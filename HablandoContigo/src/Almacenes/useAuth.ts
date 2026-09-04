@@ -198,7 +198,7 @@ export function useAuth() {
       }
 
       if (!validarDominioCorporativo(email)) {
-        errorAutenticacion.value = 'Solo se permiten correos corporativos autorizados de la empresa (@siticore o @ontime).'
+        errorAutenticacion.value = 'Solo se permiten correos corporativos autorizados de la empresa (@ontime.es).'
         return false
       }
 
@@ -335,7 +335,7 @@ export function useAuth() {
         await supabase.from('cuentas_admin').upsert({
           id: 'cta-001',
           nombre: 'Administrador Principal',
-          email: 'admin@siticore.com',
+          email: 'admin@ontime.es',
           rol: 'Super Administrador',
           departamento: 'Tecnología & Soporte TI',
           estado: 'Activo',
@@ -491,6 +491,29 @@ export function useAuth() {
     usuarioActual.value = usuarioCombinado
     localStorage.setItem(CLAVE_ALMACENAMIENTO_SESION, JSON.stringify(usuarioCombinado))
     sincronizarConCuentas(usuarioCombinado)
+
+    // 🔔 Notificación de actividad: Módulo / Perfil editado
+    try {
+      const { useNotificaciones } = await import('@/Almacenes/useNotificaciones')
+      const { agregarNotificacion } = useNotificaciones()
+      await agregarNotificacion({
+        tipo: 'modulo',
+        titulo: 'Módulo de Perfil Editado',
+        descripcion: 'Se actualizaron los datos del perfil corporativo.',
+        mensaje: `Se actualizaron las credenciales e información de perfil para ${usuarioCombinado.nombre} (${usuarioCombinado.email}).`,
+        departamento: usuarioCombinado.departamento || 'General',
+        tipoAlerta: 'Actualización de Perfil',
+        severidad: 'Baja',
+        estado: 'Detectada',
+        fecha: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }),
+        hora: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+        leida: false,
+        rutaDestino: '/configuracion'
+      })
+    } catch (e) {
+      console.warn('No se pudo registrar notificación de actualización de perfil:', e)
+    }
+
     return true
   }
 
@@ -510,6 +533,28 @@ export function useAuth() {
       // 1. Actualizar contraseña exclusivamente en Supabase Auth (cifrado bcrypt seguro)
       const { error: authErr } = await supabase.auth.updateUser({ password: nuevaContrasena })
       if (authErr) throw new Error(authErr.message)
+
+      // 🔔 Notificación de actividad: Contraseña actualizada
+      try {
+        const { useNotificaciones } = await import('@/Almacenes/useNotificaciones')
+        const { agregarNotificacion } = useNotificaciones()
+        await agregarNotificacion({
+          tipo: 'seguridad',
+          titulo: 'Contraseña Actualizada',
+          descripcion: 'Se actualizó la contraseña de tu cuenta administrativa.',
+          mensaje: `Se cambió la contraseña de la cuenta ${usuarioActual.value.email} de forma segura en Supabase Auth.`,
+          departamento: usuarioActual.value.departamento || 'Seguridad TI',
+          tipoAlerta: 'Seguridad de Cuenta',
+          severidad: 'Moderada',
+          estado: 'Detectada',
+          fecha: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }),
+          hora: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+          leida: false,
+          rutaDestino: '/configuracion'
+        })
+      } catch (errNotif) {
+        console.warn('No se pudo registrar notificación de cambio de contraseña:', errNotif)
+      }
 
       mostrarExito('Contraseña actualizada', '¡Tu contraseña fue actualizada en Supabase Auth con éxito!')
       return { ok: true, mensaje: '¡Contraseña actualizada exitosamente en Supabase Auth!' }

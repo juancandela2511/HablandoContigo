@@ -77,11 +77,33 @@ const inputLogoRef = ref<HTMLInputElement | null>(null)
 /** Mensaje temporal de descarga completada */
 const mensajeDescarga = ref<string | null>(null)
 
-const notificarDescarga = (formato: string) => {
+const notificarDescarga = async (formato: string) => {
   mensajeDescarga.value = `Presentación generada en formato ${formato}.`
   setTimeout(() => {
     mensajeDescarga.value = null
   }, 3500)
+
+  // 🔔 Notificación de actividad: Informe listo
+  try {
+    const { useNotificaciones } = await import('@/Almacenes/useNotificaciones')
+    const { agregarNotificacion } = useNotificaciones()
+    await agregarNotificacion({
+      tipo: 'informe',
+      titulo: 'Informe y Análisis Listo',
+      descripcion: `El informe en ${formato} fue generado exitosamente.`,
+      mensaje: `El análisis consolidado y las conclusiones automáticas de IA para "${props.departamentoSeleccionado}" ya están listos para revisar o compartir.`,
+      departamento: props.departamentoSeleccionado || 'General',
+      tipoAlerta: 'Informe Analítico',
+      severidad: 'Baja',
+      estado: 'Detectada',
+      fecha: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }),
+      hora: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+      leida: false,
+      rutaDestino: '/dashboard'
+    })
+  } catch (err) {
+    console.warn('Aviso notificando informe listo:', err)
+  }
 }
 
 /**

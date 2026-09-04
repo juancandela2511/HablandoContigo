@@ -101,9 +101,23 @@ const obtenerIconoAlerta = (tipo: string) => {
         </p>
         <div v-if="tipoConfigurado?.enfoqueDetalle" class="pt-1 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center gap-1 text-[10px] text-sky-700 dark:text-sky-300">
           <Target class="w-3 h-3 text-sky-500 shrink-0" />
-          <span class="truncate"><strong>Foco IA:</strong> {{ tipoConfigurado.enfoqueDetalle }}</span>
+          <span class="truncate"><strong>Foco de Alerta:</strong> {{ tipoConfigurado.enfoqueDetalle }}</span>
         </div>
       </div>
+
+      <!-- Comentario del Colaborador -->
+      <div
+        v-if="alerta.detalleRespuesta && alerta.detalleRespuesta.trim().length > 0"
+        class="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 space-y-1"
+      >
+        <p class="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-1">
+          💬 Lo que escribió el colaborador
+        </p>
+        <p class="text-xs text-amber-900 dark:text-amber-200 leading-relaxed italic">
+          "{{ alerta.detalleRespuesta }}"
+        </p>
+      </div>
+
 
       <!-- Tarjeta de PC y Cuenta -->
       <div class="flex items-center justify-between text-[11px] text-slate-500 font-mono pt-0.5">

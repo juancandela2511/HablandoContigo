@@ -51,8 +51,7 @@ const {
   cambiarContrasenaPorAdmin,
   verificarCuentaPorCorreo,
   toggleEstado,
-  eliminarCuenta,
-  reiniciarDatosDemo
+  eliminarCuenta
 } = useCuentas()
 
 // Filtros y Búsqueda reactiva
@@ -214,7 +213,7 @@ const manejarCerrarSesion = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-50 dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100 pl-14 sm:pl-16 pr-4 sm:pr-8 py-8 relative font-['Poppins',sans-serif] transition-colors duration-300">
+  <div class="min-h-screen bg-slate-50 dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100 px-4 sm:px-6 md:pl-20 md:pr-8 py-6 md:py-8 relative font-['Poppins',sans-serif] transition-colors duration-300">
     
     <!-- Luces sutiles de fondo -->
     <div class="fixed top-0 right-1/4 w-96 h-96 bg-blue-500/10 dark:bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
@@ -307,7 +306,6 @@ const manejarCerrarSesion = async () => {
         v-model:filtroEstado="filtroEstado"
         :departamentosUnicos="departamentosUnicos"
         @abrirModalCrear="abrirModalCrear"
-        @reiniciarDatosDemo="reiniciarDatosDemo"
       />
 
       <!-- Tabla Principal de Cuentas (Componente Modular) -->

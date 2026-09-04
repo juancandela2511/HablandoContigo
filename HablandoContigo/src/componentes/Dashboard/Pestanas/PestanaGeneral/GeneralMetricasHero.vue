@@ -21,7 +21,6 @@ defineProps<{
   enps: MetricaENPS
   totalAlertas: number
   participacion: MetricasParticipacion
-  totalIgnoradasRelleno?: number
 }>()
 
 const emit = defineEmits<{
@@ -30,7 +29,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
     <!-- 1. Índice General de Salud -->
     <div class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md relative overflow-hidden group hover:border-sky-500/50 transition-all text-left">
       <div class="flex items-center justify-between">
@@ -92,29 +91,6 @@ const emit = defineEmits<{
       <div class="mt-3 flex items-baseline gap-2">
         <span class="text-3xl font-black text-indigo-600 dark:text-indigo-400 font-mono">{{ participacion.tasaParticipacion }}%</span>
         <span class="text-[11px] text-slate-500">{{ participacion.totalRespondieron }}/{{ participacion.totalColaboradores }}</span>
-      </div>
-    </div>
-
-    <!-- 5. Respuestas Ignoradas por Relleno Rápido -->
-    <div 
-      @click="emit('cambiarPestana', 'auditoria')"
-      class="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md relative overflow-hidden group hover:border-slate-400 transition-all cursor-pointer text-left"
-      title="Respuestas completadas en menos de 3s o con patrones de descarte. Excluidas de las notas de clima."
-    >
-      <div class="flex items-center justify-between">
-        <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Ignoradas (&lt;3s)</span>
-        <div class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500">
-          <ZapOff class="w-4 h-4" />
-        </div>
-      </div>
-      <div class="mt-3 flex items-baseline justify-between">
-        <div>
-          <span class="text-3xl font-black text-slate-700 dark:text-slate-300 font-mono">{{ totalIgnoradasRelleno ?? 0 }}</span>
-          <span class="text-[11px] text-slate-500 ml-1">descartes</span>
-        </div>
-        <span class="text-[11px] text-slate-400 flex items-center gap-0.5 font-semibold group-hover:translate-x-1 transition-transform">
-          Auditar <ArrowRight class="w-3 h-3" />
-        </span>
       </div>
     </div>
   </div>

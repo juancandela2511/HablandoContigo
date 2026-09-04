@@ -40,7 +40,7 @@ const emit = defineEmits<{
             3 Criterios de Alertas Activas en Supabase
           </h4>
           <p class="text-[11px] text-sky-800/80 dark:text-sky-300/80">
-            Puedes editar el nombre, de qué trata y las palabras clave de cada alerta para calibrar la detección de IA.
+            Puedes editar el nombre, de qué trata y las palabras clave de cada alerta para calibrar la detección de alertas en encuestas.
           </p>
         </div>
       </div>

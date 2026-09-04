@@ -81,7 +81,7 @@ const { estaAutenticado } = useAuth()
           <template #icono>
             <Sparkles class="w-3.5 h-3.5 text-sky-500" />
           </template>
-          <span>CENTRO DE MANDO DIRECTIVO · GEMINI AI ESTRICTO</span>
+          <span>CENTRO DE MANDO DIRECTIVO </span>
         </InsigniaPill>
       </div>
 
@@ -89,7 +89,7 @@ const { estaAutenticado } = useAuth()
       <h1 class="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-slate-950 dark:text-white leading-[1.08]">
         Diseña y Analiza Encuestas <br />
         <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-600 via-indigo-600 to-purple-600 dark:from-white dark:via-sky-200 dark:to-indigo-300">
-          con Inteligencia Artificial.
+          con inteligencia asistida.
         </span>
       </h1>
 
@@ -108,7 +108,7 @@ const { estaAutenticado } = useAuth()
           <template #iconoIzquierdo>
             <Bot class="w-4 h-4" />
           </template>
-          <span>Crear Encuesta con IA</span>
+          <span>Crear Encuesta</span>
           <template #iconoDerecho>
             <ArrowRight class="w-4 h-4" />
           </template>

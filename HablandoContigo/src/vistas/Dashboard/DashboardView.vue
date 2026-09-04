@@ -26,7 +26,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { useEstadisticas } from '@/Almacenes/useEstadisticas'
+import { useEstadisticas, calcularDimensionesProporcionales } from '@/Almacenes/useEstadisticas'
 import { useNotificaciones, type NotificacionItem } from '@/Almacenes/useNotificaciones'
 import { useEncuestas } from '@/Almacenes/useEncuestas'
 import { useHighlight } from '@/Almacenes/useHighlight'
@@ -47,7 +47,7 @@ import ModalExportarInforme from '@/componentes/Dashboard/ModalExportarInforme.v
 const route = useRoute()
 const { elementoResaltadoId } = useHighlight()
 const { estaAutenticado, usuarioActual, permisosUsuario } = useAuth()
-const { notificaciones, noLeidas, marcarLeida, actualizarEstadoAlerta } = useNotificaciones()
+const { notificaciones, noLeidas, alertasConvivencia, marcarLeida, actualizarEstadoAlerta } = useNotificaciones()
 const { 
   encuestas, 
   respuestasAnonimas, 
@@ -59,7 +59,9 @@ const {
   datosEstadisticas,
   departamentoFiltro,
   departamentosDisponibles,
+  dimensionesConfiguradas,
   dimensionesFiltradas,
+  anguloRotacionRadar,
   promedioSaludActual
 } = useEstadisticas()
 
@@ -96,7 +98,6 @@ const encuestaSeleccionadaObj = computed(() => {
 // Respuestas válidas en el alcance actual (filtradas por encuesta, depto y sin descartadas)
 const respuestasValidasAlcance = computed(() => {
   return respuestasAnonimas.value.filter(r => {
-    if (r.esDescartadaPorVelocidad) return false
     if (encuestaFiltro.value !== 'todas' && r.idEncuesta !== encuestaFiltro.value) return false
     if (departamentoFiltro.value !== 'todos') {
       const enc = encuestas.value.find(e => e.id === r.idEncuesta)
@@ -112,9 +113,44 @@ const respuestasFiltradasPorEncuesta = computed(() => {
   return respuestasAnonimas.value.filter(r => r.idEncuesta === encuestaFiltro.value)
 })
 
-// Dimensiones ajustadas para el gráfico radial
+// Dimensiones ajustadas para el gráfico radial (100% proporcional a las respuestas reales del alcance actual)
 const dimensionesRadialesDinamicas = computed(() => {
-  return dimensionesFiltradas.value
+  return calcularDimensionesProporcionales(
+    dimensionesConfiguradas.value,
+    respuestasValidasAlcance.value,
+    datosEstadisticas.value.metaGlobalRadial || 85
+  )
+})
+
+// ============================================================================
+// ALERTAS PSICOSOCIALES Y DE CONVIVENCIA EN TIEMPO REAL
+// ============================================================================
+const alertasValidasAlcance = computed(() => {
+  // Filtrar las alertas de convivencia y psicosociales
+  return alertasConvivencia.value.filter(alerta => {
+    // Si hay filtro de departamento activo
+    if (departamentoFiltro.value !== 'todos' && alerta.departamento) {
+      const deptoAlerta = alerta.departamento.toLowerCase()
+      const deptoFiltro = departamentoFiltro.value.toLowerCase()
+      if (deptoAlerta !== deptoFiltro && deptoAlerta !== 'general') {
+        return false
+      }
+    }
+
+    // Si hay filtro de encuesta específica activo
+    if (encuestaFiltro.value !== 'todas' && encuestaSeleccionadaObj.value) {
+      const titEnc = encuestaSeleccionadaObj.value.titulo.toLowerCase()
+      const msg = (alerta.mensaje || '').toLowerCase()
+      const desc = (alerta.descripcion || '').toLowerCase()
+      const tit = (alerta.titulo || '').toLowerCase()
+      const idEnc = (alerta.idElemento || '').toLowerCase()
+      if (!msg.includes(titEnc) && !desc.includes(titEnc) && !tit.includes(titEnc) && idEnc !== encuestaFiltro.value.toLowerCase()) {
+        return false
+      }
+    }
+
+    return true
+  })
 })
 
 // ============================================================================
@@ -127,6 +163,11 @@ const dimensionesBarras = computed(() => {
     if (departamentoFiltro.value !== 'todos' && e.departamento !== departamentoFiltro.value) return false
     return true
   })
+
+  // Si no hay encuestas ni respuestas, lista vacía
+  if (encuestasEnAlcance.length === 0 && respuestasValidasAlcance.value.length === 0) {
+    return []
+  }
 
   // 2. Extraer categorías reales de las preguntas en estas encuestas
   const categoriasSet = new Set<string>()
@@ -147,7 +188,7 @@ const dimensionesBarras = computed(() => {
     })
   })
 
-  // Si no se han configurado categorías aún, mostrar categorías estándar organizacionales
+  // Si no se han configurado categorías aún y hay encuestas, usar estándar
   if (categoriasSet.size === 0) {
     ;['Liderazgo y Confianza', 'Carga Laboral y Estrés', 'Bienestar y Reconocimiento', 'Trabajo en Equipo y Apoyo', 'Clima y Ambiente Físico'].forEach(c => categoriasSet.add(c))
   }
@@ -199,9 +240,12 @@ const dimensionesBarras = computed(() => {
 
 // Departamentos convertidos a formato ItemBarra calculados 100% en tiempo real
 const departamentosBarras = computed(() => {
+  if (departamentosDisponibles.value.length === 0 || respuestasAnonimas.value.length === 0) {
+    return []
+  }
+
   return departamentosDisponibles.value.map(dep => {
     const respsDep = respuestasAnonimas.value.filter(r => {
-      if (r.esDescartadaPorVelocidad) return false
       const enc = encuestas.value.find(e => e.id === r.idEncuesta)
       return enc?.departamento === dep
     })
@@ -230,7 +274,7 @@ const departamentosBarras = computed(() => {
 // Salud promedio calculada según las respuestas en alcance
 const promedioSaludDinamico = computed(() => {
   if (respuestasValidasAlcance.value.length === 0) {
-    return promedioSaludActual.value
+    return 0
   }
   const suma = respuestasValidasAlcance.value.reduce((acc, r) => acc + (r.puntajeGeneral || 0), 0)
   const prom = suma / respuestasValidasAlcance.value.length
@@ -266,7 +310,7 @@ const manejarEliminarRespuestaIndividual = async (idRespuesta: string) => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-50 dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100 pl-14 sm:pl-16 pr-4 sm:pr-8 py-8 relative font-['Poppins',sans-serif] transition-colors duration-300">
+  <div class="min-h-screen bg-slate-50 dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100 px-4 sm:px-6 md:pl-20 md:pr-8 py-6 md:py-8 relative font-['Poppins',sans-serif] transition-colors duration-300">
     
     <!-- Luces sutiles de fondo -->
     <div class="fixed top-0 right-10 w-96 h-96 bg-blue-500/10 dark:bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
@@ -327,17 +371,24 @@ const manejarEliminarRespuestaIndividual = async (idRespuesta: string) => {
           @purgarEstadisticas="manejarPurgarTodasEstadisticas"
         />
 
+        <!-- Barra de Navegación de Pestañas del Dashboard -->
+        <DashboardNavegacionPestanas
+          v-model:pestanaActiva="pestanaActiva"
+          :totalAlertas="alertasValidasAlcance.length"
+        />
+
         <!-- PESTAÑA 1: VISIÓN GENERAL Y ESTADÍSTICAS -->
         <DashboardPestanaGeneral
           v-if="pestanaActiva === 'general'"
           :promedioSalud="promedioSaludDinamico"
           :enps="datosEstadisticas.enps"
-          :totalAlertas="noLeidas"
+          :totalAlertas="alertasValidasAlcance.length"
           :participacion="datosEstadisticas.participacion"
           :conclusionesIA="datosEstadisticas.analisisConclusionesIA"
           :dimensionesRadiales="dimensionesRadialesDinamicas"
           :dimensionesBarras="dimensionesBarras"
           :departamentosBarras="departamentosBarras"
+          :anguloInclinacion="anguloRotacionRadar"
           @cambiarPestana="pestanaActiva = $event"
         />
 
@@ -349,7 +400,7 @@ const manejarEliminarRespuestaIndividual = async (idRespuesta: string) => {
         <!-- PESTAÑA 4: ALERTAS DE CONVIVENCIA Y ACOSO -->
         <DashboardPestanaAlertas
           v-else-if="pestanaActiva === 'alertas'"
-          :alertas="notificaciones"
+          :alertas="alertasValidasAlcance"
           :elementoResaltadoId="elementoResaltadoId"
           @inspeccionarAlerta="inspeccionarAlerta"
         />

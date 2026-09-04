@@ -63,7 +63,7 @@ const manejarSubmit = () => {
   errorValidacion.value = null
 
   if (!validarDominioCorporativo(formulario.value.email)) {
-    errorValidacion.value = 'Solo se permiten correos corporativos autorizados de la empresa (@siticore o @ontime).'
+    errorValidacion.value = 'Solo se permiten correos corporativos autorizados de la empresa (@ontime.es).'
     return
   }
 
@@ -96,7 +96,7 @@ const manejarSubmit = () => {
   <ModalBase
     :abierto="abierto"
     :titulo="modoEdicion ? 'Editar Cuenta de Colaborador' : 'Crear Nueva Cuenta Corporativa'"
-    subtitulo="Solo se admiten correos autorizados (@siticore o @ontime). Se enviará verificación de correo."
+    subtitulo="Solo se admiten correos autorizados (@ontime.es). Se enviará verificación de correo."
     anchoMaximo="lg"
     @cerrar="emit('cerrar')"
   >
@@ -144,17 +144,10 @@ const manejarSubmit = () => {
           <div class="flex items-center gap-1">
             <button
               type="button"
-              @click="aplicarDominioRapido('siticore.com')"
-              class="px-2 py-0.5 rounded-lg bg-sky-50 dark:bg-sky-950 text-sky-600 dark:text-sky-400 text-[10px] font-mono hover:bg-sky-100 cursor-pointer"
+              @click="aplicarDominioRapido('ontime.es')"
+              class="px-2 py-0.5 rounded-lg bg-sky-50 dark:bg-sky-950 text-sky-600 dark:text-sky-400 text-[10px] font-mono hover:bg-sky-100 cursor-pointer font-bold"
             >
-              +@siticore.com
-            </button>
-            <button
-              type="button"
-              @click="aplicarDominioRapido('ontime.com')"
-              class="px-2 py-0.5 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 text-[10px] font-mono hover:bg-indigo-100 cursor-pointer"
-            >
-              +@ontime.com
+              +@ontime.es
             </button>
           </div>
         </div>
@@ -164,7 +157,7 @@ const manejarSubmit = () => {
             v-model="formulario.email"
             type="email" 
             required 
-            placeholder="colaborador@siticore.com"
+            placeholder="colaborador@ontime.es"
             class="w-full pl-9 pr-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white text-xs outline-none focus:border-sky-500 transition-all"
           />
         </div>

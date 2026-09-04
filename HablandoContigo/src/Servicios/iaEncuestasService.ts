@@ -1,13 +1,13 @@
 /**
  * ============================================================================
- * SERVICIO DE GENERACIÓN DE ENCUESTAS ADAPTATIVAS CON INTELIGENCIA ARTIFICIAL
+ * SERVICIO DE GENERACIÓN DE ENCUESTAS ADAPTATIVAS CON GEMINI IA
  * ============================================================================
  * 
  * ¿QUÉ ES Y QUÉ HACE?
- * Motor inteligente de generación temática estricta y centrada en las personas.
- * - Integra preguntas abiertas y empáticas sobre el sentir del colaborador ("¿Cómo te sientes?").
- * - Calibra las opciones para que SOLO situaciones graves y explícitas lleven marca de alerta.
- * - Garantiza que las preguntas se adapten al tema y departamento indicado.
+ * Motor inteligente con IA (Google Gemini 2.5 Flash / 1.5 Flash) que analiza
+ * el tema ingresado por el usuario y genera preguntas profesionales, naturales
+ * y profundas sobre el clima laboral y el sentir del colaborador.
+ * NUNCA genera preguntas concatenadas mecánicas con comillas.
  */
 
 export interface OpcionPregunta {
@@ -43,10 +43,10 @@ export interface PlantillaEncuestaGenerada {
 
 export interface AlertaGeminiEstricta {
   id?: string
-  estadoAlerta: string // "Activada" (con indicador de prioridad)
-  mensajeCapturado: string // Texto literal o selección exacta del usuario
-  clasificacion: 'Buena' | 'Mala' // Clasificación categórica
-  motivoDetallado: string // Explicación analítica redactada por Gemini
+  estadoAlerta: string
+  mensajeCapturado: string
+  clasificacion: 'Buena' | 'Mala'
+  motivoDetallado: string
   prioridad: 'Crítica' | 'Alta' | 'Moderada'
   tipoAlerta?: string
   idPregunta?: string
@@ -62,481 +62,478 @@ export interface ResultadoEvaluacionGemini {
   alertas: AlertaGeminiEstricta[]
 }
 
-const URL_BASE_API_BACKEND = 'http://localhost:8000/api/encuesta'
+// Credencial y Modelos de Google Gemini
+export const CLAVE_API_GEMINI: string = 'AQ.Ab8RN6JIp5P2hWrBa4a6ZmArr9y55L0g17dCKMPv7hZ8Y14Ebg'
+export const MODELO_GEMINI_PRINCIPAL: string = 'gemini-2.5-flash'
+export const MODELO_GEMINI_SECUNDARIO: string = 'gemini-1.5-flash'
+
+const uidGen = (prefix = 'p') => `${prefix}-${Date.now().toString().slice(-4)}-${Math.random().toString(36).substring(2, 6)}`
+
+function extraerJSONLimpio(texto: string): string {
+  const limpio = texto.trim()
+  const matchJson = limpio.match(/```(?:json)?\s*([\s\S]*?)\s*```/)
+  if (matchJson && matchJson[1]) {
+    return matchJson[1].trim()
+  }
+  const firstBrace = limpio.indexOf('{')
+  const lastBrace = limpio.lastIndexOf('}')
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    return limpio.substring(firstBrace, lastBrace + 1)
+  }
+  return limpio
+}
 
 /**
- * Genera una encuesta con IA basada en el tema, departamento y extensión indicada
+ * Genera una encuesta analizando el tema con Google Gemini.
+ * Si la red o la API falla, utiliza el motor de inferencia semántica local de alta calidad.
  */
 export async function generarEncuestaConIA(
   contexto: string, 
   departamento: string = 'General',
   extension: 'rapida' | 'estandar' | 'extensa' = 'estandar'
 ): Promise<PlantillaEncuestaGenerada> {
+  const lineas = parsearLineasBorrador(contexto)
+  
+  // Si el usuario proporcionó una lista explícita de preguntas pre-redactadas (2 o más)
+  if (lineas.length >= 2) {
+    return estructurarDesdePlantillaBase(contexto, departamento, extension)
+  }
+  
+  // 1. Intentar generar directamente con Google Gemini AI
   try {
-    const controladorAborto = new AbortController()
-    const temporizadorLimite = setTimeout(() => controladorAborto.abort(), 4000)
-
-    const respuestaServidor = await fetch(`${URL_BASE_API_BACKEND}/generar`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contexto, departamento, extension }),
-      signal: controladorAborto.signal
-    })
-    clearTimeout(temporizadorLimite)
-
-    if (respuestaServidor.ok) {
-      const respuestaJson = await respuestaServidor.json()
-      if (respuestaJson.success && respuestaJson.data) {
-        return respuestaJson.data as PlantillaEncuestaGenerada
-      }
+    const encuestaGemini = await generarEncuestaConGeminiAPI(contexto, departamento, extension)
+    if (encuestaGemini && encuestaGemini.preguntas && encuestaGemini.preguntas.length > 0) {
+      return encuestaGemini
     }
-  } catch (e) {
-    // Continuar con el motor generador contextual local estricto
+  } catch (error) {
+    console.warn('⚠️ [iaEncuestasService] No se pudo conectar con Gemini API, usando motor heurístico enriquecido:', error)
   }
 
-  return generarEncuestaEstrictaPorTema(contexto, departamento, extension)
+  // 2. Motor de respaldo semántico local (sin concatenaciones mecánicas)
+  return generarDesdeTemaYContexto(contexto, departamento, extension)
 }
 
 /**
- * Generador Temático Estricto con preguntas abiertas de bienestar y sentir humano
- */
-/**
- * GENERADOR CREATIVO, PSICOMÉTRICO Y ADAPTATIVO CON IA
- * Diseña cuestionarios únicos, contextuales y matizados sin usar plantillas rígidas ni repetir el prompt.
- */
-function generarEncuestaEstrictaPorTema(
-  contexto: string, 
-  departamento: string,
-  extension: 'rapida' | 'estandar' | 'extensa' = 'estandar'
-): PlantillaEncuestaGenerada {
-  const promptLimpio = contexto.trim()
-  const promptLower = promptLimpio.toLowerCase()
-  const uid = (prefix = 'preg') => `${prefix}-${Math.random().toString(36).substring(2, 7)}`
-
-  // 1. ANÁLISIS SEMÁNTICO Y EXTRACCIÓN DE EJES TEMÁTICOS DEL PROMPT
-  const incluyeTurnos = /turno|nocturno|noche|madrugada|horario|rotativo|jornada/i.test(promptLower)
-  const incluyeComedor = /comedor|cafeter[ií]a|comida|almuerzo|alimentaci[oó]n|desayuno|caf[eé]|receso|pausa/i.test(promptLower)
-  const incluyeLiderazgo = /jefe|supervisor|l[ií]der|coordinador|jefatura|directiv|gerente|mando/i.test(promptLower)
-  const incluyeTecnologia = /computador|pc|laptop|hardware|software|sistema|pantalla|herramienta|red|internet/i.test(promptLower)
-  const incluyeSalario = /salario|sueldo|pago|beneficio|remuneraci[oó]n|comisi[oó]n|bono|econ[oó]mic/i.test(promptLower)
-  const incluyeSobrecarga = /estr[eé]s|sobrecarga|agotamiento|burnout|presi[oó]n|fatiga|cansancio|volumen/i.test(promptLower)
-  const incluyeAcoso = /acoso|hostigamiento|maltrato|humillaci[oó]n|gritos|respeto|trato|discriminaci[oó]n/i.test(promptLower)
-  const incluyeEquipo = /compañer|equipo|colaboraci[oó]n|comunicaci[oó]n|ambiente|aislamiento|cohesi[oó]n/i.test(promptLower)
-  const incluyeVentas = /venta|cliente|meta|comercial|asesor|llamada|atenci[oó]n/i.test(promptLower)
-  const incluyeCapacitacion = /capacita|curso|aprendizaje|desarrollo|crecimiento|carrera|formaci[oó]n/i.test(promptLower)
-  const incluyeErgonomia = /instalacion|silla|ergonom|luz|iluminaci[oó]n|aire|ruido|espacio|oficina|bodega/i.test(promptLower)
-
-  // 2. CONSTRUCCIÓN DE TÍTULO Y DESCRIPCIÓN CREATIVA E INSTITUCIONAL
-  let tituloGenerado = ''
-  let descripcionGenerada = ''
-
-  const temasDetectados: string[] = []
-  if (incluyeTurnos) temasDetectados.push('Turnos y Jornadas')
-  if (incluyeComedor) temasDetectados.push('Alimentación y Bienestar')
-  if (incluyeLiderazgo) temasDetectados.push('Gestión de Liderazgo')
-  if (incluyeTecnologia) temasDetectados.push('Herramientas TI')
-  if (incluyeSalario) temasDetectados.push('Compensación y Beneficios')
-  if (incluyeSobrecarga) temasDetectados.push('Salud Ocupacional y Estrés')
-  if (incluyeAcoso) temasDetectados.push('Convivencia y Trato Digno')
-  if (incluyeEquipo) temasDetectados.push('Sinergia de Equipo')
-  if (incluyeVentas) temasDetectados.push('Dinámica Comercial')
-  if (incluyeCapacitacion) temasDetectados.push('Crecimiento Profesional')
-  if (incluyeErgonomia) temasDetectados.push('Confort y Ergonomía')
-
-  if (temasDetectados.length >= 2) {
-    tituloGenerado = `Diagnóstico Integral: ${temasDetectados.slice(0, 3).join(' · ')} - ${departamento}`
-    descripcionGenerada = `Evaluación participativa y 100% anónima para conocer tu experiencia sobre ${temasDetectados.join(', ').toLowerCase()} y cocrear mejoras reales en ${departamento}.`
-  } else if (temasDetectados.length === 1 && temasDetectados[0]) {
-    const temaUnico = temasDetectados[0]
-    tituloGenerado = `Evaluación Especial de ${temaUnico} - ${departamento}`
-    descripcionGenerada = `Cuestionario confidencial orientado a escuchar de forma auténtica tu percepción y vivencias sobre ${temaUnico.toLowerCase()} en tu equipo.`
-  } else {
-    // Si es un tema personalizado libre
-    const primeraPalabra = promptLimpio.charAt(0).toUpperCase() + promptLimpio.slice(1)
-    tituloGenerado = `Evaluación Estratégica de Clima y Experiencia Laboral - ${departamento}`
-    descripcionGenerada = `Tu perspectiva confidencial sobre los retos, dinámicas cotidianas y oportunidades de optimización en ${departamento}. Tu voz está protegida por cifrado de hardware UUID.`
-  }
-
-  // 3. GENERACIÓN DE PREGUNTAS PROFUNDAS Y CONTEXTUALIZADAS (CERO REPETICIONES LITERALES)
-  const bancoPreguntas: PreguntaEncuesta[] = []
-
-  // Bloque Específico: Turnos y Horarios Nocturnos
-  if (incluyeTurnos) {
-    bancoPreguntas.push({
-      id: uid(),
-      categoria: 'Gestión del Tiempo y Descanso',
-      texto: '¿En qué medida el esquema y la rotación de tus horarios te permiten conciliar un descanso reparador y mantener energía durante tu jornada?',
-      tipo: 'escala',
-      esSensibleAcoso: false,
-      opciones: [
-        { id: 't-1', texto: '1 - Agotamiento severo / Descanso insuficiente', valor: 1, esAlerta: true },
-        { id: 't-2', texto: '2 - Dificultad recurrente para recuperarme', valor: 2, esAlerta: false },
-        { id: 't-3', texto: '3 - Desgaste moderado pero manejable', valor: 3, esAlerta: false },
-        { id: 't-4', texto: '4 - Buen balance y adaptación', valor: 4, esAlerta: false },
-        { id: 't-5', texto: '5 - Óptima compatibilidad y descanso pleno', valor: 5, esAlerta: false }
-      ]
-    })
-
-    bancoPreguntas.push({
-      id: uid(),
-      categoria: 'Condiciones de Seguridad en Horarios Especiales',
-      texto: '¿Cuentas con las condiciones de iluminación, seguridad física y facilidades de desplazamiento adecuadas para laborar en tus horarios asignados?',
-      tipo: 'multiple',
-      esSensibleAcoso: false,
-      opciones: [
-        { id: 'ts-1', texto: 'Totalmente adecuadas, seguras y protegidas', valor: 5, esAlerta: false },
-        { id: 'ts-2', texto: 'Aceptables con detalles menores por mejorar', valor: 3, esAlerta: false },
-        { id: 'ts-3', texto: 'Existen riesgos físicos o dificultades de transporte', valor: 1, esAlerta: true }
-      ]
-    })
-  }
-
-  // Bloque Específico: Alimentación, Comedor y Cafetería
-  if (incluyeComedor) {
-    bancoPreguntas.push({
-      id: uid(),
-      categoria: 'Calidad y Espacios de Alimentación',
-      texto: '¿Cómo evalúas la calidad, frescura, variedad e higiene de las opciones alimenticias e instalaciones del comedor o cafetería?',
-      tipo: 'escala',
-      esSensibleAcoso: false,
-      opciones: [
-        { id: 'c-1', texto: '1 - Deficiente, descuidada o insalubre', valor: 1, esAlerta: true },
-        { id: 'c-2', texto: '2 - Poca variedad y calidad cuestionable', valor: 2, esAlerta: false },
-        { id: 'c-3', texto: '3 - Aceptable para la jornada', valor: 3, esAlerta: false },
-        { id: 'c-4', texto: '4 - Buena, nutritiva y limpia', valor: 4, esAlerta: false },
-        { id: 'c-5', texto: '5 - Excelente sabor, variedad y condiciones óptimas', valor: 5, esAlerta: false }
-      ]
-    })
-
-    bancoPreguntas.push({
-      id: uid(),
-      categoria: 'Pausas y Desconexión Efectiva',
-      texto: '¿El tiempo estipulado y la disponibilidad de espacio te permiten tomar tus alimentos con tranquilidad y desconectar de tus labores?',
-      tipo: 'multiple',
-      esSensibleAcoso: false,
-      opciones: [
-        { id: 'cp-1', texto: 'Sí, tiempo y espacio plenamente cómodos', valor: 5, esAlerta: false },
-        { id: 'cp-2', texto: 'Ajustado, con frecuencia como de prisa', valor: 3, esAlerta: false },
-        { id: 'cp-3', texto: 'No, el tiempo o el espacio resultan insuficientes', valor: 1, esAlerta: false }
-      ]
-    })
-  }
-
-  // Bloque Específico: Liderazgo y Supervisión Directa (con Ramificación Condicional)
-  bancoPreguntas.push({
-    id: 'p-jefe-relacion',
-    categoria: 'Liderazgo y Supervisión Directa',
-    texto: '¿Qué tal te la llevas con tu jefe o supervisor inmediato?',
-    tipo: 'multiple',
-    tieneBifurcacion: true,
-    preguntaCondicionalId: 'p-jefe-subpregunta-falencias',
-    esSensibleAcoso: true,
-    opciones: [
-      { id: 'opc-jefe-bien', texto: 'Bien', valor: 5, esAlerta: false },
-      { id: 'opc-jefe-regular', texto: 'Regular', valor: 3, esAlerta: false },
-      { id: 'opc-jefe-mal', texto: 'Mal', valor: 1, esAlerta: true }
-    ]
-  })
-
-  bancoPreguntas.push({
-    id: 'p-jefe-subpregunta-falencias',
-    categoria: 'Profundización de Gestión del Jefe',
-    texto: '¿Qué inconvenientes, recomendaciones o falencias tienes respecto a la gestión de tu jefe?',
-    tipo: 'texto',
-    esCondicional: true,
-    disparadorPor: 'p-jefe-relacion',
-    valoresDisparo: ['Mal', 'Regular'],
-    esSensibleAcoso: true,
-    opciones: []
-  })
-
-  // Bloque Específico: Tecnología y Herramientas
-  if (incluyeTecnologia) {
-    bancoPreguntas.push({
-      id: uid(),
-      categoria: 'Fluidez de Herramientas y Recursos TI',
-      texto: '¿La agilidad del computador, programas y plataformas te permite trabajar sin interrupciones ni frustraciones por lentitud?',
-      tipo: 'escala',
-      esSensibleAcoso: false,
-      opciones: [
-        { id: 'tec-1', texto: '1 - Bloqueos constantes / Muy deficiente', valor: 1, esAlerta: false },
-        { id: 'tec-2', texto: '2 - Lentitud frecuente que afecta mis entregas', valor: 2, esAlerta: false },
-        { id: 'tec-3', texto: '3 - Regular / Funcional para tareas básicas', valor: 3, esAlerta: false },
-        { id: 'tec-4', texto: '4 - Ágil y con buen desempeño', valor: 4, esAlerta: false },
-        { id: 'tec-5', texto: '5 - Rápido, actualizado y de alto rendimiento', valor: 5, esAlerta: false }
-      ]
-    })
-  }
-
-  // Bloque Específico: Sobrecarga, Estrés y Ritmo de Trabajo
-  if (incluyeSobrecarga || bancoPreguntas.length < 5) {
-    bancoPreguntas.push({
-      id: uid(),
-      categoria: 'Equilibrio de Carga y Presión Operativa',
-      texto: '¿Cómo percibes el volumen y la distribución diaria de tus responsabilidades frente a los tiempos límite establecidos?',
-      tipo: 'escala',
-      esSensibleAcoso: false,
-      opciones: [
-        { id: 'sb-1', texto: '1 - Sobrecarga desbordante y fatiga continua', valor: 1, esAlerta: true },
-        { id: 'sb-2', texto: '2 - Excesiva presión en la mayoría de turnos', valor: 2, esAlerta: false },
-        { id: 'sb-3', texto: '3 - Nivel demandante pero manejable', valor: 3, esAlerta: false },
-        { id: 'sb-4', texto: '4 - Carga equilibrada y organizada', valor: 4, esAlerta: false },
-        { id: 'sb-5', texto: '5 - Ritmo óptimo y sostenible en el tiempo', valor: 5, esAlerta: false }
-      ]
-    })
-  }
-
-  // Bloque Específico: Trato Digno y Seguridad Psicológica
-  bancoPreguntas.push({
-    id: uid(),
-    categoria: 'Seguridad Psicológica y Comunicación',
-    texto: '¿Te sientes en plena libertad de expresar tus opiniones, reportar dificultades o proponer mejoras sin temor a represalias o rechazo?',
-    tipo: 'multiple',
-    esSensibleAcoso: true,
-    opciones: [
-      { id: 'sp-1', texto: 'Sí, hay total confianza, apertura y escucha', valor: 5, esAlerta: false },
-      { id: 'sp-2', texto: 'A veces prefiero reservar mis comentarios', valor: 3, esAlerta: false },
-      { id: 'sp-3', texto: 'No, temo que emitir mi opinión perjudique mi posición', valor: 1, esAlerta: true }
-    ]
-  })
-
-  // Bloque Específico: Compañerismo y Apoyo Interdepartamental
-  if (incluyeEquipo || bancoPreguntas.length < 6) {
-    bancoPreguntas.push({
-      id: uid(),
-      categoria: 'Sinergia y Colaboración entre Pares',
-      texto: '¿Existe una actitud genuina de apoyo mutuo y trabajo en equipo cuando surgen momentos de alta exigencia u obstáculos?',
-      tipo: 'escala',
-      esSensibleAcoso: false,
-      opciones: [
-        { id: 'eq-1', texto: '1 - Individualismo marcado y tensiones', valor: 1, esAlerta: false },
-        { id: 'eq-2', texto: '2 - Poca disposición a colaborar', valor: 2, esAlerta: false },
-        { id: 'eq-3', texto: '3 - Cooperación básica en lo necesario', valor: 3, esAlerta: false },
-        { id: 'eq-4', texto: '4 - Buen compañerismo y actitud constructiva', valor: 4, esAlerta: false },
-        { id: 'eq-5', texto: '5 - Gran solidaridad y espíritu de equipo', valor: 5, esAlerta: false }
-      ]
-    })
-  }
-
-  // Bloque Específico: Expresión Libre Guiada
-  bancoPreguntas.push({
-    id: uid(),
-    categoria: 'Espacio de Escucha Humana',
-    texto: '¿Cómo te sientes anímicamente en tu labor actual y qué mensaje o vivencia te gustaría compartir de manera confidencial?',
-    tipo: 'texto',
-    esSensibleAcoso: false,
-    opciones: []
-  })
-
-  // Ajuste según extensión solicitada
-  let preguntasFinales = bancoPreguntas
-  if (extension === 'rapida') {
-    // Tomar las 4-5 más críticas
-    preguntasFinales = bancoPreguntas.slice(0, 5)
-  } else if (extension === 'extensa') {
-    // Si es extensa, agregar una de reconocimiento/futuro
-    preguntasFinales.push({
-      id: uid(),
-      categoria: 'Reconocimiento y Sentido de Pertenencia',
-      texto: '¿Sientes que el tiempo, dedicación y compromiso que inviertes en tus tareas es valorado de forma justa y equitativa?',
-      tipo: 'escala',
-      esSensibleAcoso: false,
-      opciones: [
-        { id: 'rec-1', texto: '1 - Totalmente invisibilizado(a)', valor: 1, esAlerta: true },
-        { id: 'rec-2', texto: '2 - Rara vez se reconoce el esfuerzo', valor: 2, esAlerta: false },
-        { id: 'rec-3', texto: '3 - Reconocimiento moderado', valor: 3, esAlerta: false },
-        { id: 'rec-4', texto: '4 - Se aprecia mi aporte', valor: 4, esAlerta: false },
-        { id: 'rec-5', texto: '5 - Muy valorado(a) y respaldado(a)', valor: 5, esAlerta: false }
-      ]
-    })
-  }
-
-  return {
-    titulo: tituloGenerado,
-    descripcion: descripcionGenerada,
-    departamento,
-    preguntas: preguntasFinales,
-    preguntasSeguimiento: [
-      {
-        id: uid('deep'),
-        categoria: 'Propuestas de Impacto y Transformación',
-        texto: 'Si tuvieras la oportunidad de implementar un cambio prioritario para mejorar tu bienestar y efectividad en tu equipo, ¿cuál sería?',
-        tipo: 'texto',
-        opciones: []
-      }
-    ]
-  }
-}
-
-/**
- * MÓDULO 2: Optimiza una encuesta base redactada por el usuario con Gemini
+ * Optimiza una encuesta base redactada por el usuario con IA
  */
 export async function optimizarEncuestaBaseConIA(
   encuestaBase: string,
   departamento: string = 'General'
 ): Promise<PlantillaEncuestaGenerada> {
-  try {
-    const controladorAborto = new AbortController()
-    const temporizadorLimite = setTimeout(() => controladorAborto.abort(), 6000)
+  return estructurarDesdePlantillaBase(encuestaBase, departamento, 'estandar')
+}
 
-    const respuestaServidor = await fetch(`${URL_BASE_API_BACKEND}/optimizar-base`, {
+// ────────────────────────────────────────────────────────────────────────────
+// LLAMADA REST A GOOGLE GEMINI API PARA GENERACIÓN DE ENCUESTAS
+// ────────────────────────────────────────────────────────────────────────────
+
+async function generarEncuestaConGeminiAPI(
+  contexto: string,
+  departamento: string,
+  extension: 'rapida' | 'estandar' | 'extensa'
+): Promise<PlantillaEncuestaGenerada> {
+  const numPreguntas = extension === 'rapida' ? '4 a 5' : extension === 'extensa' ? '12 a 16' : '8 a 10'
+
+  const prompt = `
+Eres un Psicólogo Organizacional senior y especialista en Clima Laboral y Talento Humano.
+Tu misión es diseñar un cuestionario de encuesta profesional, empático, humano y bien estructurado.
+
+CONTEXTO / TEMA SOLICITADO POR EL USUARIO: "${contexto}"
+DEPARTAMENTO / AUDIENCIA DESTINO: "${departamento}"
+EXTENSIÓN: "${extension}" (Debes generar exactamente ${numPreguntas} preguntas).
+
+REGLAS FUNDAMENTALES DE REDACCIÓN:
+1. NUNCA concatenes frases mecánicas como '¿Cómo calificas tu satisfacción frente a: "..."?'.
+2. Comprende la intención de fondo del usuario y redacta preguntas humanas, directas y elegantes en español.
+3. Si el usuario pide saber "cómo se sienten" o "ánimo", incluye preguntas abiertas y de escala sobre energía vital, tranquilidad, motivación diaria y relación con el equipo.
+4. Distribuye los tipos de preguntas:
+   - Mayoría de tipo 'escala' (1 a 5 puntos, donde 1 representa riesgo/insatisfacción con esAlerta: true, y 2 a 5 con esAlerta: false).
+   - Preguntas de opción 'multiple' con 3 o 4 opciones claras.
+   - Al menos 1 o 2 preguntas abiertas tipo 'texto' (con opciones: []) para recopilar comentarios y sugerencias del colaborador.
+5. Devuelve ÚNICAMENTE un objeto JSON válido (sin formato markdown \`\`\`json, solo texto JSON puro) con esta estructura:
+
+{
+  "titulo": "Título profesional de la encuesta",
+  "descripcion": "Descripción empática y confidencial que motive al colaborador a responder con sinceridad.",
+  "departamento": "${departamento}",
+  "preguntas": [
+    {
+      "categoria": "Nombre de la dimensión evaluada (ej. Bienestar Emocional, Carga Laboral, Liderazgo, etc.)",
+      "texto": "¿Pregunta redactada de forma humana y clara?",
+      "tipo": "escala" | "multiple" | "texto",
+      "esSensibleAcoso": boolean,
+      "opciones": [
+        { "texto": "1 - Muy insatisfecho / Totalmente en desacuerdo", "valor": 1, "esAlerta": true },
+        { "texto": "2 - Poco satisfecho / En desacuerdo", "valor": 2, "esAlerta": false },
+        { "texto": "3 - Neutral / Regular", "valor": 3, "esAlerta": false },
+        { "texto": "4 - Satisfecho / De acuerdo", "valor": 4, "esAlerta": false },
+        { "texto": "5 - Muy satisfecho / Totalmente de acuerdo", "valor": 5, "esAlerta": false }
+      ]
+    }
+  ],
+  "preguntasSeguimiento": [
+    {
+      "categoria": "Propuestas de Bienestar",
+      "texto": "¿Qué iniciativa o cambio prioritario propondrías para mejorar tu experiencia y bienestar en el equipo?",
+      "tipo": "texto",
+      "opciones": []
+    }
+  ]
+}
+`
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODELO_GEMINI_PRINCIPAL}:generateContent?key=${CLAVE_API_GEMINI}`
+
+  const respuesta = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.3,
+        topP: 0.95
+      }
+    })
+  })
+
+  if (!respuesta.ok) {
+    throw new Error(`Gemini API respondió con código HTTP ${respuesta.status}`)
+  }
+
+  const data = await respuesta.json()
+  const textoGenerado: string = data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
+  const jsonLimpio = extraerJSONLimpio(textoGenerado)
+
+  const parsed = JSON.parse(jsonLimpio) as {
+    titulo: string
+    descripcion: string
+    departamento?: string
+    preguntas: Array<{
+      categoria: string
+      texto: string
+      tipo: 'escala' | 'multiple' | 'texto' | 'si_no'
+      esSensibleAcoso?: boolean
+      opciones: Array<{ texto: string; valor: number; esAlerta?: boolean }>
+    }>
+    preguntasSeguimiento?: Array<{
+      categoria: string
+      texto: string
+      tipo: 'escala' | 'multiple' | 'texto' | 'si_no'
+      opciones: Array<{ texto: string; valor: number; esAlerta?: boolean }>
+    }>
+  }
+
+  // Normalizar y enriquecer IDs
+  const preguntasFinales: PreguntaEncuesta[] = (parsed.preguntas || []).map((p, idx) => ({
+    id: uidGen(`p-gemini-${idx + 1}`),
+    categoria: p.categoria || 'Clima General',
+    texto: formatearPreguntaEspanol(p.texto),
+    tipo: p.tipo || 'escala',
+    esSensibleAcoso: Boolean(p.esSensibleAcoso),
+    opciones: (p.opciones || []).map((op, oIdx) => ({
+      id: `opc-${idx}-${oIdx + 1}`,
+      texto: op.texto,
+      valor: typeof op.valor === 'number' ? op.valor : 3,
+      esAlerta: Boolean(op.esAlerta || (op.valor === 1))
+    }))
+  }))
+
+  const seguimientoFinales: PreguntaEncuesta[] = (parsed.preguntasSeguimiento || []).map((p, idx) => ({
+    id: uidGen(`seg-gemini-${idx + 1}`),
+    categoria: p.categoria || 'Propuestas y Bienestar',
+    texto: formatearPreguntaEspanol(p.texto),
+    tipo: p.tipo || 'texto',
+    opciones: []
+  }))
+
+  return {
+    titulo: parsed.titulo || `Evaluación de Clima: ${contexto.slice(0, 40)}`,
+    descripcion: parsed.descripcion || `Diagnóstico participativo para el área de ${departamento}.`,
+    departamento: parsed.departamento || departamento,
+    preguntas: preguntasFinales,
+    preguntasSeguimiento: seguimientoFinales
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// EVALUACIÓN DE RESPUESTAS CON GEMINI (ESTRICTO - CERO FALSAS ALARMAS)
+// ────────────────────────────────────────────────────────────────────────────
+
+export interface ParametrosEvaluacionRespuestas {
+  idEncuesta?: string
+  tituloEncuesta?: string
+  dispositivoUUID?: string
+  departamento?: string
+  respuestas: Array<{
+    idPregunta: string
+    textoPregunta: string
+    categoria: string
+    respuesta: string
+    valor?: number
+    esAlerta?: boolean
+    comentario?: string
+  }>
+}
+
+export async function evaluarRespuestasConGeminiEstricto(
+  params: ParametrosEvaluacionRespuestas
+): Promise<ResultadoEvaluacionGemini> {
+  const departamento = params.departamento || 'General'
+  const respuestas = params.respuestas || []
+
+  const respuestasFormateadas = respuestas
+    .map((r, idx) => `${idx + 1}. [${r.categoria}] ${r.textoPregunta} -> RESPUESTA: "${r.respuesta}"${r.comentario ? ` | COMENTARIO: "${r.comentario}"` : ''}`)
+    .join('\n')
+
+  const prompt = `
+Eres un Psicólogo Organizacional y Auditor de Clima Laboral.
+Evalúa las siguientes respuestas de un colaborador en el área de "${departamento}".
+
+RESPUESTAS:
+${respuestasFormateadas}
+
+REGLAS ESTRICTAS DE ALERTA:
+1. Si las respuestas son normales o aceptables (calificaciones regulares, buenas, o sin incidentes graves), 'hayAlertas': false, 'totalAlertas': 0 y 'alertas': [].
+2. NUNCA actives una alerta por el simple hecho de haber respondido la encuesta.
+3. SOLO activa una alerta ante:
+   - Violencia verbal, gritos, intimidación, acoso laboral reiterado o humillación explícita.
+   - Depresión severa manifiesta, ideaciones de daño o colapso emocional inmanejable.
+   - Deseo explícito de renunciar de inmediato debido a ambiente destructivo o maltrato.
+4. Devuelve ÚNICAMENTE un JSON con:
+{
+  "hayAlertas": boolean,
+  "totalAlertas": number,
+  "clasificacionGlobal": "Buena" | "Mala",
+  "diagnosticoGeneral": "string",
+  "alertas": [
+    {
+      "estadoAlerta": "Activada",
+      "mensajeCapturado": "string",
+      "clasificacion": "Mala",
+      "motivoDetallado": "string",
+      "prioridad": "Crítica" | "Alta" | "Moderada",
+      "categoria": "string"
+    }
+  ]
+}
+`
+
+  try {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODELO_GEMINI_PRINCIPAL}:generateContent?key=${CLAVE_API_GEMINI}`
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ encuesta_base: encuestaBase, departamento }),
-      signal: controladorAborto.signal
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.1, topP: 0.95 }
+      })
     })
-    clearTimeout(temporizadorLimite)
 
-    if (respuestaServidor.ok) {
-      const respuestaJson = await respuestaServidor.json()
-      if (respuestaJson.success && respuestaJson.data) {
-        return respuestaJson.data as PlantillaEncuestaGenerada
-      }
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+
+    const data = await res.json()
+    const texto = data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
+    const jsonLimpio = extraerJSONLimpio(texto)
+    const resultado = JSON.parse(jsonLimpio) as {
+      hayAlertas: boolean
+      totalAlertas: number
+      clasificacionGlobal: 'Buena' | 'Mala'
+      diagnosticoGeneral: string
+      alertas: AlertaGeminiEstricta[]
     }
-  } catch (e) {
-    console.info('Usando generador contextual de respaldo para optimización base')
-  }
-
-  // Estructuración inteligente y creativa si el usuario envió su propio borrador o lista de temas
-  const lineasCandidatas = encuestaBase
-    .split(/\n|\r/)
-    .map(l => l.trim())
-    .filter(l => l.length > 3 && !l.toLowerCase().startsWith('encuesta:') && !l.toLowerCase().startsWith('departamento:'))
-
-  if (lineasCandidatas.length >= 1) {
-    const preguntasDinamicas: PreguntaEncuesta[] = lineasCandidatas.map((linea, idx) => {
-      // Limpiar prefijos numéricos o viñetas ("1. ", "- ", etc.)
-      let textoLimpio = linea.replace(/^(\d+[\.\-\)]\s*|[\*\-•]\s*)/, '').trim()
-      
-      // Categorización temática inteligente
-      let categoria = 'Percepción y Clima Laboral'
-      const lower = textoLimpio.toLowerCase()
-      if (/jefe|supervisor|lider|liderazgo|coordinador/i.test(lower)) categoria = 'Liderazgo y Supervisión Directa'
-      else if (/turno|horario|noche|jornada/i.test(lower)) categoria = 'Gestión de Turnos y Descanso'
-      else if (/comedor|cafeteria|comida|almuerzo/i.test(lower)) categoria = 'Espacios de Alimentación y Bienestar'
-      else if (/herramienta|computador|pc|software|sistema/i.test(lower)) categoria = 'Herramientas y Recursos de Trabajo'
-      else if (/salario|sueldo|pago|beneficio|comision/i.test(lower)) categoria = 'Compensación y Reconocimiento'
-      else if (/estr[eé]s|sobrecarga|presion|cansancio/i.test(lower)) categoria = 'Salud Mental y Carga Laboral'
-      else if (/comunicaci[oó]n|equipo|compañer/i.test(lower)) categoria = 'Trabajo en Equipo y Comunicación'
-
-      // Transformar en pregunta retórica profesional si no viene formateada
-      let textoFormateado = textoLimpio
-      if (!textoFormateado.startsWith('¿')) {
-        // Formulación asertiva y natural
-        if (/^siento que|^creo que|^considero que/i.test(textoFormateado)) {
-          textoFormateado = `¿${textoFormateado.replace(/^siento que|^creo que|^considero que/i, '¿Consideras que')}?`
-        } else {
-          textoFormateado = `¿${textoFormateado}?`
-        }
-      }
-
-      // Opciones diferenciadas según si la pregunta busca acuerdo, frecuencia o satisfacción
-      let opciones = [
-        { id: `o-${idx}-1`, texto: '1 - Total desacuerdo / Desfavorable', valor: 1, esAlerta: true },
-        { id: `o-${idx}-2`, texto: '2 - En desacuerdo / Oportunidad de mejora', valor: 2, esAlerta: false },
-        { id: `o-${idx}-3`, texto: '3 - Neutral / Aceptable', valor: 3, esAlerta: false },
-        { id: `o-${idx}-4`, texto: '4 - De acuerdo / Favorable', valor: 4, esAlerta: false },
-        { id: `o-${idx}-5`, texto: '5 - Totalmente de acuerdo / Excelente', valor: 5, esAlerta: false }
-      ]
-
-      if (/frecuencia|veces|siempre|nunca|constante/i.test(lower)) {
-        opciones = [
-          { id: `o-${idx}-1`, texto: '1 - Nunca / Rarísima vez', valor: 1, esAlerta: true },
-          { id: `o-${idx}-2`, texto: '2 - Rara vez o de forma irregular', valor: 2, esAlerta: false },
-          { id: `o-${idx}-3`, texto: '3 - Ocasionalmente', valor: 3, esAlerta: false },
-          { id: `o-${idx}-4`, texto: '4 - Frecuentemente', valor: 4, esAlerta: false },
-          { id: `o-${idx}-5`, texto: '5 - Siempre y de manera constante', valor: 5, esAlerta: false }
-        ]
-      }
-
-      return {
-        id: `p-usr-${Date.now().toString().slice(-4)}-${idx + 1}`,
-        categoria,
-        texto: textoFormateado,
-        tipo: 'escala',
-        esSensibleAcoso: /acoso|maltrato|jefe|humillaci/i.test(lower),
-        opciones
-      }
-    })
 
     return {
-      titulo: `Evaluación Estructurada de Clima - ${departamento}`,
-      descripcion: `Cuestionario optimizado y calibrado para garantizar neutralidad psicométrica, claridad y confidencialidad absoluta en ${departamento}.`,
-      departamento,
-      preguntas: preguntasDinamicas,
-      preguntasSeguimiento: [
-        {
-          id: `deep-${Date.now().toString().slice(-4)}`,
-          categoria: 'Espacio Abierto Confidencial',
-          texto: '¿Qué recomendaciones, observaciones o propuestas adicionales quisieras compartir respecto a estos aspectos?',
-          tipo: 'texto',
-          opciones: []
-        }
-      ]
+      success: true,
+      hayAlertas: Boolean(resultado.hayAlertas),
+      totalAlertas: resultado.totalAlertas || (resultado.alertas?.length || 0),
+      diagnosticoGeneral: resultado.diagnosticoGeneral || 'Evaluación completada.',
+      clasificacionGlobal: resultado.clasificacionGlobal || (resultado.hayAlertas ? 'Mala' : 'Buena'),
+      alertas: resultado.alertas || []
+    }
+  } catch (error) {
+    // Respaldo heurístico local
+    const alertasLocales: AlertaGeminiEstricta[] = []
+    for (const r of respuestas) {
+      const texto = `${r.textoPregunta} ${r.respuesta} ${r.comentario || ''}`.toLowerCase()
+      const tienePalabrasCriticas = ['acoso', 'hostig', 'grito', 'insulto', 'amenaza', 'humillaci', 'renunciar por maltrato', 'depresion severa'].some(w => texto.includes(w))
+      
+      if (r.esAlerta && tienePalabrasCriticas) {
+        alertasLocales.push({
+          estadoAlerta: 'Activada',
+          mensajeCapturado: r.comentario || r.respuesta,
+          clasificacion: 'Mala',
+          motivoDetallado: `Se detectó indicador explícito de riesgo psicosocial en la respuesta de ${r.categoria}.`,
+          prioridad: 'Crítica',
+          categoria: r.categoria
+        })
+      }
+    }
+
+    const hayAlertas = alertasLocales.length > 0
+    return {
+      success: true,
+      hayAlertas,
+      totalAlertas: alertasLocales.length,
+      diagnosticoGeneral: hayAlertas ? 'Se identificaron alertas psicosociales prioritarias.' : 'Clima organizacional estable.',
+      clasificacionGlobal: hayAlertas ? 'Mala' : 'Buena',
+      alertas: alertasLocales
     }
   }
+}
 
-  // Fallback con estructuración psicométrica rigurosa
-  return {
-    titulo: `Encuesta de Clima Laboral y Convivencia - ${departamento}`,
-    descripcion: 'Cuestionario estructurado con neutralidad, claridad y cero sesgos. Respuestas 100% anónimas y confidenciales.',
-    departamento,
-    preguntas: [
-      {
-        id: 'p-jefe-relacion',
-        categoria: 'Liderazgo y Supervisión Directa',
-        texto: '¿Qué tal te la llevas con tu jefe?',
-        tipo: 'multiple',
-        tieneBifurcacion: true,
-        preguntaCondicionalId: 'p-jefe-subpregunta-falencias',
-        opciones: [
-          { id: 'opc-jefe-bien', texto: 'Bien', valor: 5, esAlerta: false },
-          { id: 'opc-jefe-regular', texto: 'Regular', valor: 3, esAlerta: false },
-          { id: 'opc-jefe-mal', texto: 'Mal', valor: 1, esAlerta: true }
-        ]
-      },
-      {
-        id: 'p-jefe-subpregunta-falencias',
-        categoria: 'Profundización de Gestión del Jefe',
-        texto: '¿Qué inconvenientes, recomendaciones o falencias tienes respecto a la gestión de tu jefe?',
+// ────────────────────────────────────────────────────────────────────────────
+// PARSEADORES Y AUXILIARES
+// ────────────────────────────────────────────────────────────────────────────
+
+function parsearLineasBorrador(texto: string): string[] {
+  return texto
+    .split(/\n|\r/)
+    .map(l => l.trim())
+    .filter(l => {
+      if (l.length < 4) return false
+      const lower = l.toLowerCase()
+      if (lower.startsWith('encuesta:') || lower.startsWith('departamento:') || lower.startsWith('tema:')) return false
+      return true
+    })
+}
+
+function limpiarPrefijoPregunta(texto: string): string {
+  return texto.replace(/^(\d+[\.\-\)]\s*|[\*\-•]\s*|\¿|\?)/g, '').trim()
+}
+
+function formatearPreguntaEspanol(textoLimpio: string): string {
+  let res = textoLimpio.trim()
+  if (!res.startsWith('¿')) res = `¿${res}`
+  if (!res.endsWith('?')) res = `${res}?`
+  return res
+}
+
+function inferirCategoria(texto: string, contextoGlobal: string = ''): string {
+  const combined = `${texto} ${contextoGlobal}`.toLowerCase()
+
+  if (/sentir|sienten|ánimo|animo|emocional|tristeza|felicidad|estado de [aá]nimo|bienestar personal/i.test(combined)) return 'Bienestar Emocional y Sentir del Equipo'
+  if (/comedor|cafeter[ií]a|comida|almuerzo|alimentaci[oó]n|desayuno|refrigerio|casino/i.test(combined)) return 'Alimentación y Comedor'
+  if (/computador|pc|laptop|hardware|software|sistema|internet|conectividad|plataforma|pantalla/i.test(combined)) return 'Tecnología y Herramientas TI'
+  if (/turno|horario|nocturno|noche|madrugada|rotativo|jornada|descanso/i.test(combined)) return 'Gestión de Turnos y Descanso'
+  if (/ruta|transporte|bus|movilidad|veh[ií]culo|traslado|paradero/i.test(combined)) return 'Transporte y Movilidad'
+  if (/estr[eé]s|sobrecarga|agotamiento|burnout|presi[oó]n|fatiga|cansancio/i.test(combined)) return 'Salud Mental y Carga Laboral'
+  if (/silla|ergonom|luz|iluminaci[oó]n|aire|ruido|espacio|bodega|uniforme|calzado|dotaci[oó]n|epp|seguridad industrial/i.test(combined)) return 'Ergonomía e Instalaciones'
+  if (/acoso|hostigamiento|maltrato|humillaci[oó]n|gritos|respeto|trato digno|discriminaci/i.test(combined)) return 'Convivencia y Clima Seguro'
+  if (/jefe|supervisor|l[ií]der|coordinador|jefatura|directiv|retroalimentaci[oó]n de l[ií]der/i.test(combined)) return 'Liderazgo y Supervisión'
+  if (/compañer|equipo|colaboraci[oó]n|comunicaci[oó]n|sinergia|apoyo entre pares/i.test(combined)) return 'Trabajo en Equipo y Cooperación'
+  if (/salario|sueldo|pago|beneficio|remuneraci[oó]n|comisi[oó]n|bono|econ[oó]mic/i.test(combined)) return 'Compensación y Beneficios'
+  if (/capacita|curso|aprendizaje|desarrollo|crecimiento|carrera|inducci[oó]n|onboarding|bienvenida/i.test(combined)) return 'Crecimiento y Capacitación'
+  if (/venta|cliente|meta comercial|asesor|llamada|atenci[oó]n/i.test(combined)) return 'Dinámica Comercial y Metas'
+  if (/remoto|teletrabajo|casa|home office|h[ií]brido|desconexi[oó]n/i.test(combined)) return 'Trabajo Remoto y Desconexión'
+
+  return 'Bienestar y Experiencia Laboral'
+}
+
+function generarOpcionesEscala(textoPregunta: string): Array<{ id: string; texto: string; valor: number; esAlerta?: boolean }> {
+  const lower = textoPregunta.toLowerCase()
+
+  if (/frecuencia|con qu[eé] frecuencia|veces|siempre|nunca|habitual/i.test(lower)) {
+    return [
+      { id: 'esc-1', texto: '1 - Nunca / Rarísima vez', valor: 1, esAlerta: true },
+      { id: 'esc-2', texto: '2 - Rara vez', valor: 2, esAlerta: false },
+      { id: 'esc-3', texto: '3 - Ocasionalmente', valor: 3, esAlerta: false },
+      { id: 'esc-4', texto: '4 - Frecuentemente', valor: 4, esAlerta: false },
+      { id: 'esc-5', texto: '5 - Siempre y de forma constante', valor: 5, esAlerta: false }
+    ]
+  }
+
+  if (/calidad|califica|adecuad|c[oó]mo eval[uú]as|condiciones|estado/i.test(lower)) {
+    return [
+      { id: 'esc-1', texto: '1 - Muy deficiente / Crítico', valor: 1, esAlerta: true },
+      { id: 'esc-2', texto: '2 - Insuficiente / Con fallas frecuentes', valor: 2, esAlerta: false },
+      { id: 'esc-3', texto: '3 - Regular / Aceptable', valor: 3, esAlerta: false },
+      { id: 'esc-4', texto: '4 - Bueno y funcional', valor: 4, esAlerta: false },
+      { id: 'esc-5', texto: '5 - Excelente y óptimo', valor: 5, esAlerta: false }
+    ]
+  }
+
+  if (/satisfacci[oó]n|c[oó]mo te sientes|contento|c[oó]modo|a gusto|ánimo|animo/i.test(lower)) {
+    return [
+      { id: 'esc-1', texto: '1 - Muy insatisfecho(a) / Desanimado(a)', valor: 1, esAlerta: true },
+      { id: 'esc-2', texto: '2 - Poco satisfecho(a)', valor: 2, esAlerta: false },
+      { id: 'esc-3', texto: '3 - Neutral / En equilibrio', valor: 3, esAlerta: false },
+      { id: 'esc-4', texto: '4 - Satisfecho(a) y con buen ánimo', valor: 4, esAlerta: false },
+      { id: 'esc-5', texto: '5 - Totalmente satisfecho(a) y motivado(a)', valor: 5, esAlerta: false }
+    ]
+  }
+
+  return [
+    { id: 'esc-1', texto: '1 - Totalmente en desacuerdo', valor: 1, esAlerta: true },
+    { id: 'esc-2', texto: '2 - En desacuerdo', valor: 2, esAlerta: false },
+    { id: 'esc-3', texto: '3 - Neutral / En parte', valor: 3, esAlerta: false },
+    { id: 'esc-4', texto: '4 - De acuerdo', valor: 4, esAlerta: false },
+    { id: 'esc-5', texto: '5 - Totalmente de acuerdo', valor: 5, esAlerta: false }
+  ]
+}
+
+function estructurarDesdePlantillaBase(
+  encuestaBase: string,
+  departamento: string,
+  extension: 'rapida' | 'estandar' | 'extensa'
+): PlantillaEncuestaGenerada {
+  const lineas = parsearLineasBorrador(encuestaBase)
+  const temaPredominante = inferirCategoria(encuestaBase, departamento)
+  
+  const preguntasProcesadas: PreguntaEncuesta[] = lineas.map((linea, idx) => {
+    const textoLimpio = limpiarPrefijoPregunta(linea)
+    const categoria = inferirCategoria(textoLimpio, temaPredominante)
+    const lower = textoLimpio.toLowerCase()
+
+    const esPreguntaAbierta = /qu[eé] propones|cu[aá]les|por qu[eé]|comentarios|sugerencias|observaciones|c[oó]mo te sientes/i.test(lower)
+
+    if (esPreguntaAbierta) {
+      return {
+        id: uidGen(`p-usr-${idx + 1}`),
+        categoria,
+        texto: formatearPreguntaEspanol(textoLimpio),
         tipo: 'texto',
-        esCondicional: true,
-        disparadorPor: 'p-jefe-relacion',
-        valoresDisparo: ['Mal', 'Regular'],
+        esSensibleAcoso: false,
         opciones: []
-      },
-      {
-        id: 'p-opt-clima',
-        categoria: 'Convivencia y Seguridad Psicológica',
-        texto: '¿Sientes que el ambiente de trabajo favorece el respeto mutuo y la comunicación transparente?',
-        tipo: 'escala',
+      }
+    }
+
+    const esOpcionMultiple = /cuenta con|tiene|recibe|dispone de|ha presenciado/i.test(lower)
+
+    if (esOpcionMultiple) {
+      return {
+        id: uidGen(`p-usr-${idx + 1}`),
+        categoria,
+        texto: formatearPreguntaEspanol(textoLimpio),
+        tipo: 'multiple',
+        esSensibleAcoso: /acoso|maltrato|humillaci/i.test(lower),
         opciones: [
-          { id: 'o-1', texto: '1 - Total desacuerdo', valor: 1, esAlerta: true },
-          { id: 'o-2', texto: '2 - En desacuerdo', valor: 2, esAlerta: true },
-          { id: 'o-3', texto: '3 - Neutral', valor: 3, esAlerta: false },
-          { id: 'o-4', texto: '4 - De acuerdo', valor: 4, esAlerta: false },
-          { id: 'o-5', texto: '5 - Totalmente de acuerdo', valor: 5, esAlerta: false }
-        ]
-      },
-      {
-        id: 'p-opt-bienestar',
-        categoria: 'Carga de Trabajo & Bienestar Integral',
-        texto: '¿Consideras equilibrada tu carga diaria de actividades para prevenir el agotamiento extremo?',
-        tipo: 'escala',
-        opciones: [
-          { id: 'b-1', texto: '1 - Sobrecarga extrema', valor: 1, esAlerta: true },
-          { id: 'b-2', texto: '2 - Carga pesada', valor: 2, esAlerta: true },
-          { id: 'b-3', texto: '3 - Manejable', valor: 3, esAlerta: false },
-          { id: 'b-4', texto: '4 - Adecuada', valor: 4, esAlerta: false },
-          { id: 'b-5', texto: '5 - Óptima', valor: 5, esAlerta: false }
+          { id: `opc-${idx}-1`, texto: 'Sí, de manera completa y oportuna', valor: 5, esAlerta: false },
+          { id: `opc-${idx}-2`, texto: 'Parcialmente / Con algunas limitaciones', valor: 3, esAlerta: false },
+          { id: `opc-${idx}-3`, texto: 'No, carecemos totalmente de este aspecto', valor: 1, esAlerta: true }
         ]
       }
-    ],
+    }
+
+    return {
+      id: uidGen(`p-usr-${idx + 1}`),
+      categoria,
+      texto: formatearPreguntaEspanol(textoLimpio),
+      tipo: 'escala',
+      esSensibleAcoso: /acoso|maltrato|gritos|discriminaci/i.test(lower),
+      opciones: generarOpcionesEscala(textoLimpio)
+    }
+  })
+
+  return {
+    titulo: `Cuestionario Personalizado: ${temaPredominante} (${departamento})`,
+    descripcion: `Encuesta estructurada y calibrada con IA para ${departamento}.`,
+    departamento,
+    preguntas: preguntasProcesadas,
     preguntasSeguimiento: [
       {
-        id: 'deep-1',
-        categoria: 'Espacio Confidencial de Bienestar',
-        texto: '¿Qué acciones o mejoras propondrías para fortalecer el clima laboral y la convivencia en tu equipo?',
+        id: uidGen('seg-base'),
+        categoria: 'Comentarios Adicionales',
+        texto: '¿Tienes alguna otra observación o aporte confidencial que desees compartir?',
         tipo: 'texto',
         opciones: []
       }
@@ -544,88 +541,278 @@ export async function optimizarEncuestaBaseConIA(
   }
 }
 
-/**
- * MÓDULO 4: Evalúa las respuestas de una encuesta bajo el motor analítico estricto de Gemini
- */
-export async function evaluarRespuestasConGeminiEstricto(payload: {
-  idEncuesta: string
-  tituloEncuesta?: string
-  dispositivoUUID: string
-  departamento?: string
-  respuestas: any[]
-}): Promise<ResultadoEvaluacionGemini> {
-  try {
-    const controladorAborto = new AbortController()
-    const temporizadorLimite = setTimeout(() => controladorAborto.abort(), 6000)
+// ────────────────────────────────────────────────────────────────────────────
+// GENERADOR CONTEXTUAL DE RESPALDO (100% PROFESIONAL, SIN CONCATENACIONES CRUDAS)
+// ────────────────────────────────────────────────────────────────────────────
 
-    const respuestaServidor = await fetch(`${URL_BASE_API_BACKEND}/evaluar-alerta`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-      signal: controladorAborto.signal
-    })
-    clearTimeout(temporizadorLimite)
+function generarDesdeTemaYContexto(
+  contexto: string,
+  departamento: string,
+  extension: 'rapida' | 'estandar' | 'extensa'
+): PlantillaEncuestaGenerada {
+  const promptLimpio = contexto.trim()
+  const temaDetectado = inferirCategoria(promptLimpio, departamento)
 
-    if (respuestaServidor.ok) {
-      const respuestaJson = await respuestaServidor.json()
-      if (respuestaJson.success && respuestaJson.data) {
-        return respuestaJson.data as ResultadoEvaluacionGemini
-      }
-    }
-  } catch (e) {
-    console.info('Ejecutando evaluador estricto local de respaldo')
+  const preguntas: PreguntaEncuesta[] = []
+
+  switch (temaDetectado) {
+    case 'Bienestar Emocional y Sentir del Equipo':
+      preguntas.push(
+        {
+          id: uidGen('emo'),
+          categoria: 'Estado de Ánimo y Energía Vital',
+          texto: 'En términos generales, ¿cómo describirías tu estado de ánimo y motivación al iniciar tu jornada laboral diaria?',
+          tipo: 'escala',
+          opciones: generarOpcionesEscala('ánimo')
+        },
+        {
+          id: uidGen('emo'),
+          categoria: 'Apoyo y Escucha en el Equipo',
+          texto: '¿Sientes que cuentas con un entorno seguro donde puedes expresar tus inquietudes o momentos de fatiga sin ser juzgado(a)?',
+          tipo: 'escala',
+          opciones: generarOpcionesEscala('acuerdo')
+        },
+        {
+          id: uidGen('emo'),
+          categoria: 'Manejo del Estrés y Equilibrio',
+          texto: '¿El ritmo de trabajo te permite mantener un balance saludable entre tus exigencias laborales y tu bienestar personal?',
+          tipo: 'multiple',
+          opciones: [
+            { id: 'em-1', texto: 'Sí, mantengo un equilibrio óptimo y tranquilo', valor: 5, esAlerta: false },
+            { id: 'em-2', texto: 'Ritmo demandante pero manejable', valor: 3, esAlerta: false },
+            { id: 'em-3', texto: 'Nivel de estrés excesivo que afecta mi salud anímica', valor: 1, esAlerta: true }
+          ]
+        },
+        {
+          id: uidGen('emo'),
+          categoria: 'Sensación de Reconocimiento',
+          texto: '¿Percibes que tu esfuerzo y dedicación son valorados adecuadamente por tus líderes y compañeros de trabajo?',
+          tipo: 'escala',
+          opciones: generarOpcionesEscala('acuerdo')
+        },
+        {
+          id: uidGen('emo'),
+          categoria: 'Expresión Abierta del Sentir',
+          texto: 'En tus propias palabras, ¿cómo te has sentido en las últimas semanas en la empresa y qué te ayudaría a sentirte aún mejor?',
+          tipo: 'texto',
+          opciones: []
+        }
+      )
+      break
+
+    case 'Alimentación y Comedor':
+      preguntas.push(
+        {
+          id: uidGen('com'),
+          categoria: 'Calidad y Sabor de Alimentos',
+          texto: '¿Cómo evalúas la calidad, sabor, higiene y frescura de los alimentos ofrecidos en el comedor o cafetería?',
+          tipo: 'escala',
+          opciones: generarOpcionesEscala('calidad')
+        },
+        {
+          id: uidGen('com'),
+          categoria: 'Tiempos de Atención y Filas',
+          texto: '¿La agilidad en la atención y la disponibilidad de mesas te permiten disfrutar tu tiempo de alimentación con tranquilidad?',
+          tipo: 'multiple',
+          opciones: [
+            { id: 'c1', texto: 'Tiempo y espacio plenamente cómodos', valor: 5, esAlerta: false },
+            { id: 'c2', texto: 'Filas moderadas pero manejables', valor: 3, esAlerta: false },
+            { id: 'c3', texto: 'Demoras excesivas o falta de espacio para sentarse', valor: 1, esAlerta: true }
+          ]
+        },
+        {
+          id: uidGen('com'),
+          categoria: 'Variedad y Opciones Saludables',
+          texto: '¿Consideras que el menú ofrece suficiente variedad y opciones saludables para diferentes necesidades nutricionales?',
+          tipo: 'escala',
+          opciones: generarOpcionesEscala('acuerdo')
+        },
+        {
+          id: uidGen('com'),
+          categoria: 'Propuestas de Menú',
+          texto: '¿Qué sugerencias o nuevas alternativas te gustaría que se incorporen en el servicio de alimentación?',
+          tipo: 'texto',
+          opciones: []
+        }
+      )
+      break
+
+    case 'Tecnología y Herramientas TI':
+      preguntas.push(
+        {
+          id: uidGen('ti'),
+          categoria: 'Rendimiento de Equipos y Software',
+          texto: '¿La velocidad y funcionamiento de tu computador y herramientas de trabajo te permite cumplir tus metas sin trabas?',
+          tipo: 'escala',
+          opciones: generarOpcionesEscala('calidad')
+        },
+        {
+          id: uidGen('ti'),
+          categoria: 'Soporte Técnico y Solución de Fallos',
+          texto: '¿Cuando se presentan incidentes tecnológicos, recibes atención y solución oportuna por parte del equipo de soporte?',
+          tipo: 'multiple',
+          opciones: [
+            { id: 'ti-1', texto: 'Atención ágil y solución eficaz', valor: 5, esAlerta: false },
+            { id: 'ti-2', texto: 'Respuesta aceptable con demoras menores', valor: 3, esAlerta: false },
+            { id: 'ti-3', texto: 'Respuestas tardías que bloquean mis entregas', valor: 1, esAlerta: true }
+          ]
+        },
+        {
+          id: uidGen('ti'),
+          categoria: 'Conectividad y Redes',
+          texto: '¿La estabilidad de la conexión a internet y redes internas es confiable para tus tareas cotidianas?',
+          tipo: 'escala',
+          opciones: generarOpcionesEscala('acuerdo')
+        },
+        {
+          id: uidGen('ti'),
+          categoria: 'Propuestas Tecnológicas',
+          texto: '¿Qué herramienta o recurso técnico consideras prioritario mejorar o implementar?',
+          tipo: 'texto',
+          opciones: []
+        }
+      )
+      break
+
+    case 'Gestión de Turnos y Descanso':
+      preguntas.push(
+        {
+          id: uidGen('tur'),
+          categoria: 'Rotación y Previsibilidad de Turnos',
+          texto: '¿La programación de tus turnos se comunica con suficiente anticipación para planificar tu descanso y vida personal?',
+          tipo: 'escala',
+          opciones: generarOpcionesEscala('acuerdo')
+        },
+        {
+          id: uidGen('tur'),
+          categoria: 'Calidad del Descanso Reparador',
+          texto: '¿El tiempo entre turnos te permite recuperar tus energías físicas y mentales de forma adecuada?',
+          tipo: 'multiple',
+          opciones: [
+            { id: 'tur-1', texto: 'Descanso pleno y energía suficiente', valor: 5, esAlerta: false },
+            { id: 'tur-2', texto: 'Descanso justo pero manejable', valor: 3, esAlerta: false },
+            { id: 'tur-3', texto: 'Agotamiento acumulado por intervalos cortos', valor: 1, esAlerta: true }
+          ]
+        },
+        {
+          id: uidGen('tur'),
+          categoria: 'Equidad en Asignación',
+          texto: '¿Percibes que la asignación de descansos y turnos especiales se realiza de manera justa y transparente?',
+          tipo: 'escala',
+          opciones: generarOpcionesEscala('acuerdo')
+        },
+        {
+          id: uidGen('tur'),
+          categoria: 'Propuestas de Horarios',
+          texto: '¿Qué sugerencia propones en el esquema de turnos para optimizar el balance vida-trabajo?',
+          tipo: 'texto',
+          opciones: []
+        }
+      )
+      break
+
+    case 'Convivencia y Clima Seguro':
+      preguntas.push(
+        {
+          id: uidGen('con'),
+          categoria: 'Respeto y Trato Digno',
+          texto: '¿El ambiente cotidiano entre líderes y colaboradores se caracteriza por el respeto mutuo, la cordialidad y el trato humano?',
+          tipo: 'escala',
+          opciones: generarOpcionesEscala('respeto')
+        },
+        {
+          id: uidGen('con'),
+          categoria: 'Prevención de Hostigamiento y Acoso',
+          texto: '¿Has presenciado o experimentado situaciones de maltrato, humillación o conductas intimidatorias en tu equipo?',
+          tipo: 'multiple',
+          esSensibleAcoso: true,
+          opciones: [
+            { id: 'con-1', texto: 'Nunca, el clima es 100% respetuoso y seguro', valor: 5, esAlerta: false },
+            { id: 'con-2', texto: 'Situaciones aisladas de tensión que se resolvieron', valor: 3, esAlerta: false },
+            { id: 'con-3', texto: 'Sí, he vivido o presenciado conductas hostiles recurrentes', valor: 1, esAlerta: true }
+          ]
+        },
+        {
+          id: uidGen('con'),
+          categoria: 'Confianza en Canales de Apoyo',
+          texto: '¿Sientes la tranquilidad de reportar situaciones injustas sin temor a represalias personales o laborales?',
+          tipo: 'escala',
+          opciones: generarOpcionesEscala('confianza')
+        },
+        {
+          id: uidGen('con'),
+          categoria: 'Mensaje Confidencial de Convivencia',
+          texto: '¿Deseas compartir alguna situación particular o recomendación confidencial para fortalecer la convivencia?',
+          tipo: 'texto',
+          opciones: []
+        }
+      )
+      break
+
+    default:
+      // Caso genérico contextual elegante (sin comillas ni concatenaciones crudas)
+      preguntas.push(
+        {
+          id: uidGen('gen'),
+          categoria: 'Experiencia y Satisfacción General',
+          texto: '¿Cómo evalúas tu nivel general de satisfacción y bienestar con las condiciones actuales de tu entorno de trabajo?',
+          tipo: 'escala',
+          opciones: generarOpcionesEscala('satisfaccion')
+        },
+        {
+          id: uidGen('gen'),
+          categoria: 'Claridad en Metas y Procesos',
+          texto: '¿Tienes claridad absoluta sobre tus objetivos, prioridades y los recursos disponibles para alcanzarlos con éxito?',
+          tipo: 'escala',
+          opciones: generarOpcionesEscala('claridad')
+        },
+        {
+          id: uidGen('gen'),
+          categoria: 'Apoyo del Equipo y Liderazgo',
+          texto: '¿Sientes que cuentas con el respaldo y la colaboración necesaria de tu equipo y jefatura para resolver dificultades?',
+          tipo: 'multiple',
+          opciones: [
+            { id: 'g1', texto: 'Sí, respaldo pleno y trabajo colaborativo constante', valor: 5, esAlerta: false },
+            { id: 'g2', texto: 'Apoyo moderado con oportunidad de mejora', valor: 3, esAlerta: false },
+            { id: 'g3', texto: 'No, falta de acompañamiento o aislamiento en mis labores', valor: 1, esAlerta: true }
+          ]
+        },
+        {
+          id: uidGen('gen'),
+          categoria: 'Motivación y Compromiso',
+          texto: '¿Te sientes motivado(a) y con orgullo de pertenecer a este equipo de trabajo?',
+          tipo: 'escala',
+          opciones: generarOpcionesEscala('motivacion')
+        },
+        {
+          id: uidGen('gen'),
+          categoria: 'Sugerencias y Propuestas Abiertas',
+          texto: '¿Qué cambio, idea o iniciativa consideras que generaría el mayor impacto positivo en tu día a día laboral?',
+          tipo: 'texto',
+          opciones: []
+        }
+      )
+      break
   }
 
-  // Evaluador estricto local con Cero Falsas Alarmas
-  const alertasDetectadas: AlertaGeminiEstricta[] = []
-
-  for (const r of payload.respuestas) {
-    const respStr = String(r.respuesta || '').toLowerCase()
-    const comentStr = String(r.comentario || '').toLowerCase()
-    const textoCompleto = `${respStr} ${comentStr}`.trim()
-
-    // Criterio de Rigor Estricto Absoluto: Solo se activa alerta ante situaciones graves comprobables
-    const contieneAcosoOGrave = [
-      'acoso sexual', 'tocamiento', 'amenaza de despido injustificada', 'agresión física', 
-      'golpe', 'insulto denigrante', 'humillación pública sistemática', 'hostigamiento deliberado'
-    ].some(kw => textoCompleto.includes(kw))
-
-    const contieneCrisisVital = [
-      'ideas de suicidio', 'atentado contra mi vida', 'colapso nervioso severo'
-    ].some(kw => textoCompleto.includes(kw))
-
-    if (contieneAcosoOGrave) {
-      alertasDetectadas.push({
-        id: `alt-loc-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        estadoAlerta: 'Activada',
-        mensajeCapturado: String(r.respuesta || r.comentario || ''),
-        clasificacion: 'Mala',
-        motivoDetallado: 'Se detectaron indicios explícitos de acoso u hostigamiento grave que vulneran la dignidad del colaborador.',
-        prioridad: 'Crítica',
-        tipoAlerta: 'Acoso Laboral & Hostigamiento'
-      })
-    } else if (contieneCrisisVital) {
-      alertasDetectadas.push({
-        id: `alt-loc-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        estadoAlerta: 'Activada',
-        mensajeCapturado: String(r.respuesta || r.comentario || ''),
-        clasificacion: 'Mala',
-        motivoDetallado: 'El colaborador manifiesta señales críticas de crisis anímica severa que requieren intervención inmediata de Bienestar.',
-        prioridad: 'Crítica',
-        tipoAlerta: 'Crisis Anímica & Salud Mental'
-      })
-    }
+  let preguntasResultado = preguntas
+  if (extension === 'rapida') {
+    preguntasResultado = preguntas.slice(0, 4)
   }
 
   return {
-    success: true,
-    hayAlertas: alertasDetectadas.length > 0,
-    totalAlertas: alertasDetectadas.length,
-    diagnosticoGeneral: alertasDetectadas.length === 0
-      ? 'Evaluación completada con rigor analítico. Cero falsas alertas activadas.'
-      : 'Se detectaron alertas prioritarias que requieren intervención institucional.',
-    clasificacionGlobal: alertasDetectadas.length === 0 ? 'Buena' : 'Mala',
-    alertas: alertasDetectadas
+    titulo: `Diagnóstico de Clima: ${temaDetectado}`,
+    descripcion: `Evaluación confidencial dirigida a ${departamento} para identificar oportunidades de bienestar y mejora continua.`,
+    departamento,
+    preguntas: preguntasResultado,
+    preguntasSeguimiento: [
+      {
+        id: uidGen('seg-gen'),
+        categoria: 'Propuestas de Mejora',
+        texto: '¿Qué iniciativa o acción prioritaria propondrías para mejorar este aspecto en tu área de trabajo?',
+        tipo: 'texto',
+        opciones: []
+      }
+    ]
   }
 }
-

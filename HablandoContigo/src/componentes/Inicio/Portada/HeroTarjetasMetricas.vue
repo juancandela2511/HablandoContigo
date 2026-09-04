@@ -53,7 +53,7 @@ import { ShieldCheck, Cpu } from 'lucide-vue-next'
               99.4%
             </span>
             <span class="text-xs font-semibold text-slate-700 dark:text-neutral-300">
-              Precisión Analítica IA
+              Precisión Analítica 
             </span>
             <span class="text-[11px] text-slate-500 dark:text-neutral-400 leading-snug">
               Detección estricta de acoso y cero falsas alarmas

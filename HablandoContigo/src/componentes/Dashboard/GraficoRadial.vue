@@ -31,10 +31,12 @@ const props = withDefaults(
     dimensiones: DimensionRadial[]
     metaGlobal?: number
     mostrarBotonConfig?: boolean
+    anguloInclinacion?: number
   }>(),
   {
     metaGlobal: 85,
-    mostrarBotonConfig: true
+    mostrarBotonConfig: true,
+    anguloInclinacion: 0
   }
 )
 
@@ -49,14 +51,28 @@ const puntoCentro = anchoLienzo / 2
 const radioMaximo = 115
 
 /**
+ * Calcula el ángulo en radianes de cada eje considerando la inclinación global y personalizada
+ */
+const angulosPorEje = computed(() => {
+  const totalEjes = props.dimensiones?.length || 6
+  const rotacionGlobalRad = ((props.anguloInclinacion || 0) * Math.PI) / 180
+
+  return (props.dimensiones || []).map((dim, indice) => {
+    const anguloBase = (Math.PI * 2 / totalEjes) * indice - Math.PI / 2
+    const offsetInclinacionRad = ((dim.inclinacion || 0) * Math.PI) / 180
+    return anguloBase + offsetInclinacionRad + rotacionGlobalRad
+  })
+})
+
+/**
  * Calcula los vértices del polígono radial según el valor de cada dimensión (0 a 100)
+ * 100% proporcional a las respuestas de las encuestas
  */
 const puntosPoligonoDatos = computed(() => {
   if (!props.dimensiones || props.dimensiones.length === 0) return ''
-  const totalEjes = props.dimensiones.length
   
   return props.dimensiones.map((dim, indice) => {
-    const angulo = (Math.PI * 2 / totalEjes) * indice - Math.PI / 2
+    const angulo = angulosPorEje.value[indice] ?? ((Math.PI * 2 / props.dimensiones.length) * indice - Math.PI / 2)
     const distancia = (Math.min(Math.max(dim.valor, 0), 100) / 100) * radioMaximo
     const x = puntoCentro + distancia * Math.cos(angulo)
     const y = puntoCentro + distancia * Math.sin(angulo)
@@ -72,7 +88,7 @@ const puntosPoligonoMeta = computed(() => {
   const factorMeta = (props.metaGlobal || 85) / 100
   
   return Array.from({ length: totalEjes }).map((_, indice) => {
-    const angulo = (Math.PI * 2 / totalEjes) * indice - Math.PI / 2
+    const angulo = angulosPorEje.value[indice] ?? ((Math.PI * 2 / totalEjes) * indice - Math.PI / 2)
     const distancia = factorMeta * radioMaximo
     const x = puntoCentro + distancia * Math.cos(angulo)
     const y = puntoCentro + distancia * Math.sin(angulo)
@@ -81,25 +97,40 @@ const puntosPoligonoMeta = computed(() => {
 })
 
 /**
+ * Vértices para los anillos concéntricos de referencia (20%, 40%, 60%, 80%, 100%)
+ */
+const puntosAnillo = (nivel: number) => {
+  const totalEjes = props.dimensiones?.length || 6
+  return Array.from({ length: totalEjes }).map((_, indice) => {
+    const angulo = angulosPorEje.value[indice] ?? ((Math.PI * 2 / totalEjes) * indice - Math.PI / 2)
+    const distancia = nivel * radioMaximo
+    const x = puntoCentro + distancia * Math.cos(angulo)
+    const y = puntoCentro + distancia * Math.sin(angulo)
+    return `${x},${y}`
+  }).join(' ')
+}
+
+/**
  * Coordenadas espaciales para las líneas guía y etiquetas de cada dimensión
  */
 const posicionesEjesCalculadas = computed(() => {
   const totalEjes = props.dimensiones?.length || 6
   
   return (props.dimensiones || []).map((dim, indice) => {
-    const angulo = (Math.PI * 2 / totalEjes) * indice - Math.PI / 2
+    const angulo = angulosPorEje.value[indice] ?? ((Math.PI * 2 / totalEjes) * indice - Math.PI / 2)
     const lineaX = puntoCentro + radioMaximo * Math.cos(angulo)
     const lineaY = puntoCentro + radioMaximo * Math.sin(angulo)
-    const etiquetaX = puntoCentro + (radioMaximo + 26) * Math.cos(angulo)
+    const etiquetaX = puntoCentro + (radioMaximo + 28) * Math.cos(angulo)
     const etiquetaY = puntoCentro + (radioMaximo + 16) * Math.sin(angulo)
     
-    // Posición del nodo de dato
+    // Posición del nodo de dato proporcional
     const distanciaDato = (Math.min(Math.max(dim.valor, 0), 100) / 100) * radioMaximo
     const datoX = puntoCentro + distanciaDato * Math.cos(angulo)
     const datoY = puntoCentro + distanciaDato * Math.sin(angulo)
 
     return {
       dim,
+      angulo,
       lineaX,
       lineaY,
       etiquetaX,
@@ -115,19 +146,31 @@ const posicionesEjesCalculadas = computed(() => {
   <div 
     @dblclick="$emit('abrirConfiguracion')"
     class="flex flex-col items-center justify-center relative select-none w-full cursor-pointer group"
-    title="Doble clic para desbloquear y configurar dimensiones e inclinaciones del radar"
+    title="Doble clic para configurar y crear inclinaciones o ejes del radar"
   >
-    <!-- Botón de Configuración Rápida de Dimensiones -->
-    <div v-if="mostrarBotonConfig" class="w-full flex justify-end pb-1">
-      <button
-        type="button"
-        @click="$emit('abrirConfiguracion')"
-        title="Doble clic o clic para editar o eliminar dimensiones e inclinaciones"
-        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-50 dark:bg-slate-800 hover:bg-sky-100 dark:hover:bg-slate-700 text-sky-700 dark:text-sky-300 text-[11px] font-semibold transition-all cursor-pointer border border-sky-200 dark:border-slate-700 shadow-sm"
-      >
-        <Sliders class="w-3 h-3 text-sky-500" />
-        <span>Configurar Ejes ({{ dimensiones.length }}) · Doble clic</span>
-      </button>
+    <!-- Botón de Configuración Rápida de Dimensiones e Inclinaciones -->
+    <div v-if="mostrarBotonConfig" class="w-full flex items-center justify-between pb-1 text-xs">
+      <span class="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1 font-mono">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
+        Proporcional a respuestas reales
+      </span>
+      <div class="flex items-center gap-1.5">
+        <span 
+          v-if="anguloInclinacion !== undefined && anguloInclinacion !== 0"
+          class="px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/70 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-[10px] font-mono font-bold"
+        >
+          {{ anguloInclinacion }}° Inclinación
+        </span>
+        <button
+          type="button"
+          @click="$emit('abrirConfiguracion')"
+          title="Clic para crear o editar inclinaciones y ejes"
+          class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-50 dark:bg-slate-800 hover:bg-sky-100 dark:hover:bg-slate-700 text-sky-700 dark:text-sky-300 text-[11px] font-semibold transition-all cursor-pointer border border-sky-200 dark:border-slate-700 shadow-sm"
+        >
+          <Sliders class="w-3 h-3 text-sky-500" />
+          <span>Configurar Inclinaciones ({{ dimensiones.length }})</span>
+        </button>
+      </div>
     </div>
 
     <svg :viewBox="`0 0 ${anchoLienzo} ${altoLienzo}`" class="w-full max-w-[320px] h-auto overflow-visible">
@@ -135,11 +178,7 @@ const posicionesEjesCalculadas = computed(() => {
       <polygon
         v-for="nivel in [0.2, 0.4, 0.6, 0.8, 1.0]"
         :key="nivel"
-        :points="Array.from({ length: dimensiones?.length || 6 }).map((_, i) => {
-          const ang = (Math.PI * 2 / (dimensiones?.length || 6)) * i - Math.PI / 2
-          const d = nivel * radioMaximo
-          return `${puntoCentro + d * Math.cos(ang)},${puntoCentro + d * Math.sin(ang)}`
-        }).join(' ')"
+        :points="puntosAnillo(nivel)"
         fill="none"
         stroke="currentColor"
         class="text-slate-200 dark:text-slate-800/80"

@@ -41,7 +41,7 @@ const emit = defineEmits<{
         ></span>
       </div>
       <span class="text-xs font-bold text-white tracking-wide">
-        Alertas & Notificaciones
+        Actividad & Notificaciones
       </span>
       <span
         v-if="noLeidas > 0"

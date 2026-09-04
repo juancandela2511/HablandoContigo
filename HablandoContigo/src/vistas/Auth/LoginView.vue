@@ -12,7 +12,7 @@
 -->
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '@/Almacenes/useAuth'
 import { useCuentas, type CuentaAdmin } from '@/Almacenes/useCuentas'
@@ -27,7 +27,6 @@ import {
 } from 'lucide-vue-next'
 
 import FormularioLogin from '@/componentes/Autenticacion/FormularioLogin.vue'
-import SelectorCuentasDemo from '@/componentes/Autenticacion/SelectorCuentasDemo.vue'
 import EstadoConexionSupabase from '@/componentes/Autenticacion/EstadoConexionSupabase.vue'
 import ModalVerificacionCorreo from '@/componentes/Admin/ModalVerificacionCorreo.vue'
 import ModalCambioClavePrimerIngreso from '@/componentes/Autenticacion/ModalCambioClavePrimerIngreso.vue'
@@ -36,7 +35,6 @@ const route = useRoute()
 const router = useRouter()
 const { 
   iniciarSesion, 
-  accesoRapidoAdmin, 
   cargando, 
   errorAutenticacion, 
   cuentaPendienteVerificacion, 
@@ -48,7 +46,6 @@ const {
 const { cuentas, verificarCuentaPorCorreo, sembrarCuentasInicialesEnSupabase, cargandoCuentas } = useCuentas()
 const { mensajeError: errorConexion, tieneError, verificarConexionSupabase } = useSupabaseStatus()
 
-const refFormulario = ref<InstanceType<typeof FormularioLogin> | null>(null)
 const mensajeExito = ref(false)
 const cuentaDesactivadaNotif = ref(route.query.desactivada === '1')
 const cuentaActivadaNotif = ref(false)
@@ -79,18 +76,6 @@ const ejecutarSiembraEnSupabase = async () => {
   }
 }
 
-const cuentasDemoRoles = computed(() => {
-  return cuentas.value.slice(0, 4).map(c => ({
-    rol: c.rol,
-    email: c.email,
-    desc: c.departamento
-  }))
-})
-
-const seleccionarCuentaDemo = (email: string) => {
-  refFormulario.value?.establecerCredenciales(email, 'Admin123*')
-}
-
 const abrirVerificacionDesdeLogin = () => {
   const encontrada = cuentas.value.find(c => c.estado === 'Pendiente') || cuentas.value[0]
   if (encontrada) {
@@ -105,7 +90,7 @@ const manejarEnvio = async (credenciales: { email: string; pass: string }) => {
     mensajeExito.value = true
     setTimeout(() => {
       const email = credenciales.email.toLowerCase()
-      if (email.includes('admin') || email.includes('siticore')) {
+      if (email.includes('admin') || email.includes('ontime.es')) {
         router.push('/admin/cuentas')
       } else if (email.includes('supervisor') || email.includes('morales')) {
         router.push('/proyectos')
@@ -116,16 +101,6 @@ const manejarEnvio = async (credenciales: { email: string; pass: string }) => {
   } else if (cuentaPendienteVerificacion.value) {
     cuentaParaVerificar.value = cuentaPendienteVerificacion.value
     modalVerificacionAbierto.value = true
-  }
-}
-
-const manejarAccesoRapido = async () => {
-  const exito = await accesoRapidoAdmin()
-  if (exito) {
-    mensajeExito.value = true
-    setTimeout(() => {
-      router.push('/admin/cuentas')
-    }, 500)
   }
 }
 
@@ -173,7 +148,7 @@ const alActualizarClavePrimerIngreso = () => {
             Acceso Corporativo
           </h1>
           <p class="text-xs sm:text-sm text-slate-400">
-            Ingreso exclusivo para colaboradores de <span class="text-sky-400 font-medium">@siticore</span> y <span class="text-sky-400 font-medium">@ontime</span>.
+            Ingreso exclusivo para colaboradores de <span class="text-sky-400 font-medium">@ontime.es</span>.
           </p>
         </div>
 
@@ -215,21 +190,13 @@ const alActualizarClavePrimerIngreso = () => {
 
         <!-- Formulario Desacoplado -->
         <FormularioLogin
-          ref="refFormulario"
           :cargando="cargando"
           @enviar="manejarEnvio"
-          @accesoRapido="manejarAccesoRapido"
-        />
-
-        <!-- Selector Desacoplado de Cuentas Demo -->
-        <SelectorCuentasDemo
-          :cuentasDemo="cuentasDemoRoles"
-          @seleccionar="seleccionarCuentaDemo"
         />
 
         <p class="text-center text-[11px] text-slate-500 mt-5 flex items-center justify-center gap-1.5">
           <ShieldCheck class="w-3.5 h-3.5 text-emerald-400" />
-          <span>Políticas de dominio @siticore y @ontime activas</span>
+          <span>Políticas de dominio corporativo @ontime.es activas</span>
         </p>
       </div>
     </div>

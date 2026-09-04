@@ -93,7 +93,6 @@ const tiempoInicioPregunta = ref(Date.now())
 const segundosTranscurridos = ref(0)
 const tiemposPorPregunta = ref<Record<string, number>>({})
 const preguntasApresuradasCount = ref(0)
-const fueDescartadaPorRapidez = ref(false)
 
 let timerPregunta: ReturnType<typeof setInterval> | null = null
 
@@ -305,16 +304,7 @@ const finalizarYEnviar = async () => {
     }
   }
 
-  // Criterio de descarte estricto ("responder por responder" / responder porque sí):
-  // 1. Duración total acumulada menor al umbral mínimo
-  // 2. O alguna pregunta abierta o cerrada respondida por debajo del tiempo reglamentario
-  const totalCerradas = colaPreguntas.value.filter(p => p.tipo !== 'texto').length
-  const totalAbiertas = colaPreguntas.value.filter(p => p.tipo === 'texto').length
-  const tiempoMinimoTotalEsperado = (totalCerradas * TIEMPO_MINIMO_CERRADA) + (totalAbiertas * TIEMPO_MINIMO_ABIERTA)
-
   const duracionTotalSegundos = Math.max(1, Math.round((Date.now() - tiempoInicioGlobal.value) / 1000))
-  const esRapida = preguntasApresuradasCount.value > 0 || duracionTotalSegundos < tiempoMinimoTotalEsperado
-  fueDescartadaPorRapidez.value = esRapida
 
   // Capturar geolocalización exacta en tiempo real
   let ubicacionCapturada = undefined
@@ -359,13 +349,12 @@ const finalizarYEnviar = async () => {
       console.info('Evaluación estricta completada')
     }
 
-    // Registrar en Supabase enviando la bandera de descarte por velocidad
+    // Registrar en Supabase
     await registrarRespuestaAnonima(
       encuesta.value.id, 
       respuestasFormateadas, 
       ubicacionCapturada, 
       duracionTotalSegundos, 
-      esRapida,
       idVoluntaria,
       alertasGeminiActivas
     )
@@ -397,7 +386,6 @@ const finalizarYEnviar = async () => {
         v-if="completada"
         :fechaYHora="fechaYHora"
         :dispositivoUUID="dispositivoUUID"
-        :fueDescartadaPorRapidez="fueDescartadaPorRapidez"
       />
 
       <!-- PREGUNTA ACTIVA (Componente Modular con Temporizador Antirapidez) -->

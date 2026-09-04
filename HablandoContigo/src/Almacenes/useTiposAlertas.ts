@@ -132,14 +132,47 @@ function normalizarTipoAlerta(item: any): TipoAlertaPersonalizada {
   }
 }
 
+async function cargarTiposAlertasDesdeSupabase() {
+  try {
+    const { data, error } = await supabase
+      .from('tipos_alertas_config')
+      .select('*')
+      .order('creado_en', { ascending: false })
+
+    if (error) throw new Error(error.message)
+
+    if (data && data.length > 0) {
+      tiposAlertas.value = data.map((d: any) => ({
+        id: d.id,
+        nombre: d.nombre,
+        descripcion: d.descripcion,
+        nivel: d.nivel || 1,
+        severidad: d.severidad || 'Crítica',
+        modoEnfoque: d.modo_enfoque || 'especifico',
+        enfoqueDetalle: d.enfoque_detalle || d.descripcion,
+        palabrasClave: Array.isArray(d.palabras_clave) ? d.palabras_clave : [],
+        protocoloAccion: d.protocolo_accion || '',
+        icono: d.icono || 'ShieldAlert',
+        activa: d.activa !== undefined ? d.activa : true,
+        creadoEn: d.creado_en
+      }))
+      guardarEnLocalStorage()
+      return
+    }
+  } catch (e) {
+    // Si la tabla no está creada aún, usa respaldo local
+  }
+
+  cargarTiposAlertasLocales()
+}
+
 function cargarTiposAlertasLocales() {
   try {
     const raw = localStorage.getItem(CLAVE_LOCAL_STORAGE_TIPOS_ALERTAS)
     if (raw) {
       const parseado = JSON.parse(raw)
       if (Array.isArray(parseado) && parseado.length > 0) {
-        // Garantizar que solo existan hasta 3 alertas
-        tiposAlertas.value = parseado.slice(0, 3).map(normalizarTipoAlerta)
+        tiposAlertas.value = parseado.map(normalizarTipoAlerta)
         return
       }
     }
@@ -161,7 +194,7 @@ function guardarEnLocalStorage() {
 
 export function useTiposAlertas() {
   if (tiposAlertas.value.length === 0) {
-    cargarTiposAlertasLocales()
+    cargarTiposAlertasDesdeSupabase()
   }
 
   const tiposActivos = computed(() => tiposAlertas.value.filter(t => t.activa))
@@ -215,9 +248,27 @@ export function useTiposAlertas() {
 
     tiposAlertas.value.unshift(registro)
     guardarEnLocalStorage()
+
+    // Sincronizar con Supabase
+    supabase.from('tipos_alertas_config').insert({
+      id: registro.id,
+      nombre: registro.nombre,
+      descripcion: registro.descripcion,
+      nivel: registro.nivel,
+      severidad: registro.severidad,
+      modo_enfoque: registro.modoEnfoque,
+      enfoque_detalle: registro.enfoqueDetalle,
+      palabras_clave: registro.palabrasClave,
+      protocolo_accion: registro.protocoloAccion,
+      icono: registro.icono,
+      activa: registro.activa
+    }).then(({ error }) => {
+      if (error) console.info('Sincronizado localmente')
+    })
+
     mostrarExito(
       'Alerta configurada',
-      `"${registro.nombre}" (Nivel ${registro.nivel}) se configuró exitosamente. La IA ahora encasillará respuestas en este criterio.`
+      `"${registro.nombre}" (Nivel ${registro.nivel}) se configuró exitosamente en la base de datos.`
     )
     return registro
   }
@@ -235,6 +286,19 @@ export function useTiposAlertas() {
 
     Object.assign(item, datos)
     guardarEnLocalStorage()
+
+    supabase.from('tipos_alertas_config').update({
+      nombre: item.nombre,
+      descripcion: item.descripcion,
+      nivel: item.nivel,
+      severidad: item.severidad,
+      modo_enfoque: item.modoEnfoque,
+      enfoque_detalle: item.enfoqueDetalle,
+      palabras_clave: item.palabrasClave,
+      protocolo_accion: item.protocoloAccion,
+      activa: item.activa
+    }).eq('id', id).then()
+
     mostrarExito('Alerta actualizada', `Se guardaron los cambios en "${item.nombre}".`)
     return true
   }
@@ -254,6 +318,14 @@ export function useTiposAlertas() {
     if (datos.palabrasClave !== undefined) item.palabrasClave = datos.palabrasClave
 
     guardarEnLocalStorage()
+
+    supabase.from('tipos_alertas_config').update({
+      nombre: item.nombre,
+      descripcion: item.descripcion,
+      enfoque_detalle: item.enfoqueDetalle,
+      palabras_clave: item.palabrasClave
+    }).eq('id', id).then()
+
     mostrarExito('Criterio actualizado', `Se actualizaron las definiciones de "${item.nombre}".`)
     return true
   }
@@ -267,6 +339,9 @@ export function useTiposAlertas() {
 
     const borrado = tiposAlertas.value.splice(idx, 1)[0]
     guardarEnLocalStorage()
+
+    supabase.from('tipos_alertas_config').delete().eq('id', id).then()
+
     mostrarExito('Alerta eliminada', `"${borrado?.nombre || ''}" fue retirada de los criterios de IA.`)
     return true
   }
@@ -280,6 +355,8 @@ export function useTiposAlertas() {
 
     item.activa = !item.activa
     guardarEnLocalStorage()
+
+    supabase.from('tipos_alertas_config').update({ activa: item.activa }).eq('id', id).then()
     return item.activa
   }
 

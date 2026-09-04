@@ -29,7 +29,7 @@ const { estaAutenticado } = useAuth()
           <span class="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse"></span>
         </span>
         <span class="text-[10px] text-slate-500 dark:text-slate-400 font-mono tracking-wider uppercase">
-          {{ estaAutenticado ? 'Consola de Gestión IA' : 'Espacio Seguro & Anónimo' }}
+          {{ estaAutenticado ? 'Consola de Gestión' : 'Espacio Seguro & Anónimo' }}
         </span>
       </div>
     </div>

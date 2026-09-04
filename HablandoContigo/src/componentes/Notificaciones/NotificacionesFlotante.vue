@@ -23,7 +23,7 @@ import NotificacionesBarraHeader from './NotificacionesBarraHeader.vue'
 import NotificacionesListaItems from './NotificacionesListaItems.vue'
 
 const {
-  notificaciones,
+  notificacionesActividad,
   panelAbierto,
   noLeidas,
   cerrarPanel,
@@ -33,26 +33,28 @@ const {
 
 const { navegarYResaltar } = useHighlight()
 
-const posX = ref(Math.max(20, window.innerWidth - 420))
+const posX = ref(Math.max(16, Math.min(window.innerWidth - 396, window.innerWidth - 420)))
 const posY = ref(80)
 const estaArrastrando = ref(false)
 const estaMinimizado = ref(false)
 
 const inicioArrastre = { x: 0, y: 0, inicialX: 0, inicialY: 0 }
-const filtroNotificaciones = ref<'todas' | 'alertas' | 'sistema'>('todas')
+const filtroNotificaciones = ref<'todas' | 'encuestas' | 'informes' | 'seguridad' | 'modulos'>('todas')
 
 const notificacionesFiltradas = computed(() => {
-  if (filtroNotificaciones.value === 'alertas') {
-    return notificaciones.value.filter(
-      n => n.tipo === 'alerta_clima' || n.tipo === 'acoso' || n.tipo === 'burnout' || n.tipo === 'alerta'
-    )
+  if (filtroNotificaciones.value === 'encuestas') {
+    return notificacionesActividad.value.filter(n => n.tipo === 'encuesta')
   }
-  if (filtroNotificaciones.value === 'sistema') {
-    return notificaciones.value.filter(
-      n => n.tipo === 'sistema' || n.tipo === 'seguridad_perfil' || n.tipo === 'encuesta' || n.tipo === 'cuenta'
-    )
+  if (filtroNotificaciones.value === 'informes') {
+    return notificacionesActividad.value.filter(n => n.tipo === 'informe')
   }
-  return notificaciones.value
+  if (filtroNotificaciones.value === 'seguridad') {
+    return notificacionesActividad.value.filter(n => n.tipo === 'seguridad' || n.tipo === 'seguridad_perfil')
+  }
+  if (filtroNotificaciones.value === 'modulos') {
+    return notificacionesActividad.value.filter(n => n.tipo === 'modulo')
+  }
+  return notificacionesActividad.value
 })
 
 const iniciarArrastre = (e: MouseEvent) => {
@@ -114,7 +116,7 @@ onUnmounted(() => {
 <template>
   <div
     v-if="panelAbierto"
-    class="fixed z-[9990] select-none transition-shadow font-['Poppins',sans-serif]"
+    class="fixed z-[9990] select-none transition-shadow font-['Poppins',sans-serif] max-w-[calc(100vw-24px)]"
     :style="{
       left: `${posX}px`,
       top: `${posY}px`,

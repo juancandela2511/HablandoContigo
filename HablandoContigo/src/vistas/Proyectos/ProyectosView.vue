@@ -30,6 +30,10 @@ import {
   optimizarEncuestaBaseConIA, 
   type PreguntaEncuesta 
 } from '@/Servicios/iaEncuestasService'
+import {
+  PREGUNTAS_DEFECTO_CUESTIONARIO,
+  PREGUNTAS_SEGUIMIENTO_DEFECTO
+} from '@/Config/preguntasCuestionario'
 import { Sparkles } from 'lucide-vue-next'
 
 import ProyectosGaleria from '@/componentes/Proyectos/ProyectosGaleria.vue'
@@ -140,47 +144,8 @@ const iniciarCreacionManual = () => {
   tituloEncuesta.value = 'Nueva Encuesta de Diagnóstico Laboral'
   descripcionEncuesta.value = 'Cuestionario estructurado manualmente para evaluar la convivencia, bienestar y condiciones laborales.'
   departamentoSeleccionado.value = 'General'
-  preguntasGeneradas.value = [
-    {
-      id: `p-man-${Date.now().toString().slice(-4)}-1`,
-      categoria: 'Liderazgo & Convivencia',
-      texto: '¿Sientes que existe un trato respetuoso, constructivo y libre de favoritismos en tu equipo?',
-      tipo: 'escala',
-      esRelleno: false,
-      esSensibleAcoso: false,
-      opciones: [
-        { id: 'opt-1', texto: '1 - Total desacuerdo (Ambiente tenso)', valor: 1, esAlerta: true },
-        { id: 'opt-2', texto: '2 - En desacuerdo', valor: 2, esAlerta: false },
-        { id: 'opt-3', texto: '3 - Regular / Neutral', valor: 3, esAlerta: false },
-        { id: 'opt-4', texto: '4 - De acuerdo (Buen trato)', valor: 4, esAlerta: false },
-        { id: 'opt-5', texto: '5 - Totalmente de acuerdo (Excelente respeto)', valor: 5, esAlerta: false }
-      ]
-    },
-    {
-      id: `p-man-${Date.now().toString().slice(-4)}-2`,
-      categoria: 'Carga de Trabajo & Bienestar',
-      texto: '¿Consideras equilibrada tu carga diaria de tareas para prevenir el agotamiento extremo?',
-      tipo: 'escala',
-      esRelleno: false,
-      esSensibleAcoso: false,
-      opciones: [
-        { id: 'opt-21', texto: '1 - Sobrecarga extrema', valor: 1, esAlerta: true },
-        { id: 'opt-22', texto: '2 - Carga pesada', valor: 2, esAlerta: false },
-        { id: 'opt-23', texto: '3 - Manejable', valor: 3, esAlerta: false },
-        { id: 'opt-24', texto: '4 - Adecuada', valor: 4, esAlerta: false },
-        { id: 'opt-25', texto: '5 - Óptima', valor: 5, esAlerta: false }
-      ]
-    }
-  ]
-  preguntasSeguimiento.value = [
-    {
-      id: `deep-${Date.now().toString().slice(-4)}`,
-      categoria: 'Espacio Abierto Confidencial',
-      texto: '¿Qué sugerencia o aspecto concreto propondrías para mejorar tu bienestar en el trabajo?',
-      tipo: 'texto',
-      opciones: []
-    }
-  ]
+  preguntasGeneradas.value = JSON.parse(JSON.stringify(PREGUNTAS_DEFECTO_CUESTIONARIO))
+  preguntasSeguimiento.value = JSON.parse(JSON.stringify(PREGUNTAS_SEGUIMIENTO_DEFECTO))
   vistaActual.value = 'crear'
   pasoCreacion.value = 2
 }
@@ -270,7 +235,7 @@ const manejarVaciarEstadisticas = async (id: string) => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-50 dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100 pl-14 sm:pl-16 pr-4 sm:pr-8 py-8 relative font-['Poppins',sans-serif] transition-colors duration-300">
+  <div class="min-h-screen bg-slate-50 dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100 px-4 sm:px-6 md:pl-20 md:pr-8 py-6 md:py-8 relative font-['Poppins',sans-serif] transition-colors duration-300">
     
     <!-- Luces sutiles de fondo -->
     <div class="fixed top-10 left-1/4 w-96 h-96 bg-blue-500/10 dark:bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
@@ -304,7 +269,7 @@ const manejarVaciarEstadisticas = async (id: string) => {
             class="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-lg shadow-blue-500/25 active:scale-95 transition-all cursor-pointer"
           >
             <Sparkles class="w-4 h-4 text-white animate-pulse" />
-            <span>Crear Proyecto con IA</span>
+            <span>Crear Proyecto </span>
           </button>
           
           <button

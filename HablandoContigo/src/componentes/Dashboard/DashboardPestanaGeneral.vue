@@ -41,7 +41,7 @@ defineProps<{
   dimensionesRadiales: DimensionRadial[]
   dimensionesBarras: ItemBarra[]
   departamentosBarras: ItemBarra[]
-  totalIgnoradasRelleno?: number
+  anguloInclinacion?: number
 }>()
 
 const emit = defineEmits<{
@@ -59,7 +59,6 @@ const modalConfigRadialAbierto = ref(false)
       :enps="enps"
       :totalAlertas="totalAlertas"
       :participacion="participacion"
-      :totalIgnoradasRelleno="totalIgnoradasRelleno"
       @cambiarPestana="emit('cambiarPestana', $event)"
     />
 
@@ -69,6 +68,7 @@ const modalConfigRadialAbierto = ref(false)
       :conclusionesIA="conclusionesIA"
       :dimensionesRadiales="dimensionesRadiales"
       :dimensionesBarras="dimensionesBarras"
+      :anguloInclinacion="anguloInclinacion"
       @configurarRadial="modalConfigRadialAbierto = true"
     />
 

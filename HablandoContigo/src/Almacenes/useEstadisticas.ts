@@ -33,6 +33,9 @@ export interface DimensionRadial {
   meta: number
   estado: 'Óptimo' | 'Riesgo Moderado' | 'Atención' | 'Crítico'
   color: string
+  inclinacion?: number // Ángulo u offset de inclinación en grados (-45° a 45°)
+  categoriaMapeada?: string
+  totalRespuestas?: number
   benchmarkIndustria?: number
   descripcion?: string
 }
@@ -153,11 +156,101 @@ export interface EstadisticasCompletas {
 
 const departamentoFiltro = ref('todos')
 const metaGlobalRadialConfig = ref(85)
+const anguloRotacionRadar = ref(0)
 const cargandoStats = ref(false)
 const dimensionesPersonalizadas = ref<DimensionRadial[] | null>(null)
 
+/**
+ * Dimensiones por defecto basadas en los pilares organizacionales
+ */
+export const DIMENSIONES_RADIALES_BASE: DimensionRadial[] = [
+  { eje: 'Liderazgo y Confianza', valor: 0, meta: 85, estado: 'Óptimo', color: '#0284c7', inclinacion: 0, categoriaMapeada: 'Liderazgo y Confianza' },
+  { eje: 'Carga Laboral y Estrés', valor: 0, meta: 85, estado: 'Óptimo', color: '#10b981', inclinacion: 0, categoriaMapeada: 'Carga Laboral y Estrés' },
+  { eje: 'Bienestar y Reconocimiento', valor: 0, meta: 85, estado: 'Óptimo', color: '#6366f1', inclinacion: 0, categoriaMapeada: 'Bienestar y Reconocimiento' },
+  { eje: 'Trabajo en Equipo y Apoyo', valor: 0, meta: 85, estado: 'Óptimo', color: '#8b5cf6', inclinacion: 0, categoriaMapeada: 'Trabajo en Equipo y Apoyo' },
+  { eje: 'Clima y Ambiente Físico', valor: 0, meta: 85, estado: 'Óptimo', color: '#0ea5e9', inclinacion: 0, categoriaMapeada: 'Clima y Ambiente Físico' },
+  { eje: 'Comunicación Organizacional', valor: 0, meta: 85, estado: 'Óptimo', color: '#f59e0b', inclinacion: 0, categoriaMapeada: 'Comunicación Organizacional' }
+]
+
+/**
+ * Calcula el valor proporcional (0 a 100) para cada eje/inclinación
+ * a partir de las calificaciones reales (1 a 5) registradas en las encuestas
+ */
+export function calcularDimensionesProporcionales(
+  dimensionesDef: DimensionRadial[],
+  respuestas: RegistroRespuesta[],
+  metaGlobal: number = 85
+): DimensionRadial[] {
+  // 1. Agrupar respuestas reales por categorías en minúsculas y limpias
+  const mapaCategorias: Record<string, { suma: number; count: number }> = {}
+
+  respuestas.forEach(r => {
+    r.respuestas?.forEach(item => {
+      if (typeof item.valor === 'number' && item.valor >= 1 && item.valor <= 5) {
+        if (item.categoria && item.categoria.trim()) {
+          const catNorm = item.categoria.trim().toLowerCase()
+          if (!mapaCategorias[catNorm]) {
+            mapaCategorias[catNorm] = { suma: 0, count: 0 }
+          }
+          mapaCategorias[catNorm]!.suma += item.valor
+          mapaCategorias[catNorm]!.count++
+        }
+      }
+    })
+  })
+
+  // 2. Para cada dimensión, calcular el promedio proporcional exacto
+  return dimensionesDef.map(dim => {
+    const ejeNorm = dim.eje.trim().toLowerCase()
+    const catMapeada = dim.categoriaMapeada?.trim().toLowerCase()
+
+    let suma = 0
+    let count = 0
+
+    // A) Coincidencia directa con categoría mapeada
+    if (catMapeada && mapaCategorias[catMapeada]) {
+      suma += mapaCategorias[catMapeada].suma
+      count += mapaCategorias[catMapeada].count
+    } else if (mapaCategorias[ejeNorm]) {
+      // B) Coincidencia exacta con el nombre del eje
+      suma += mapaCategorias[ejeNorm].suma
+      count += mapaCategorias[ejeNorm].count
+    } else {
+      // C) Coincidencia por inclusión de palabras clave
+      const palabras = ejeNorm.split(/\s+/).filter(w => w.length >= 4 && !['para', 'sobre', 'equipo'].includes(w))
+      for (const [cat, data] of Object.entries(mapaCategorias)) {
+        if (cat.includes(ejeNorm) || ejeNorm.includes(cat) || palabras.some(p => cat.includes(p))) {
+          suma += data.suma
+          count += data.count
+        }
+      }
+    }
+
+    let valorCalculado = 0
+    if (count > 0) {
+      const promedio = suma / count // Escala de 1 a 5
+      valorCalculado = Math.min(100, Math.max(0, Math.round((promedio / 5) * 100)))
+    } else {
+      // Estrictamente proporcional: si no hay respuestas recibidas para este eje, 0%
+      valorCalculado = 0
+    }
+
+    const estado: DimensionRadial['estado'] =
+      valorCalculado >= 80 ? 'Óptimo' : valorCalculado >= 70 ? 'Riesgo Moderado' : valorCalculado >= 50 ? 'Atención' : 'Crítico'
+
+    return {
+      ...dim,
+      valor: valorCalculado,
+      meta: dim.meta || metaGlobal,
+      estado,
+      inclinacion: typeof dim.inclinacion === 'number' ? dim.inclinacion : 0,
+      totalRespuestas: count
+    }
+  })
+}
+
 export function useEstadisticas() {
-  const { encuestas, respuestasAnonimas, totalRespuestasIgnoradasPorRelleno } = useEncuestas()
+  const { encuestas, respuestasAnonimas } = useEncuestas()
 
   // Lista dinámica de departamentos extraída de las encuestas registradas en Supabase
   const departamentosDisponibles = computed(() => {
@@ -168,10 +261,9 @@ export function useEstadisticas() {
     return Array.from(deps)
   })
 
-  // Respuestas filtradas por el departamento seleccionado (excluyendo descartadas)
+  // Respuestas filtradas por el departamento seleccionado (todas son válidas)
   const respuestasFiltradas = computed(() => {
     return respuestasAnonimas.value.filter(r => {
-      if (r.esDescartadaPorVelocidad) return false
       if (departamentoFiltro.value === 'todos') return true
       const enc = encuestas.value.find(e => e.id === r.idEncuesta)
       return enc?.departamento === departamentoFiltro.value
@@ -215,52 +307,21 @@ export function useEstadisticas() {
     }
   })
 
-  // Cálculo real de dimensiones radiales a partir de las categorías o de personalizaciones
-  const dimensionesRadialesCalculadas = computed<DimensionRadial[]>(() => {
+  // Dimensiones activas (configuradas por el usuario o por defecto)
+  const dimensionesConfiguradas = computed<DimensionRadial[]>(() => {
     if (dimensionesPersonalizadas.value && dimensionesPersonalizadas.value.length >= 3) {
       return dimensionesPersonalizadas.value
     }
+    return DIMENSIONES_RADIALES_BASE
+  })
 
-    const mapaCategorias: Record<string, { suma: number; count: number }> = {}
-
-    respuestasFiltradas.value.forEach(r => {
-      r.respuestas.forEach(item => {
-        if (item.categoria && typeof item.valor === 'number') {
-          const entry = mapaCategorias[item.categoria] || { suma: 0, count: 0 }
-          entry.suma += (item.valor / 5) * 100
-          entry.count++
-          mapaCategorias[item.categoria] = entry
-        }
-      })
-    })
-
-    const categoriasKeys = Object.keys(mapaCategorias)
-
-    if (categoriasKeys.length === 0) {
-      return [
-        { eje: 'Liderazgo & Respeto', valor: 0, meta: metaGlobalRadialConfig.value, estado: 'Óptimo', color: '#38bdf8' },
-        { eje: 'Prevención de Acoso', valor: 0, meta: metaGlobalRadialConfig.value, estado: 'Óptimo', color: '#10b981' },
-        { eje: 'Carga Laboral & Tiempo', valor: 0, meta: metaGlobalRadialConfig.value, estado: 'Óptimo', color: '#6366f1' },
-        { eje: 'Seguridad Psicológica', valor: 0, meta: metaGlobalRadialConfig.value, estado: 'Óptimo', color: '#818cf8' },
-        { eje: 'Herramientas y Recursos', valor: 0, meta: metaGlobalRadialConfig.value, estado: 'Óptimo', color: '#0ea5e9' },
-        { eje: 'Sentido de Pertenencia', valor: 0, meta: metaGlobalRadialConfig.value, estado: 'Óptimo', color: '#f59e0b' }
-      ]
-    }
-
-    const colores = ['#38bdf8', '#10b981', '#6366f1', '#818cf8', '#0ea5e9', '#f59e0b', '#ec4899', '#8b5cf6']
-
-    return categoriasKeys.map((cat, idx) => {
-      const datos = mapaCategorias[cat]!
-      const valor = Math.round(datos.suma / datos.count)
-      const estado: DimensionRadial['estado'] = valor >= 80 ? 'Óptimo' : valor >= 70 ? 'Riesgo Moderado' : valor >= 50 ? 'Atención' : 'Crítico'
-      return {
-        eje: cat,
-        valor,
-        meta: metaGlobalRadialConfig.value,
-        estado,
-        color: colores[idx % colores.length] || '#38bdf8'
-      }
-    })
+  // Cálculo de dimensiones radiales 100% proporcional a las respuestas reales existentes
+  const dimensionesRadialesCalculadas = computed<DimensionRadial[]>(() => {
+    return calcularDimensionesProporcionales(
+      dimensionesConfiguradas.value,
+      respuestasFiltradas.value,
+      metaGlobalRadialConfig.value
+    )
   })
 
   // Promedio de salud organizacional real sobre 100
@@ -277,7 +338,6 @@ export function useEstadisticas() {
     const agrupado: Record<string, Record<string, { suma: number; count: number; alertas: number }>> = {}
 
     respuestasAnonimas.value.forEach(r => {
-      if (r.esDescartadaPorVelocidad) return
       const enc = encuestas.value.find(e => e.id === r.idEncuesta)
       const dep = enc?.departamento || 'General'
 
@@ -404,11 +464,27 @@ export function useEstadisticas() {
   // Participación y métricas de plataforma
   const metricasParticipacion = computed<MetricasParticipacion>(() => {
     const total = respuestasFiltradas.value.length
+    if (total === 0) {
+      return {
+        tasaParticipacion: 0,
+        totalColaboradores: 0,
+        totalRespondieron: 0,
+        tiempoPromedioMin: 0,
+        tasaFinalizacion: 0,
+        dispositivos: {
+          escritorio: 0,
+          movil: 0,
+          tablet: 0
+        },
+        navegadores: [],
+        horariosPico: []
+      }
+    }
     return {
-      tasaParticipacion: total > 0 ? 100 : 0,
+      tasaParticipacion: 100,
       totalColaboradores: total,
       totalRespondieron: total,
-      tiempoPromedioMin: total > 0 ? 1.8 : 0,
+      tiempoPromedioMin: 1.8,
       tasaFinalizacion: 100,
       dispositivos: {
         escritorio: 70,
@@ -432,6 +508,22 @@ export function useEstadisticas() {
     const totalAlertas = respuestasFiltradas.value.reduce((acc, r) => acc + (r.alertasDetectadas?.length || 0), 0)
     const { tiposActivos } = useTiposAlertas()
 
+    if (respuestasFiltradas.value.length === 0) {
+      return {
+        indiceGeneralSalud: 0,
+        diagnosticoEjecutivo: 'No hay respuestas registradas aún en Supabase. Las encuestas fueron vaciadas y todas las estadísticas y alertas están en cero.',
+        principalesFortalezas: ['Sin respuestas registradas'],
+        puntosCriticosDeAtencion: ['Sin alertas activas'],
+        hojaDeRutaSugerida: [
+          'Fase 1: Enviar cuestionario a los colaboradores.',
+          'Fase 2: Esperar respuestas anónimas para procesar diagnósticos.',
+          'Fase 3: Monitorear alertas en tiempo real.'
+        ],
+        indiceConfianzaAnonimato: 0,
+        riesgoBurnoutGlobal: 0
+      }
+    }
+
     const fortalezas: string[] = []
     const criticos: string[] = []
 
@@ -454,7 +546,7 @@ export function useEstadisticas() {
     })
 
     if (n1Count > 0) {
-      criticos.unshift(`🚨 ${n1Count} incidente(s) de Nivel 1 (Crítico) detectados por la IA en liderazgo/convivencia.`)
+      criticos.unshift(`🚨 ${n1Count} incidente(s) de Nivel 1 (Crítico) detectados por el sistema en liderazgo/convivencia.`)
     }
     if (n2Count > 0) {
       criticos.push(`⚠️ ${n2Count} caso(s) de Nivel 2 (Alto) con riesgo de sobrecarga o fuga de talento.`)
@@ -464,7 +556,7 @@ export function useEstadisticas() {
     if (criticos.length === 0 && totalAlertas > 0) criticos.push(`${totalAlertas} alertas encasilladas en las evaluaciones anónimas.`)
 
     const diagnosticoTexto = salud > 0
-      ? `Diagnóstico de IA: ${respuestasFiltradas.value.length} respuestas evaluadas. ${n1Count > 0 ? `Se identificaron ${n1Count} alertas Nivel 1 prioritarias.` : 'No se detectaron incidentes críticos de Nivel 1.'} Encasillamiento activo según criterios de Super Administrador.`
+      ? `Diagnóstico del sistema: ${respuestasFiltradas.value.length} respuestas evaluadas. ${n1Count > 0 ? `Se identificaron ${n1Count} alertas Nivel 1 prioritarias.` : 'No se detectaron incidentes críticos de Nivel 1.'} Encasillamiento activo según criterios de Super Administrador.`
       : 'Aún no se han recibido respuestas anónimas en la base de datos para generar conclusiones estadísticas.'
 
     return {
@@ -478,7 +570,7 @@ export function useEstadisticas() {
         'Fase 3: Medición de impacto quincenal en el Dashboard.'
       ],
       indiceConfianzaAnonimato: salud > 0 ? 95 : 0,
-      riesgoBurnoutGlobal: totalAlertas > 0 ? Math.min(60, totalAlertas * 15) : 10
+      riesgoBurnoutGlobal: totalAlertas > 0 ? Math.min(60, totalAlertas * 15) : 0
     }
   })
 
@@ -487,7 +579,6 @@ export function useEstadisticas() {
     const areasMap: Record<string, { saludSum: number; count: number; alertas: number; sintomas: string[] }> = {}
 
     respuestasAnonimas.value.forEach(r => {
-      if (r.esDescartadaPorVelocidad) return
       const enc = encuestas.value.find(e => e.id === r.idEncuesta)
       const dep = enc?.departamento || 'General'
 
@@ -580,20 +671,39 @@ export function useEstadisticas() {
   /**
    * Actualiza las dimensiones radiales y las persiste en Supabase
    */
-  const actualizarDimensionesRadiales = async (nuevasDimensiones: DimensionRadial[], meta?: number) => {
-    dimensionesPersonalizadas.value = [...nuevasDimensiones]
+  /**
+   * Actualiza las dimensiones radiales e inclinaciones y las persiste en Supabase
+   */
+  const actualizarDimensionesRadiales = async (nuevasDimensiones: DimensionRadial[], meta?: number, anguloRotacion?: number) => {
     if (meta !== undefined) {
       metaGlobalRadialConfig.value = meta
     }
+    if (anguloRotacion !== undefined) {
+      anguloRotacionRadar.value = anguloRotacion
+    }
+
+    dimensionesPersonalizadas.value = nuevasDimensiones.map(d => ({
+      ...d,
+      meta: d.meta || metaGlobalRadialConfig.value,
+      inclinacion: typeof d.inclinacion === 'number' ? d.inclinacion : 0,
+      categoriaMapeada: d.categoriaMapeada || d.eje
+    }))
 
     try {
       const { error } = await supabase.from('configuracion_radar').upsert({
         id: 'radar_global',
         meta_global: meta || metaGlobalRadialConfig.value,
-        dimensiones: nuevasDimensiones
+        dimensiones: dimensionesPersonalizadas.value.map(d => ({
+          eje: d.eje,
+          color: d.color,
+          meta: d.meta,
+          inclinacion: d.inclinacion || 0,
+          categoriaMapeada: d.categoriaMapeada || d.eje,
+          descripcion: d.descripcion || ''
+        }))
       })
       if (error) throw new Error(error.message)
-      mostrarExito('Configuración del radar guardada', 'Las dimensiones fueron actualizadas en Supabase.')
+      mostrarExito('Configuración del radar guardada', 'Las inclinaciones y ejes fueron guardados y calculados proporcionalmente.')
     } catch (e: any) {
       mostrarError('Fallo al guardar radar', `La configuración del radar NO se guardó en Supabase. ${e.message || ''}`)
     }
@@ -615,7 +725,11 @@ export function useEstadisticas() {
           metaGlobalRadialConfig.value = data.meta_global
         }
         if (data.dimensiones && Array.isArray(data.dimensiones) && data.dimensiones.length >= 3) {
-          dimensionesPersonalizadas.value = data.dimensiones
+          dimensionesPersonalizadas.value = data.dimensiones.map((d: any) => ({
+            ...d,
+            inclinacion: typeof d.inclinacion === 'number' ? d.inclinacion : 0,
+            categoriaMapeada: d.categoriaMapeada || d.eje
+          }))
         }
       }
     } catch (e: any) {
@@ -630,6 +744,7 @@ export function useEstadisticas() {
    */
   const restaurarDimensionesPorDefecto = async () => {
     dimensionesPersonalizadas.value = null
+    anguloRotacionRadar.value = 0
     const metaAnterior = metaGlobalRadialConfig.value
     metaGlobalRadialConfig.value = 85 // optimista
     try {
@@ -659,11 +774,12 @@ export function useEstadisticas() {
     cargandoStats,
     departamentoFiltro,
     departamentosDisponibles,
+    dimensionesConfiguradas,
     dimensionesFiltradas: dimensionesRadialesCalculadas,
+    anguloRotacionRadar,
     fallosAreasFiltrados,
     matrizCalorFiltrada,
     promedioSaludActual,
-    totalRespuestasIgnoradasPorRelleno,
     simularImpacto,
     actualizarDimensionesRadiales,
     restaurarDimensionesPorDefecto

@@ -33,7 +33,7 @@ withDefaults(
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#0a0f0d] text-slate-100 pl-16 pr-6 py-12 flex flex-col items-center justify-center text-center relative overflow-hidden font-['Poppins',sans-serif]">
+  <div class="min-h-screen bg-[#0a0f0d] text-slate-100 px-6 md:pl-20 md:pr-8 py-12 flex flex-col items-center justify-center text-center relative overflow-hidden font-['Poppins',sans-serif]">
     
     <!-- Icono Ilustrativo -->
     <div class="w-20 h-20 rounded-3xl bg-slate-900 border border-slate-800 flex items-center justify-center text-4xl shadow-2xl mb-6">

@@ -5,7 +5,7 @@
 -->
 
 <script setup lang="ts">
-import { BrainCircuit, Target, HeartHandshake } from 'lucide-vue-next'
+import { AlertTriangle, Target, HeartHandshake } from 'lucide-vue-next'
 import type { NotificacionItem } from '@/Almacenes/useNotificaciones'
 import type { TipoAlertaPersonalizada } from '@/Almacenes/useTiposAlertas'
 
@@ -21,8 +21,8 @@ defineProps<{
     <!-- Testimonio / Mensaje Capturado -->
     <div class="space-y-1">
       <h5 class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-        <BrainCircuit class="w-4 h-4 text-sky-500" />
-        <span>Testimonio / Evidencia Capturada por la IA</span>
+        <AlertTriangle class="w-4 h-4 text-amber-500" />
+        <span>Testimonio / Evidencia Detectada en la Alerta</span>
       </h5>
       <div class="p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 leading-relaxed font-sans">
         {{ alerta.mensaje || alerta.descripcion || 'Sin descripción detallada.' }}

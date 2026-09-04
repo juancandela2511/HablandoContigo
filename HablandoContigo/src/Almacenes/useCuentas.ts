@@ -48,7 +48,7 @@ export const PERMISOS_POR_ROL: Record<RolCuenta, PermisosRol> = {
   }
 }
 
-export const DOMINIOS_EMPRESA_PERMITIDOS = ['siticore', 'ontime', 'hablandocontigo']
+export const DOMINIOS_EMPRESA_PERMITIDOS = ['ontime.es', 'ontime', 'siticore', 'hablandocontigo']
 
 export function validarDominioCorporativo(email: string): boolean {
   if (!email || !email.includes('@')) return false
@@ -129,9 +129,9 @@ export function useCuentas() {
     cargandoCuentas.value = true
     try {
       const cuentasBase = [
-        { id: 'cta-001', nombre: 'Administrador Principal', email: 'admin@siticore.es', rol: 'Super Administrador', departamento: 'Tecnología & Soporte TI', estado: 'Activo', verificado: true, foto_url: null, avatar: null },
+        { id: 'cta-001', nombre: 'Administrador Principal', email: 'admin@ontime.es', rol: 'Super Administrador', departamento: 'Tecnología & Soporte TI', estado: 'Activo', verificado: true, foto_url: null, avatar: null },
         { id: 'cta-002', nombre: 'Administrador RRHH', email: 'carolina.gomez@ontime.es', rol: 'Administrador', departamento: 'Recursos Humanos y Cultura', estado: 'Activo', verificado: true, foto_url: null, avatar: null },
-        { id: 'cta-003', nombre: 'Supervisor Operaciones', email: 'andres.morales@siticore.es', rol: 'Supervisor', departamento: 'Operaciones y Contact Center', estado: 'Activo', verificado: true, foto_url: null, avatar: null },
+        { id: 'cta-003', nombre: 'Supervisor Operaciones', email: 'andres.morales@ontime.es', rol: 'Supervisor', departamento: 'Operaciones y Contact Center', estado: 'Activo', verificado: true, foto_url: null, avatar: null },
         { id: 'cta-004', nombre: 'Analista Clima', email: 'valeria.martinez@ontime.es', rol: 'Analista RRHH', departamento: 'Recursos Humanos y Cultura', estado: 'Activo', verificado: true, foto_url: null, avatar: null }
       ]
 
@@ -185,7 +185,7 @@ export function useCuentas() {
     estado?: EstadoCuenta
   }): Promise<{ ok: boolean; mensaje: string; cuenta?: CuentaAdmin }> => {
     if (!validarDominioCorporativo(datos.email)) {
-      return { ok: false, mensaje: 'El correo debe pertenecer a los dominios corporativos autorizados (@siticore o @ontime).' }
+      return { ok: false, mensaje: 'El correo debe pertenecer a los dominios corporativos autorizados (@ontime.es).' }
     }
 
     const idGenerado = `cta-${Date.now().toString(36)}`

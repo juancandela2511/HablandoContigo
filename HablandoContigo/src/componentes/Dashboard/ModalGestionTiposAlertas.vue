@@ -18,7 +18,7 @@ import {
   type NivelAlerta
 } from '@/Almacenes/useTiposAlertas'
 import { ModalBase, BotonBase, InsigniaPill } from '@/componentes/ElementosBase'
-import { BrainCircuit, RotateCcw } from 'lucide-vue-next'
+import { AlertTriangle, RotateCcw } from 'lucide-vue-next'
 import FormularioCrearAlerta from './Modales/GestionTiposAlertas/FormularioCrearAlerta.vue'
 import ListaTiposAlertas from './Modales/GestionTiposAlertas/ListaTiposAlertas.vue'
 
@@ -52,20 +52,20 @@ const procesarEdicionAlerta = (datos: { id: string; nombre: string; descripcion:
 <template>
   <ModalBase
     :abierto="abierto"
-    titulo="Calibración de las 3 Alertas de IA"
-    subtitulo="Configura el nombre, de qué trata y las palabras clave de cada alerta para que la IA las detecte con precisión."
+    titulo="Calibración de Alertas y Protocolos"
+    subtitulo="Configura el nombre, de qué trata y las palabras clave de cada alerta para que el sistema las detecte con precisión."
     anchoMaximo="3xl"
     @cerrar="emit('cerrar')"
   >
     <template #icono>
-      <div class="w-8 h-8 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-500">
-        <BrainCircuit class="w-4 h-4" />
+      <div class="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500">
+        <AlertTriangle class="w-4 h-4" />
       </div>
     </template>
 
     <template #insignia>
-      <InsigniaPill variante="info" tamano="sm">
-        3 ALERTAS IA
+      <InsigniaPill variante="alerta" tamano="sm">
+        3 ALERTAS ACTIVAS
       </InsigniaPill>
     </template>
 

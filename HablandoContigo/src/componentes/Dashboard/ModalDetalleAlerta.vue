@@ -97,7 +97,7 @@ const protocoloRecomendado = computed(() => {
   <ModalBase
     :abierto="abierto && !!alerta"
     :titulo="alerta?.tipoAlerta || alerta?.titulo || 'Detalle de Alerta'"
-    subtitulo="Auditoría de IA, motivo detectado y protocolo recomendado de Talento Humano."
+    subtitulo="Auditoría del sistema, motivo detectado y protocolo recomendado de Talento Humano."
     anchoMaximo="2xl"
     @cerrar="emit('cerrar')"
   >

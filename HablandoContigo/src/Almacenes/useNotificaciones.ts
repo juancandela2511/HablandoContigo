@@ -18,12 +18,14 @@ export type TipoNotificacion =
   | 'depresion' | 'renuncia' | 'social' | 'burnout'
   | 'alerta' | 'encuesta' | 'cuenta' | 'informe' | 'modulo' | 'seguridad'
 
-export const esAlertaConvivencia = (tipo: string): boolean => {
-  return ['alerta_clima', 'acoso', 'burnout', 'depresion', 'renuncia', 'social', 'alerta'].includes(tipo)
-}
+const TIPOS_ACTIVIDADES_SISTEMA = ['encuesta', 'informe', 'cuenta', 'modulo', 'seguridad', 'seguridad_perfil', 'sistema']
 
 export const esNotificacionActividad = (tipo: string): boolean => {
-  return !esAlertaConvivencia(tipo)
+  return TIPOS_ACTIVIDADES_SISTEMA.includes(tipo)
+}
+
+export const esAlertaConvivencia = (tipo: string): boolean => {
+  return !esNotificacionActividad(tipo)
 }
 
 export interface NotificacionItem {
@@ -187,12 +189,12 @@ export function useNotificaciones() {
   // ESCRITURA — SUPABASE PRIMERO SIEMPRE
   // ─────────────────────────────────────────────
 
-  /**
-   * Agrega una notificación en Supabase primero. Si falla → toast de error → NO agrega localmente.
-   */
   const agregarNotificacion = async (nueva: Omit<NotificacionItem, 'id'>) => {
-    const id = `notif-${Date.now().toString(36)}`
+    const id = `notif-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`
     const registro: NotificacionItem = { ...nueva, id }
+
+    // Inserción inmediata en memoria para reactividad instantánea en el Dashboard
+    notificaciones.value.unshift(registro)
 
     try {
       const { error } = await supabase.from('notificaciones_alertas').insert({
@@ -217,12 +219,11 @@ export function useNotificaciones() {
         id_elemento: registro.idElemento
       })
 
-      if (error) throw new Error(error.message)
-
-      // ✅ Solo agrega localmente si Supabase confirmó
-      notificaciones.value.unshift(registro)
+      if (error) {
+        console.warn('Aviso sincronizando notificación con Supabase:', error.message)
+      }
     } catch (e: any) {
-      mostrarError('Fallo al guardar notificación', `La alerta no pudo registrarse en Supabase. ${e.message || ''}`)
+      console.warn('Aviso guardando alerta en Supabase:', e.message)
     }
   }
 
@@ -354,6 +355,52 @@ export function useNotificaciones() {
     }
   }
 
+  /**
+   * Limpia exclusivamente todas las alertas psicosociales y de convivencia
+   * tanto en Supabase como en el estado reactivo local.
+   */
+  const limpiarAlertasConvivencia = async () => {
+    const tiposAlerta = ['alerta_clima', 'acoso', 'burnout', 'depresion', 'renuncia', 'social', 'alerta']
+    const copia = [...notificaciones.value]
+    notificaciones.value = notificaciones.value.filter(n => !esAlertaConvivencia(n.tipo))
+
+    try {
+      const { error } = await supabase
+        .from('notificaciones_alertas')
+        .delete()
+        .in('tipo', tiposAlerta)
+
+      if (error) throw new Error(error.message)
+    } catch (e: any) {
+      notificaciones.value = copia
+      console.error('Error al limpiar alertas de convivencia en Supabase:', e)
+    }
+  }
+
+  /**
+   * Elimina las alertas asociadas a una encuesta específica por su título o ID.
+   */
+  const eliminarAlertasDeEncuesta = async (tituloOId: string) => {
+    if (!tituloOId) return
+    const tNorm = tituloOId.toLowerCase()
+    notificaciones.value = notificaciones.value.filter(n => {
+      if (!esAlertaConvivencia(n.tipo)) return true
+      const msg = (n.mensaje || '').toLowerCase()
+      const desc = (n.descripcion || '').toLowerCase()
+      const tit = (n.titulo || '').toLowerCase()
+      return !msg.includes(tNorm) && !desc.includes(tNorm) && !tit.includes(tNorm)
+    })
+
+    try {
+      await supabase
+        .from('notificaciones_alertas')
+        .delete()
+        .ilike('mensaje', `%${tituloOId}%`)
+    } catch (e: any) {
+      console.error('Error al eliminar alertas de encuesta en Supabase:', e)
+    }
+  }
+
   // Cargar al instanciar
   cargarNotificacionesDesdeSupabase()
 
@@ -374,6 +421,8 @@ export function useNotificaciones() {
     marcarTodasLeidas,
     eliminarNotificacion,
     limpiarTodasNotificaciones,
+    limpiarAlertasConvivencia,
+    eliminarAlertasDeEncuesta,
     actualizarEstadoAlerta,
     agregarNotificacion
   }

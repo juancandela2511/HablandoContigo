@@ -28,6 +28,7 @@ defineProps<{
   conclusionesIA: AnalisisConclusiones
   dimensionesRadiales: DimensionRadial[]
   dimensionesBarras: ItemBarra[]
+  anguloInclinacion?: number
 }>()
 
 const emit = defineEmits<{
@@ -100,6 +101,7 @@ const emit = defineEmits<{
       <div class="lg:col-span-6 p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md">
         <GraficoRadial 
           :dimensiones="dimensionesRadiales" 
+          :anguloInclinacion="anguloInclinacion"
           @abrirConfiguracion="emit('configurarRadial')"
           @configurar="emit('configurarRadial')"
         />

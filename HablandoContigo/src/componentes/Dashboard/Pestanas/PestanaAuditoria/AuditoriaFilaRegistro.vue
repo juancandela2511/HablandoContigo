@@ -28,15 +28,10 @@ const emit = defineEmits<{
         <span>{{ registro.dispositivoUUID }}</span>
       </div>
 
-      <div v-if="!registro.esDescartadaPorVelocidad && registro.alertasDetectadas && registro.alertasDetectadas.length > 0" class="flex items-center gap-1.5 text-[11px]">
+      <div v-if="registro.alertasDetectadas && registro.alertasDetectadas.length > 0" class="flex items-center gap-1.5 text-[11px]">
         <span class="px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 font-mono font-bold border border-amber-300 dark:border-amber-800">
           💻 {{ registro.nombreEquipoPC || 'PC-CORP' }} ({{ registro.cuentaUsuarioPC || 'usr' }})
         </span>
-      </div>
-
-      <div v-else-if="registro.esDescartadaPorVelocidad" class="flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400">
-        <ZapOff class="w-3 h-3 text-slate-400" />
-        <span>Ignorada (Respuesta en {{ registro.duracionSegundos || 2 }}s)</span>
       </div>
 
       <div v-else class="flex items-center gap-1 text-[10px] text-slate-400">

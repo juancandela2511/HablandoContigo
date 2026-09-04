@@ -53,7 +53,8 @@ const enviarMensaje = async (texto: string) => {
   mensajes.value.push({
     id: `bot-${Date.now()}`,
     remitente: 'asistente',
-    texto: respuestaBot,
+    texto: typeof respuestaBot === 'string' ? respuestaBot : respuestaBot.texto,
+    accionesSugeridas: typeof respuestaBot === 'object' ? respuestaBot.accionesSugeridas : undefined,
     hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   })
 

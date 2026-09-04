@@ -20,7 +20,6 @@ import { CheckCircle2, Clock, Laptop, ArrowRight, ShieldCheck, AlertTriangle } f
 defineProps<{
   fechaYHora: { fecha: string; hora: string }
   dispositivoUUID: string
-  fueDescartadaPorRapidez?: boolean
 }>()
 
 const router = useRouter()
@@ -29,44 +28,20 @@ const router = useRouter()
 <template>
   <TarjetaContenedor :mostrarVisores="true" relleno="amplio" class="text-center space-y-6 animate-fadeIn">
     
-    <!-- Icono Principal: Esmeralda o Ámbar según si fue descartada por rapidez -->
+    <!-- Icono Principal: Esmeralda -->
     <div 
-      v-if="!fueDescartadaPorRapidez"
       class="w-16 h-16 rounded-3xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center shadow-lg shadow-emerald-500/10"
     >
       <CheckCircle2 class="w-8 h-8" />
-    </div>
-    <div 
-      v-else
-      class="w-16 h-16 rounded-3xl bg-amber-500/15 border border-amber-500/40 text-amber-600 dark:text-amber-400 mx-auto flex items-center justify-center shadow-lg shadow-amber-500/10"
-    >
-      <AlertTriangle class="w-8 h-8" />
     </div>
 
     <!-- Mensaje Principal de Gratitud -->
     <div class="space-y-2">
       <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-        {{ fueDescartadaPorRapidez ? 'Respuesta Registrada con Observación' : '¡Tu voz ha sido escuchada!' }}
+        ¡Tu voz ha sido escuchada!
       </h2>
       <p class="text-xs sm:text-sm text-slate-600 dark:text-neutral-300 max-w-md mx-auto leading-relaxed">
-        {{ fueDescartadaPorRapidez 
-          ? 'Tu participación ha sido registrada en el sistema, pero el motor de auditoría detectó que las preguntas se contestaron por debajo del tiempo mínimo de lectura.'
-          : 'Tu respuesta ha sido registrada y cifrada con éxito. La información recopilada será analizada bajo estrictos criterios de rigor por el motor analítico de Talento Humano.' 
-        }}
-      </p>
-    </div>
-
-    <!-- Banner de Descarte por Velocidad / Responder por responder -->
-    <div 
-      v-if="fueDescartadaPorRapidez"
-      class="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs space-y-1.5 max-w-md mx-auto text-left"
-    >
-      <div class="flex items-center gap-2 font-bold text-amber-600 dark:text-amber-400">
-        <AlertTriangle class="w-4 h-4 shrink-0" />
-        <span>Auditoría: Respuesta Descartada de Estadísticas Oficiales</span>
-      </div>
-      <p class="text-[11px] text-slate-600 dark:text-neutral-300 leading-relaxed">
-        Para garantizar la veracidad del estudio y evitar respuestas automáticas o impulsivas ("responder por que sí"), las preguntas cerradas requieren al menos 4 segundos y las abiertas 8 segundos de reflexión. Por haberse completado a una velocidad inferior a este umbral, tu registro no alterará los porcentajes oficiales de clima laboral.
+        Tu respuesta ha sido registrada y cifrada con éxito. La información recopilada será analizada bajo estrictos criterios de rigor por el motor analítico de Talento Humano.
       </p>
     </div>
 

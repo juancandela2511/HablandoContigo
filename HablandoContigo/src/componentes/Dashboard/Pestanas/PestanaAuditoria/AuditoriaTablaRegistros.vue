@@ -40,7 +40,7 @@ const emit = defineEmits<{
           :value="filtroTexto"
           @input="emit('update:filtroTexto', ($event.target as HTMLInputElement).value)"
           type="text"
-          placeholder="Buscar por UUID de hardware, ciudad, PC o encuesta..."
+          placeholder="Buscar por  encuesta..."
           class="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-sky-500 shadow-sm"
         />
       </div>

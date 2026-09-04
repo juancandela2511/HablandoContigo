@@ -72,7 +72,6 @@ export interface RegistroRespuesta {
   fecha: string
   hora: string
   duracionSegundos?: number
-  esDescartadaPorVelocidad?: boolean
   timestampISO: string
   respuestas: RespuestaItem[]
   alertasDetectadas: string[]
@@ -161,13 +160,14 @@ export function useEncuestas() {
   const totalEncuestas = computed(() => encuestas.value.length)
   const encuestasActivas = computed(() => encuestas.value.filter(e => e.estado === 'Activa').length)
   const totalRespuestasGlobales = computed(() => respuestasAnonimas.value.length)
-  const alertasTotales = computed(() =>
-    encuestas.value.reduce((acc, enc) => acc + (enc.alertasRegistradas || 0), 0)
-  )
+  const alertasTotales = computed(() => {
+    if (respuestasAnonimas.value.length === 0) return 0
+    return encuestas.value.reduce((acc, enc) => acc + (enc.alertasRegistradas || 0), 0)
+  })
   const promedioSatisfaccionGlobal = computed(() => {
-    if (encuestas.value.length === 0) return 4.5
-    const suma = encuestas.value.reduce((acc, enc) => acc + (enc.puntajePromedio || 5.0), 0)
-    return Number((suma / encuestas.value.length).toFixed(1))
+    if (respuestasAnonimas.value.length === 0 || encuestas.value.length === 0) return 0.0
+    const suma = respuestasAnonimas.value.reduce((acc, r) => acc + (r.puntajeGeneral || 0), 0)
+    return Number((suma / respuestasAnonimas.value.length).toFixed(1))
   })
 
   // ─────────────────────────────────────────────
@@ -262,6 +262,27 @@ export function useEncuestas() {
       const { error } = await supabase.from('encuestas').update(payload).eq('id', id)
       if (error) throw new Error(error.message)
 
+      // 🔔 Notificación de actividad: Encuesta / Módulo editado
+      try {
+        const { agregarNotificacion } = useNotificaciones()
+        await agregarNotificacion({
+          tipo: 'modulo',
+          titulo: `Módulo Editado: ${datos.titulo || snapshot?.titulo || 'Encuesta'}`,
+          descripcion: `Se actualizaron los parámetros del módulo de encuestas.`,
+          mensaje: `Se editaron los ajustes y preguntas de la encuesta "${datos.titulo || snapshot?.titulo || 'Encuesta'}" de ${datos.departamento || snapshot?.departamento || 'General'}.`,
+          departamento: datos.departamento || snapshot?.departamento || 'General',
+          tipoAlerta: 'Edición de Módulo',
+          severidad: 'Baja',
+          estado: 'Detectada',
+          fecha: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }),
+          hora: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+          leida: false,
+          rutaDestino: '/proyectos'
+        })
+      } catch (errNotif) {
+        console.warn('Aviso: Notificación de edición no se pudo registrar:', errNotif)
+      }
+
       mostrarExito('Encuesta actualizada', 'Los cambios se guardaron correctamente en Supabase.')
       return true
     } catch (e: any) {
@@ -278,16 +299,32 @@ export function useEncuestas() {
   const eliminarEncuesta = async (id: string): Promise<boolean> => {
     const indice = encuestas.value.findIndex(e => e.id === id)
     const copia = indice !== -1 ? { ...encuestas.value[indice] } : null
+    const tituloEnc = copia?.titulo || ''
 
     // Optimista: quita del estado local
     if (indice !== -1) encuestas.value.splice(indice, 1)
     respuestasAnonimas.value = respuestasAnonimas.value.filter(r => r.idEncuesta !== id)
 
     try {
+      // 1. Eliminar respuestas de esta encuesta en Supabase
+      await supabase.from('respuestas_anonimas').delete().eq('id_encuesta', id)
+
+      // 2. Eliminar alertas asociadas en Supabase
+      if (tituloEnc) {
+        await supabase.from('notificaciones_alertas').delete().ilike('mensaje', `%${tituloEnc}%`)
+      }
+
+      // 3. Eliminar la encuesta en Supabase
       const { error } = await supabase.from('encuestas').delete().eq('id', id)
       if (error) throw new Error(error.message)
 
-      mostrarExito('Encuesta eliminada', 'La encuesta fue eliminada de Supabase correctamente.')
+      // 4. Limpiar alertas de la encuesta del estado local
+      try {
+        const { eliminarAlertasDeEncuesta } = useNotificaciones()
+        if (tituloEnc) await eliminarAlertasDeEncuesta(tituloEnc)
+      } catch {}
+
+      mostrarExito('Encuesta eliminada', 'La encuesta y sus datos asociados fueron eliminados correctamente.')
       return true
     } catch (e: any) {
       // 🔄 Revertir: reinserta la encuesta si Supabase falló
@@ -309,7 +346,6 @@ export function useEncuestas() {
     items: RespuestaItem[],
     ubicacionExactaPersonalizada?: UbicacionExacta | UbicacionAuditoria,
     duracionSegundos?: number,
-    esDescartadaPorVelocidad: boolean = false,
     identificacionVoluntaria?: string,
     alertasGemini?: AlertaGeminiEstricta[]
   ): Promise<RegistroRespuesta | null> => {
@@ -353,12 +389,15 @@ export function useEncuestas() {
       })
     }
 
-    if (esDescartadaPorVelocidad) {
-      alertasIdentificadas.push('⚠️ Respuesta Anómala Descartada (Velocidad < 3s)')
-    } else {
-      // Importar dinámicamente y evaluar con rigor estricto (CERO FALSAS ALARMAS)
-      const { tiposActivos, clasificarYEncasillarTexto } = useTiposAlertas()
+    // Importar dinámicamente y evaluar con rigor estricto (CERO FALSAS ALARMAS)
+    // ⚠️ Solo ejecutar el clasificador local si Gemini NO generó alertas propias.
+    // Si Gemini ya detectó alertas (bloque anterior), este bloque se omite para
+    // evitar que se dupliquen las notificaciones en el dashboard.
+    const { tiposActivos, clasificarYEncasillarTexto } = useTiposAlertas()
 
+    const geminiYaDetecto = alertasGemini && alertasGemini.length > 0
+
+    if (!geminiYaDetecto) {
       items.forEach(item => {
         // Rigor estricto: NUNCA evaluar el texto de la pregunta ni la categoría para evitar falsos positivos
         const textoRespuesta = `${item.respuesta || ''} ${item.comentario || ''}`.toLowerCase().trim()
@@ -399,13 +438,16 @@ export function useEncuestas() {
             }
           }
         }
-
-        if (typeof item.valor === 'number' && item.valor > 0) {
-          sumaPuntajes += item.valor
-          totalPuntajesValidos++
-        }
       })
     }
+
+    // Siempre acumular puntajes independientemente de alertas
+    items.forEach(item => {
+      if (typeof item.valor === 'number' && item.valor > 0) {
+        sumaPuntajes += item.valor
+        totalPuntajesValidos++
+      }
+    })
 
     const alertasUnicas = Array.from(new Set(alertasIdentificadas))
     const categoriasUnicas = Array.from(new Set(categoriasDetectadas))
@@ -442,7 +484,6 @@ export function useEncuestas() {
       fecha,
       hora,
       duracionSegundos: duracionSegundos || 15,
-      esDescartadaPorVelocidad,
       timestampISO,
       respuestas: items,
       alertasDetectadas: alertasUnicas,
@@ -479,7 +520,7 @@ export function useEncuestas() {
     }
 
     // 2. Actualizar contadores de la encuesta en Supabase
-    if (encuestaEncontrada && !esDescartadaPorVelocidad) {
+    if (encuestaEncontrada) {
       const nuevoTotal = (encuestaEncontrada.totalRespuestas || 0) + 1
       const nuevasAlertas = alertasUnicas.length > 0
         ? (encuestaEncontrada.alertasRegistradas || 0) + 1
@@ -501,7 +542,7 @@ export function useEncuestas() {
     }
 
     // 3. Insertar alerta en notificaciones_alertas si hay alertas
-    if (alertasUnicas.length > 0 && !esDescartadaPorVelocidad) {
+    if (alertasUnicas.length > 0) {
       const { tiposActivos } = useTiposAlertas()
       const tipoCat = categoriasUnicas[0] || 'acoso'
       const primeraAlertaNombre = alertasUnicas[0] || 'Alerta de Clima Laboral'
@@ -551,6 +592,7 @@ export function useEncuestas() {
     const snapRespuestas = [...respuestasAnonimas.value]
     const enc = encuestas.value.find(e => e.id === idEncuesta)
     const snapEnc = enc ? { ...enc } : null
+    const tituloEnc = enc?.titulo || ''
 
     try {
       const { error: errResp } = await supabase
@@ -560,9 +602,17 @@ export function useEncuestas() {
 
       if (errResp) throw new Error(`Respuestas: ${errResp.message}`)
 
+      // Purgar alertas asociadas a esta encuesta en Supabase
+      if (tituloEnc) {
+        await supabase
+          .from('notificaciones_alertas')
+          .delete()
+          .ilike('mensaje', `%${tituloEnc}%`)
+      }
+
       const { error: errEnc } = await supabase
         .from('encuestas')
-        .update({ total_respuestas: 0, alertas_registradas: 0, puntaje_promedio: 5.0 })
+        .update({ total_respuestas: 0, alertas_registradas: 0, puntaje_promedio: 0.0 })
         .eq('id', idEncuesta)
 
       if (errEnc) throw new Error(`Encuesta: ${errEnc.message}`)
@@ -572,10 +622,15 @@ export function useEncuestas() {
       if (enc) {
         enc.totalRespuestas = 0
         enc.alertasRegistradas = 0
-        enc.puntajePromedio = 5.0
+        enc.puntajePromedio = 0.0
       }
 
-      mostrarExito('Estadísticas vaciadas', 'Todas las respuestas fueron eliminadas de Supabase.')
+      try {
+        const { eliminarAlertasDeEncuesta } = useNotificaciones()
+        if (tituloEnc) await eliminarAlertasDeEncuesta(tituloEnc)
+      } catch {}
+
+      mostrarExito('Estadísticas vaciadas', 'Todas las respuestas y alertas de esta encuesta fueron eliminadas de Supabase.')
       return true
     } catch (e: any) {
       // 🔄 Revertir estado local si Supabase falló
@@ -629,13 +684,14 @@ export function useEncuestas() {
   }
 
   /**
-   * Vacía TODAS las respuestas y registros estadísticos de Supabase a nivel general
+   * Vacía TODAS las respuestas, estadísticas y alertas de convivencia de Supabase
    */
   const vaciarTodasLasEstadisticas = async (): Promise<boolean> => {
     const snapResp = [...respuestasAnonimas.value]
     respuestasAnonimas.value = []
 
     try {
+      // 1. Eliminar todas las respuestas en Supabase
       const { error } = await supabase
         .from('respuestas_anonimas')
         .delete()
@@ -643,19 +699,31 @@ export function useEncuestas() {
 
       if (error) throw new Error(error.message)
 
-      // Resetear contadores de todas las encuestas en Supabase
+      // 2. Eliminar todas las alertas de convivencia en Supabase
+      await supabase
+        .from('notificaciones_alertas')
+        .delete()
+        .in('tipo', ['alerta_clima', 'acoso', 'burnout', 'depresion', 'renuncia', 'social', 'alerta'])
+
+      // 3. Resetear contadores de todas las encuestas en Supabase a CERO
       encuestas.value.forEach(e => {
         e.totalRespuestas = 0
         e.alertasRegistradas = 0
-        e.puntajePromedio = 5.0
+        e.puntajePromedio = 0.0
       })
 
       await supabase
         .from('encuestas')
-        .update({ total_respuestas: 0, alertas_registradas: 0, puntaje_promedio: 5.0 })
+        .update({ total_respuestas: 0, alertas_registradas: 0, puntaje_promedio: 0.0 })
         .neq('id', 'dummy_no_match')
 
-      mostrarExito('Estadísticas purgadas', 'Todas las respuestas y métricas fueron vaciadas en Supabase.')
+      // 4. Limpiar alertas psicosociales del almacén local de notificaciones
+      try {
+        const { limpiarAlertasConvivencia } = useNotificaciones()
+        await limpiarAlertasConvivencia()
+      } catch {}
+
+      mostrarExito('Estadísticas y alertas purgadas', 'Todas las respuestas, estadísticas y alertas fueron reiniciadas a cero en Supabase.')
       return true
     } catch (e: any) {
       respuestasAnonimas.value = snapResp
@@ -663,11 +731,6 @@ export function useEncuestas() {
       return false
     }
   }
-
-  // Métrica computada: Total de respuestas ignoradas por detección de relleno / velocidad anormal (<3s)
-  const totalRespuestasIgnoradasPorRelleno = computed(() => {
-    return respuestasAnonimas.value.filter(r => r.esDescartadaPorVelocidad).length
-  })
 
   const obtenerRespuestasDeEncuesta = (idEncuesta: string): RegistroRespuesta[] =>
     respuestasAnonimas.value.filter(r => r.idEncuesta === idEncuesta)
@@ -683,7 +746,6 @@ export function useEncuestas() {
     totalEncuestas,
     encuestasActivas,
     totalRespuestasGlobales,
-    totalRespuestasIgnoradasPorRelleno,
     alertasTotales,
     promedioSatisfaccionGlobal,
     cargarEncuestasDesdeSupabase,

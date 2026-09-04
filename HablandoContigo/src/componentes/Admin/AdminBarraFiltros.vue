@@ -5,7 +5,7 @@
 -->
 
 <script setup lang="ts">
-import { Search, Filter, Sparkles, UserPlus } from 'lucide-vue-next'
+import { Search, Filter, UserPlus } from 'lucide-vue-next'
 import { BotonBase } from '@/componentes/ElementosBase'
 
 defineProps<{
@@ -22,7 +22,6 @@ defineEmits<{
   (e: 'update:filtroDepartamento', valor: string): void
   (e: 'update:filtroEstado', valor: string): void
   (e: 'abrirModalCrear'): void
-  (e: 'reiniciarDatosDemo'): void
 }>()
 </script>
 
@@ -43,17 +42,6 @@ defineEmits<{
 
       <!-- Botones de Acción usando BotonBase -->
       <div class="flex items-center gap-2.5 shrink-0">
-        <BotonBase
-          variante="secundario"
-          tamano="pequeno"
-          @click="$emit('reiniciarDatosDemo')"
-        >
-          <template #iconoIzquierdo>
-            <Sparkles class="w-3.5 h-3.5 text-amber-500" />
-          </template>
-          <span class="hidden sm:inline">Restaurar Demo</span>
-        </BotonBase>
-
         <BotonBase
           variante="gradiente"
           tamano="pequeno"

@@ -19,7 +19,7 @@ import {
   type TipoAlertaPersonalizada,
   type NivelAlerta
 } from '@/Almacenes/useTiposAlertas'
-import { BrainCircuit, Sliders } from 'lucide-vue-next'
+import { AlertTriangle, Sliders } from 'lucide-vue-next'
 import { BotonBase } from '@/componentes/ElementosBase'
 import ModalGestionTiposAlertas from './ModalGestionTiposAlertas.vue'
 import AlertasResumenNiveles from './Pestanas/PestanaAlertas/AlertasResumenNiveles.vue'
@@ -134,15 +134,15 @@ const alertasFiltradas = computed(() => {
     <!-- Encabezado Principal y Botón de Calibración -->
     <div class="p-5 sm:p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
       <div class="space-y-1">
-        <div class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-sky-300 text-[10px] font-bold uppercase tracking-wider">
-          <BrainCircuit class="w-3.5 h-3.5" />
-          <span>Inteligencia Artificial & Encasillamiento por Niveles</span>
+        <div class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 text-[10px] font-bold uppercase tracking-wider border border-amber-300 dark:border-amber-800">
+          <AlertTriangle class="w-3.5 h-3.5" />
+          <span>Protocolo de Alertas & Encasillamiento por Niveles</span>
         </div>
         <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
           <span>Protocolo de Alertas Psicosociales & Convivencia</span>
         </h3>
         <p class="text-xs text-slate-500 dark:text-slate-400">
-          La IA clasifica y encasilla automáticamente las respuestas de las encuestas en los Niveles (1 al 4) y criterios creados por el Super Administrador.
+          El sistema clasifica y encasilla automáticamente las respuestas de las encuestas en los Niveles (1 al 4) y criterios creados por el Super Administrador.
         </p>
       </div>
 
