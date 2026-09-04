@@ -1,0 +1,33 @@
+{
+  "name": "proyecto-encuestas-inteligentes",
+  "version": "1.0.0",
+  "description": "Sistema Inteligente de Encuestas Dinámicas con Análisis Estricto (Gemini API) y Landing Page 3D",
+  "main": "backend/servidor.js",
+  "scripts": {
+    "iniciar-servidor": "node backend/servidor.js",
+    "test-evaluacion": "node -e \"const { evaluarRespuestasConGemini } = require('./servicios/gemini-api'); evaluarRespuestasConGemini('Operaciones', [{ idPregunta: '1', textoPregunta: '¿Qué tal te la llevas con tu jefe?', categoria: 'Liderazgo', respuestaSeleccionada: 'Bien' }]).then(console.log);\""
+  },
+  "keywords": [
+    "encuestas-inteligentes",
+    "gemini-api",
+    "clima-laboral",
+    "threejs",
+    "landing-page-3d",
+    "analisis-estricto"
+  ],
+  "author": "Google Deepmind Pair Programmer & Senior Architect",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "three": "^0.174.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.13.9",
+    "@types/react": "^19.0.10",
+    "@types/three": "^0.174.0",
+    "typescript": "^5.8.2"
+  }
+}
