@@ -128,21 +128,23 @@ const idxEditando = ref<number>(-1)
 
 const abrirEditorPreguntaPorIndiceGlobal = (idx: number) => {
   if (!puedeEditar.value) return
-  idxEditando.value = idx
-  preguntaEditando.value = JSON.parse(JSON.stringify(preguntas.value[idx]))
-  modalAbierto.value = true
+  if (idx >= 0 && idx < preguntas.value.length && preguntas.value[idx]) {
+    idxEditando.value = idx
+    preguntaEditando.value = JSON.parse(JSON.stringify(preguntas.value[idx]))
+    modalAbierto.value = true
+  }
 }
 
 const abrirEditorPorId = (idPregunta: string) => {
   if (!puedeEditar.value) return
-  const idx = preguntas.value.findIndex(p => p.id === idPregunta)
+  const idx = preguntas.value.findIndex(p => p?.id === idPregunta)
   if (idx !== -1) {
     abrirEditorPreguntaPorIndiceGlobal(idx)
   }
 }
 
 const guardarEdicionPregunta = (preguntaEditada: PreguntaEncuesta) => {
-  if (idxEditando.value >= 0) {
+  if (idxEditando.value >= 0 && idxEditando.value < preguntas.value.length && preguntas.value[idxEditando.value]) {
     preguntas.value[idxEditando.value] = preguntaEditada
     analizarYGenerarSugerencia(preguntas.value, false)
   }
@@ -202,7 +204,7 @@ const destacarPregunta = (idPregunta: string) => {
 
 const aplicarAccionesJarvis = (acciones: AccionJarvis[]) => {
   if (!puedeEditar.value) return
-  const nombreAsis = ajustes.value.nombreAsistente || 'Daniel'
+  const nombreAsis = ajustes.value?.nombreAsistente || 'Daniel'
 
   acciones.forEach(accion => {
     switch (accion.tipo) {
@@ -220,7 +222,7 @@ const aplicarAccionesJarvis = (acciones: AccionJarvis[]) => {
         }
         preguntas.value.push(nueva)
         destacarPregunta(nueva.id)
-        mostrarExito(`🤖 ${nombreAsis}: Pregunta creada en "${nueva.categoria}"`)
+        mostrarExito(`🤖 ${nombreAsis}`, `Pregunta creada en "${nueva.categoria}"`)
         break
       }
 
@@ -232,14 +234,14 @@ const aplicarAccionesJarvis = (acciones: AccionJarvis[]) => {
           index = preguntas.value.findIndex(p => p.id === accion.idPregunta)
         }
 
-        if (index !== -1) {
+        if (index !== -1 && preguntas.value[index]) {
           const target = preguntas.value[index]
           if (accion.textoPregunta) target.texto = accion.textoPregunta
           if (accion.categoria) target.categoria = accion.categoria
           if (accion.tipoPregunta) target.tipo = accion.tipoPregunta
           if (accion.opciones && accion.opciones.length > 0) target.opciones = accion.opciones
           destacarPregunta(target.id)
-          mostrarExito(`🤖 ${nombreAsis}: Pregunta #${index + 1} actualizada`)
+          mostrarExito(`🤖 ${nombreAsis}`, `Pregunta #${index + 1} actualizada`)
         }
         break
       }
@@ -252,10 +254,11 @@ const aplicarAccionesJarvis = (acciones: AccionJarvis[]) => {
           index = preguntas.value.findIndex(p => p.id === accion.idPregunta)
         }
 
-        if (index !== -1 && accion.opciones) {
-          preguntas.value[index].opciones = accion.opciones
-          destacarPregunta(preguntas.value[index].id)
-          mostrarExito(`🤖 ${nombreAsis}: Opciones de la pregunta #${index + 1} actualizadas`)
+        if (index !== -1 && accion.opciones && preguntas.value[index]) {
+          const target = preguntas.value[index]
+          target.opciones = accion.opciones
+          destacarPregunta(target.id)
+          mostrarExito(`🤖 ${nombreAsis}`, `Opciones de la pregunta #${index + 1} actualizadas`)
         }
         break
       }
@@ -268,21 +271,26 @@ const aplicarAccionesJarvis = (acciones: AccionJarvis[]) => {
           index = preguntas.value.findIndex(p => p.id === accion.idPregunta)
         }
 
-        if (index !== -1) {
+        if (index !== -1 && preguntas.value[index]) {
           const target = preguntas.value[index]
-          if (accion.opcionTexto) {
-            const opcMatch = target.opciones.find(o => 
-              o.texto.toLowerCase().includes(accion.opcionTexto!.toLowerCase()) ||
-              accion.opcionTexto!.toLowerCase().includes(o.texto.toLowerCase())
-            )
-            if (opcMatch) {
-              opcMatch.esAlerta = accion.esAlerta !== undefined ? accion.esAlerta : true
+          if (Array.isArray(target?.opciones)) {
+            if (accion.opcionTexto) {
+              const opcMatch = target.opciones.find(o => 
+                o.texto.toLowerCase().includes(accion.opcionTexto!.toLowerCase()) ||
+                accion.opcionTexto!.toLowerCase().includes(o.texto.toLowerCase())
+              )
+              if (opcMatch) {
+                opcMatch.esAlerta = accion.esAlerta !== undefined ? accion.esAlerta : true
+              }
+            } else if (target.opciones.length > 0) {
+              const ultimaOpcion = target.opciones[target.opciones.length - 1]
+              if (ultimaOpcion) {
+                ultimaOpcion.esAlerta = accion.esAlerta !== undefined ? accion.esAlerta : true
+              }
             }
-          } else if (target.opciones.length > 0) {
-            target.opciones[target.opciones.length - 1].esAlerta = accion.esAlerta !== undefined ? accion.esAlerta : true
           }
           destacarPregunta(target.id)
-          mostrarExito(`🤖 ${nombreAsis}: Alerta configurada en la pregunta #${index + 1}`)
+          mostrarExito(`🤖 ${nombreAsis}`, `Alerta configurada en la pregunta #${index + 1}`)
         }
         break
       }
@@ -295,8 +303,11 @@ const aplicarAccionesJarvis = (acciones: AccionJarvis[]) => {
           index = preguntas.value.findIndex(p => p.id === accion.idPregunta)
         }
 
-        if (index !== -1 && accion.opcionTexto) {
+        if (index !== -1 && accion.opcionTexto && preguntas.value[index]) {
           const target = preguntas.value[index]
+          if (!Array.isArray(target.opciones)) {
+            target.opciones = []
+          }
           target.opciones.push({
             id: `opc-asis-${Date.now()}`,
             texto: accion.opcionTexto,
@@ -304,7 +315,7 @@ const aplicarAccionesJarvis = (acciones: AccionJarvis[]) => {
             esAlerta: Boolean(accion.esAlerta)
           })
           destacarPregunta(target.id)
-          mostrarExito(`🤖 ${nombreAsis}: Opción agregada a la pregunta #${index + 1}`)
+          mostrarExito(`🤖 ${nombreAsis}`, `Opción agregada a la pregunta #${index + 1}`)
         }
         break
       }
@@ -317,13 +328,15 @@ const aplicarAccionesJarvis = (acciones: AccionJarvis[]) => {
           index = preguntas.value.findIndex(p => p.id === accion.idPregunta)
         }
 
-        if (index !== -1 && accion.opcionTexto) {
+        if (index !== -1 && accion.opcionTexto && preguntas.value[index]) {
           const target = preguntas.value[index]
-          const opcIdx = target.opciones.findIndex(o => o.texto.toLowerCase().includes(accion.opcionTexto!.toLowerCase()))
-          if (opcIdx !== -1) {
-            target.opciones.splice(opcIdx, 1)
-            destacarPregunta(target.id)
-            mostrarExito(`🤖 ${nombreAsis}: Opción eliminada de la pregunta #${index + 1}`)
+          if (Array.isArray(target?.opciones)) {
+            const opcIdx = target.opciones.findIndex(o => o.texto.toLowerCase().includes(accion.opcionTexto!.toLowerCase()))
+            if (opcIdx !== -1) {
+              target.opciones.splice(opcIdx, 1)
+              destacarPregunta(target.id)
+              mostrarExito(`🤖 ${nombreAsis}`, `Opción eliminada de la pregunta #${index + 1}`)
+            }
           }
         }
         break
@@ -337,9 +350,9 @@ const aplicarAccionesJarvis = (acciones: AccionJarvis[]) => {
           index = preguntas.value.findIndex(p => p.id === accion.idPregunta)
         }
 
-        if (index !== -1) {
-          const rem = preguntas.value.splice(index, 1)
-          mostrarExito(`🤖 ${nombreAsis}: Pregunta #${index + 1} eliminada`)
+        if (index !== -1 && index < preguntas.value.length) {
+          preguntas.value.splice(index, 1)
+          mostrarExito(`🤖 ${nombreAsis}`, `Pregunta #${index + 1} eliminada`)
         }
         break
       }
@@ -347,7 +360,7 @@ const aplicarAccionesJarvis = (acciones: AccionJarvis[]) => {
       case 'CAMBIAR_TITULO': {
         if (accion.nuevoTitulo) {
           titulo.value = accion.nuevoTitulo
-          mostrarExito(`🤖 ${nombreAsis}: Título de la encuesta actualizado`)
+          mostrarExito(`🤖 ${nombreAsis}`, 'Título de la encuesta actualizado')
         }
         break
       }
@@ -355,7 +368,7 @@ const aplicarAccionesJarvis = (acciones: AccionJarvis[]) => {
       case 'CAMBIAR_DESCRIPCION': {
         if (accion.nuevaDescripcion) {
           descripcion.value = accion.nuevaDescripcion
-          mostrarExito(`🤖 ${nombreAsis}: Descripción de la encuesta actualizada`)
+          mostrarExito(`🤖 ${nombreAsis}`, 'Descripción de la encuesta actualizada')
         }
         break
       }
@@ -364,7 +377,7 @@ const aplicarAccionesJarvis = (acciones: AccionJarvis[]) => {
         titulo.value = TITULO_ENCUESTA_CLIMA_INTEGRAL
         descripcion.value = DESCRIPCION_ENCUESTA_CLIMA_INTEGRAL
         preguntas.value = JSON.parse(JSON.stringify(PLANTILLA_CLIMA_INTEGRAL_DETALLADA))
-        mostrarExito(`🤖 ${nombreAsis}: Plantilla oficial restaurada (34 preguntas · 8 bloques)`)
+        mostrarExito(`🤖 ${nombreAsis}`, 'Plantilla oficial restaurada (34 preguntas · 8 bloques)')
         break
       }
     }

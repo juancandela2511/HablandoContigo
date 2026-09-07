@@ -72,7 +72,7 @@ export function useToast() {
     setTimeout(() => eliminar(id), duracion)
   }
 
-  const mostrarError = (titulo: string, descripcion: string) => {
+  const mostrarError = (titulo: string, descripcion: string = '') => {
     // Si no ha iniciado sesión, NUNCA mostrar errores técnicos ni alertas en pantalla
     if (!sesionActiva()) {
       return
@@ -80,10 +80,10 @@ export function useToast() {
     agregar('error', titulo, descripcion, 7000)
   }
 
-  const mostrarExito = (titulo: string, descripcion: string) =>
+  const mostrarExito = (titulo: string, descripcion: string = '') =>
     agregar('exito', titulo, descripcion, 4000)
 
-  const mostrarAviso = (titulo: string, descripcion: string) => {
+  const mostrarAviso = (titulo: string, descripcion: string = '') => {
     if (!sesionActiva()) {
       return
     }

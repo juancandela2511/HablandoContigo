@@ -262,23 +262,26 @@ export function useTiposAlertas() {
 
     // Sincronizar con Supabase si la tabla existe
     if (tablaExisteEnSupabase.value) {
-      supabase.from('tipos_alertas_config').insert({
-        id: registro.id,
-        nombre: registro.nombre,
-        descripcion: registro.descripcion,
-        nivel: registro.nivel,
-        severidad: registro.severidad,
-        modo_enfoque: registro.modoEnfoque,
-        enfoque_detalle: registro.enfoqueDetalle,
-        palabras_clave: registro.palabrasClave,
-        protocolo_accion: registro.protocoloAccion,
-        icono: registro.icono,
-        activa: registro.activa
-      }).then(({ error }) => {
-        if (error) tablaExisteEnSupabase.value = false
-      }).catch(() => {
-        tablaExisteEnSupabase.value = false
-      })
+      ;(async () => {
+        try {
+          const { error } = await supabase.from('tipos_alertas_config').insert({
+            id: registro.id,
+            nombre: registro.nombre,
+            descripcion: registro.descripcion,
+            nivel: registro.nivel,
+            severidad: registro.severidad,
+            modo_enfoque: registro.modoEnfoque,
+            enfoque_detalle: registro.enfoqueDetalle,
+            palabras_clave: registro.palabrasClave,
+            protocolo_accion: registro.protocoloAccion,
+            icono: registro.icono,
+            activa: registro.activa
+          })
+          if (error) tablaExisteEnSupabase.value = false
+        } catch {
+          tablaExisteEnSupabase.value = false
+        }
+      })()
     }
 
     mostrarExito(
@@ -303,19 +306,24 @@ export function useTiposAlertas() {
     guardarEnLocalStorage()
 
     if (tablaExisteEnSupabase.value) {
-      supabase.from('tipos_alertas_config').update({
-        nombre: item.nombre,
-        descripcion: item.descripcion,
-        nivel: item.nivel,
-        severidad: item.severidad,
-        modo_enfoque: item.modoEnfoque,
-        enfoque_detalle: item.enfoqueDetalle,
-        palabras_clave: item.palabrasClave,
-        protocolo_accion: item.protocoloAccion,
-        activa: item.activa
-      }).eq('id', id).then(({ error }) => {
-        if (error) tablaExisteEnSupabase.value = false
-      }).catch(() => {})
+      ;(async () => {
+        try {
+          const { error } = await supabase.from('tipos_alertas_config').update({
+            nombre: item.nombre,
+            descripcion: item.descripcion,
+            nivel: item.nivel,
+            severidad: item.severidad,
+            modo_enfoque: item.modoEnfoque,
+            enfoque_detalle: item.enfoqueDetalle,
+            palabras_clave: item.palabrasClave,
+            protocolo_accion: item.protocoloAccion,
+            activa: item.activa
+          }).eq('id', id)
+          if (error) tablaExisteEnSupabase.value = false
+        } catch {
+          tablaExisteEnSupabase.value = false
+        }
+      })()
     }
 
     mostrarExito('Alerta actualizada', `Se guardaron los cambios en "${item.nombre}".`)
@@ -339,14 +347,19 @@ export function useTiposAlertas() {
     guardarEnLocalStorage()
 
     if (tablaExisteEnSupabase.value) {
-      supabase.from('tipos_alertas_config').update({
-        nombre: item.nombre,
-        descripcion: item.descripcion,
-        enfoque_detalle: item.enfoqueDetalle,
-        palabras_clave: item.palabrasClave
-      }).eq('id', id).then(({ error }) => {
-        if (error) tablaExisteEnSupabase.value = false
-      }).catch(() => {})
+      ;(async () => {
+        try {
+          const { error } = await supabase.from('tipos_alertas_config').update({
+            nombre: item.nombre,
+            descripcion: item.descripcion,
+            enfoque_detalle: item.enfoqueDetalle,
+            palabras_clave: item.palabrasClave
+          }).eq('id', id)
+          if (error) tablaExisteEnSupabase.value = false
+        } catch {
+          tablaExisteEnSupabase.value = false
+        }
+      })()
     }
 
     mostrarExito('Criterio actualizado', `Se actualizaron las definiciones de "${item.nombre}".`)
@@ -364,9 +377,14 @@ export function useTiposAlertas() {
     guardarEnLocalStorage()
 
     if (tablaExisteEnSupabase.value) {
-      supabase.from('tipos_alertas_config').delete().eq('id', id).then(({ error }) => {
-        if (error) tablaExisteEnSupabase.value = false
-      }).catch(() => {})
+      ;(async () => {
+        try {
+          const { error } = await supabase.from('tipos_alertas_config').delete().eq('id', id)
+          if (error) tablaExisteEnSupabase.value = false
+        } catch {
+          tablaExisteEnSupabase.value = false
+        }
+      })()
     }
 
     mostrarExito('Alerta eliminada', `"${borrado?.nombre || ''}" fue retirada de los criterios de IA.`)
@@ -384,9 +402,14 @@ export function useTiposAlertas() {
     guardarEnLocalStorage()
 
     if (tablaExisteEnSupabase.value) {
-      supabase.from('tipos_alertas_config').update({ activa: item.activa }).eq('id', id).then(({ error }) => {
-        if (error) tablaExisteEnSupabase.value = false
-      }).catch(() => {})
+      ;(async () => {
+        try {
+          const { error } = await supabase.from('tipos_alertas_config').update({ activa: item.activa }).eq('id', id)
+          if (error) tablaExisteEnSupabase.value = false
+        } catch {
+          tablaExisteEnSupabase.value = false
+        }
+      })()
     }
     return item.activa
   }
