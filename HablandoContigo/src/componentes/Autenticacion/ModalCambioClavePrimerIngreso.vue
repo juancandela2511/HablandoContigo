@@ -17,8 +17,9 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useAuth } from '@/Almacenes/useAuth'
+import { useLegal } from '@/Almacenes/useLegal'
 import { ModalBase, BotonBase, InsigniaPill } from '@/componentes/ElementosBase'
-import { KeyRound, ShieldCheck, Eye, EyeOff, AlertCircle, CheckCircle2, Lock } from 'lucide-vue-next'
+import { KeyRound, ShieldCheck, Eye, EyeOff, AlertCircle, CheckCircle2, Lock, Scale } from 'lucide-vue-next'
 
 const props = defineProps<{
   abierto: boolean
@@ -38,15 +39,25 @@ const cargando = ref(false)
 const errorMensaje = ref<string | null>(null)
 const exito = ref(false)
 
+// Checkboxes de cumplimiento legal obligatorio
+const aceptaTerminos = ref(false)
+const aceptaPrivacidad = ref(false)
+const aceptaConfidencialidad = ref(false)
+
 const tieneMinimo6 = computed(() => nuevaClave.value.length >= 6)
 const tieneMayusculaONumero = computed(() => /[A-Z0-9]/.test(nuevaClave.value))
 const clavesCoinciden = computed(() => nuevaClave.value.length > 0 && nuevaClave.value === confirmarClave.value)
 
 const formularioValido = computed(() => {
-  return tieneMinimo6.value && clavesCoinciden.value
+  return tieneMinimo6.value && 
+         clavesCoinciden.value && 
+         aceptaTerminos.value && 
+         aceptaPrivacidad.value && 
+         aceptaConfidencialidad.value
 })
 
 const { actualizarClavePrimerIngreso } = useAuth()
+const { abrirTerminos, abrirPrivacidad, registrarAceptacionPrimerIngreso } = useLegal()
 
 const manejarCambioClave = async () => {
   errorMensaje.value = null
@@ -66,11 +77,18 @@ const manejarCambioClave = async () => {
     return
   }
 
+  if (!aceptaTerminos.value || !aceptaPrivacidad.value || !aceptaConfidencialidad.value) {
+    errorMensaje.value = 'Por requisitos legales, debes aceptar los Términos y la Política de Privacidad.'
+    return
+  }
+
   cargando.value = true
   try {
     const resultado = await actualizarClavePrimerIngreso(props.email, nuevaClave.value)
 
     if (resultado.ok) {
+      // Registrar formalmente la aceptación legal
+      registrarAceptacionPrimerIngreso(props.email)
       exito.value = true
       setTimeout(() => {
         emit('claveActualizada')
@@ -85,6 +103,7 @@ const manejarCambioClave = async () => {
   }
 }
 </script>
+
 
 <template>
   <ModalBase
@@ -195,8 +214,50 @@ const manejarCambioClave = async () => {
             <span>{{ clavesCoinciden ? '✓' : '•' }} Ambas contraseñas deben ser idénticas</span>
           </div>
         </div>
+
+        <!-- Marco Legal y Consentimiento Obligatorio en Primer Ingreso -->
+        <div class="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2.5">
+          <div class="flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-white">
+            <Scale class="w-3.5 h-3.5 text-sky-500" />
+            <span>Aceptación Legal Obligatoria de Primer Ingreso</span>
+          </div>
+
+          <label class="flex items-start gap-2 text-[11px] text-slate-600 dark:text-slate-400 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              v-model="aceptaTerminos"
+              class="mt-0.5 w-3.5 h-3.5 text-sky-600 rounded border-slate-300 focus:ring-sky-500 shrink-0 cursor-pointer"
+            />
+            <span>
+              He leído y acepto los <button type="button" @click.prevent="abrirTerminos" class="text-sky-600 dark:text-sky-400 underline font-bold hover:text-sky-500">Términos y Condiciones</button> de la plataforma.
+            </span>
+          </label>
+
+          <label class="flex items-start gap-2 text-[11px] text-slate-600 dark:text-slate-400 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              v-model="aceptaPrivacidad"
+              class="mt-0.5 w-3.5 h-3.5 text-sky-600 rounded border-slate-300 focus:ring-sky-500 shrink-0 cursor-pointer"
+            />
+            <span>
+              Autorizo el tratamiento de mis datos conforme a la <button type="button" @click.prevent="abrirPrivacidad" class="text-sky-600 dark:text-sky-400 underline font-bold hover:text-sky-500">Política de Privacidad</button> (RGPD / Habeas Data).
+            </span>
+          </label>
+
+          <label class="flex items-start gap-2 text-[11px] text-slate-600 dark:text-slate-400 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              v-model="aceptaConfidencialidad"
+              class="mt-0.5 w-3.5 h-3.5 text-sky-600 rounded border-slate-300 focus:ring-sky-500 shrink-0 cursor-pointer"
+            />
+            <span>
+              Me comprometo al <strong>deber ético de confidencialidad y reserva</strong> en el manejo de métricas y diagnósticos de colaboradores.
+            </span>
+          </label>
+        </div>
       </form>
     </div>
+
 
     <template #pie>
       <div class="flex items-center justify-end gap-2 w-full">

@@ -19,25 +19,45 @@
 -->
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuth } from '@/Almacenes/useAuth'
 import { useSupabaseStatus } from '@/Almacenes/useSupabaseStatus'
+import { useSesionSegura } from '@/Almacenes/useSesionSegura'
 import Menu from './componentes/Comunes/Menu.vue'
 import BuscadorSpotlight from './componentes/Comunes/BuscadorSpotlight.vue'
 import NotificacionesFlotante from './componentes/Notificaciones/NotificacionesFlotante.vue'
 import AlertaConexionSupabase from './componentes/Comunes/AlertaConexionSupabase.vue'
 import ToastNotificaciones from './componentes/Comunes/ToastNotificaciones.vue'
+import ModalInactividad from './componentes/Comunes/ModalInactividad.vue'
+import ContenedorError from './componentes/Errores/ContenedorError.vue'
+
 
 const rutaActual = useRoute()
 const { estaAutenticado, refrescarSesionDesdeSupabase } = useAuth()
 const { verificarConexionSupabase } = useSupabaseStatus()
+const { iniciarVigilancia, detenerVigilancia } = useSesionSegura()
 
 onMounted(async () => {
   // Solo verificar conectividad y refrescar perfil si el usuario ha iniciado sesión
   if (estaAutenticado.value) {
     verificarConexionSupabase()
     await refrescarSesionDesdeSupabase()
+    iniciarVigilancia()
+  }
+})
+
+onUnmounted(() => {
+  detenerVigilancia()
+})
+
+// Iniciar o detener vigilancia cuando cambia el estado de autenticación
+// (p. ej. el usuario inicia sesión sin recargar la página)
+watch(estaAutenticado, (autenticado) => {
+  if (autenticado) {
+    iniciarVigilancia()
+  } else {
+    detenerVigilancia()
   }
 })
 
@@ -50,6 +70,7 @@ const ocultarMenuLateral = computed(() => {
          rutaActual.path.startsWith('/encuesta')
 })
 </script>
+
 
 <template>
   <div class="min-h-screen bg-slate-50 dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100 relative transition-colors duration-300">
@@ -69,13 +90,21 @@ const ocultarMenuLateral = computed(() => {
     <!-- Buscador Global Spotlight estilo macOS / iPhone (Solo autenticados) -->
     <BuscadorSpotlight v-if="estaAutenticado" />
 
+    <!-- Modal de inactividad: pregunta si continuar o cerrar sesión -->
+    <ModalInactividad v-if="estaAutenticado" />
+
+    <!-- Contenedor Global de Errores y Cumplimiento Legal (Modal o Vista) -->
+    <ContenedorError />
+
     <!-- Contenedor principal de vistas dinámicas -->
     <main class="w-full min-h-screen">
       <router-view />
     </main>
 
+
   </div>
 </template>
+
 
 <style>
 /* Estilos globales y efectos de iluminación */

@@ -37,13 +37,27 @@ import EncuestaBarraSuperior from '@/componentes/Encuestas/EncuestaBarraSuperior
 import EncuestaPreguntaItem from '@/componentes/Encuestas/EncuestaPreguntaItem.vue'
 import EncuestaPantallaExito from '@/componentes/Encuestas/EncuestaPantallaExito.vue'
 
+// Componentes del Marco Legal
+import {
+  PantallaConsentimientoEncuesta,
+  ModalTerminosCondiciones,
+  ModalPoliticaPrivacidad,
+  ModalConsentimientoInformado
+} from '@/componentes/Legal'
+import { useLegal } from '@/Almacenes/useLegal'
+
 const ruta = useRoute()
 const { encuestas, registrarRespuestaAnonima, obtenerEncuestaPorId } = useEncuestas()
+const { registrarConsentimientoEncuesta, haAceptadoConsentimientoEncuesta } = useLegal()
 
 const idEncuesta = computed(() => (ruta.params.id as string) || 'enc-001')
 const encuesta = ref<Encuesta | null>(null)
 const dispositivoUUID = ref('')
 const fechaYHora = ref({ fecha: '', hora: '' })
+
+// Estado de consentimiento informado previo
+const consentimientoOtorgado = ref(false)
+
 
 // Estado del cuestionario adaptativo
 const indicePreguntaActual = ref(0)
@@ -123,20 +137,33 @@ const reiniciarCronometroPregunta = () => {
   }, 1000)
 }
 
-onMounted(() => {
+const manejarConsentimientoOtorgado = () => {
+  consentimientoOtorgado.value = true
+  registrarConsentimientoEncuesta(dispositivoUUID.value, idEncuesta.value)
   tiempoInicioGlobal.value = Date.now()
   reiniciarCronometroPregunta()
+}
+
+onMounted(() => {
+  dispositivoUUID.value = obtenerODefinirDispositivoUUID()
+  fechaYHora.value = obtenerFechaYHoraActual()
+
+  // Comprobar si ya otorgó consentimiento previo para esta encuesta
+  consentimientoOtorgado.value = haAceptadoConsentimientoEncuesta(dispositivoUUID.value, idEncuesta.value)
+
+  tiempoInicioGlobal.value = Date.now()
+  if (consentimientoOtorgado.value) {
+    reiniciarCronometroPregunta()
+  }
 
   // Bloqueo de salida en navegador y retroceso de historial
   window.history.pushState(null, '', window.location.href)
   window.addEventListener('beforeunload', manejarBloqueoSalir)
   window.addEventListener('popstate', manejarPopState)
 
-  dispositivoUUID.value = obtenerODefinirDispositivoUUID()
-  fechaYHora.value = obtenerFechaYHoraActual()
-
   // Iniciar detección de ubicación exacta inmediatamente en segundo plano
   iniciarCapturaUbicacion()
+
 
   let encuestaEncontrada = obtenerEncuestaPorId(idEncuesta.value)
   if (!encuestaEncontrada && encuestas.value.length > 0) {
@@ -146,24 +173,9 @@ onMounted(() => {
   if (encuestaEncontrada) {
     encuesta.value = encuestaEncontrada
     const pregs = [...encuestaEncontrada.preguntas]
-    
-    // Garantizar que la pregunta de jefatura esté presente
-    if (!pregs.some(p => p.texto.toLowerCase().includes('jefe') || p.id === 'p-jefe-relacion')) {
-      pregs.unshift({
-        id: 'p-jefe-relacion',
-        categoria: 'Liderazgo y Supervisión Directa',
-        texto: '¿Qué tal te la llevas con tu jefe?',
-        tipo: 'multiple',
-        tieneBifurcacion: true,
-        preguntaCondicionalId: 'p-jefe-subpregunta-falencias',
-        opciones: [
-          { id: 'opc-jefe-bien', texto: 'Bien', valor: 5, esAlerta: false },
-          { id: 'opc-jefe-regular', texto: 'Regular', valor: 3, esAlerta: false },
-          { id: 'opc-jefe-mal', texto: 'Mal', valor: 1, esAlerta: true }
-        ]
-      })
-    }
-    colaPreguntas.value = pregs
+
+    // Las preguntas condicionales (12b, 28, etc.) inician fuera de la cola principal y se insertan según la respuesta
+    colaPreguntas.value = pregs.filter(p => !p.esCondicional)
   }
 })
 
@@ -191,20 +203,62 @@ const seleccionarOpcion = (opcion: OpcionPregunta) => {
     esAlerta: opcion.esAlerta
   }
 
-  // Bifurcación condicional de jefatura
+  const todasLasPreguntas = encuesta.value?.preguntas || []
   const textoPregunta = preguntaActual.value.texto.toLowerCase()
-  const esPreguntaJefe = textoPregunta.includes('jefe') || preguntaActual.value.id === 'p-jefe-relacion'
+  const idPreguntaActual = preguntaActual.value.id
+  const textoOpcion = (opcion.texto || '').trim().toLowerCase()
 
-  if (esPreguntaJefe) {
-    const seleccion = (opcion.texto || '').trim().toLowerCase()
+  // 1. Bifurcación Pregunta 12 (Conflictos de Convivencia)
+  if (idPreguntaActual === 'b3-p12-conflictos') {
+    const idSub = 'b3-p12b-conflictos-detalle'
+    if (textoOpcion.startsWith('sí') || textoOpcion.startsWith('si')) {
+      if (!colaPreguntas.value.some(p => p.id === idSub)) {
+        const subPreg = todasLasPreguntas.find(p => p.id === idSub) || {
+          id: idSub,
+          categoria: 'Bloque 3: Convivencia, Compañerismo y Trabajo en Equipo',
+          texto: 'Pregunta 12b — Si respondió "Sí" en la pregunta anterior, describa brevemente el contexto del conflicto:',
+          tipo: 'texto' as const,
+          esCondicional: true,
+          esSensibleAcoso: true,
+          opciones: []
+        }
+        colaPreguntas.value.splice(indicePreguntaActual.value + 1, 0, subPreg)
+      }
+    } else {
+      colaPreguntas.value = colaPreguntas.value.filter(p => p.id !== idSub)
+      delete respuestasUsuario.value[idSub]
+    }
+  }
+
+  // 2. Bifurcación Pregunta 27 (Estudios Académicos)
+  if (idPreguntaActual === 'b6-p27-estudia') {
+    const idSub = 'b6-p28-que-estudia'
+    if (textoOpcion === 'sí' || textoOpcion === 'si') {
+      if (!colaPreguntas.value.some(p => p.id === idSub)) {
+        const subPreg = todasLasPreguntas.find(p => p.id === idSub) || {
+          id: idSub,
+          categoria: 'Bloque 6: Nivel Académico, Estudios y Talento Humano',
+          texto: 'Pregunta 28 — Si actualmente estudia, ¿qué está estudiando y en qué institución? (Ej. ADSO, Idiomas, etc.)',
+          tipo: 'texto' as const,
+          esCondicional: true,
+          opciones: []
+        }
+        colaPreguntas.value.splice(indicePreguntaActual.value + 1, 0, subPreg)
+      }
+    } else {
+      colaPreguntas.value = colaPreguntas.value.filter(p => p.id !== idSub)
+      delete respuestasUsuario.value[idSub]
+    }
+  }
+
+  // 3. Bifurcación condicional genérica de jefatura
+  if (idPreguntaActual === 'p-jefe-relacion') {
     const idSubpregunta = 'p-jefe-subpregunta-falencias'
-
-    if (seleccion === 'bien') {
+    if (textoOpcion === 'bien') {
       colaPreguntas.value = colaPreguntas.value.filter(p => p.id !== idSubpregunta)
       delete respuestasUsuario.value[idSubpregunta]
-    } else if (seleccion === 'mal' || seleccion === 'regular') {
-      const yaExiste = colaPreguntas.value.some(p => p.id === idSubpregunta)
-      if (!yaExiste) {
+    } else if (textoOpcion === 'mal' || textoOpcion === 'regular') {
+      if (!colaPreguntas.value.some(p => p.id === idSubpregunta)) {
         const subpregunta: PreguntaEncuesta = {
           id: idSubpregunta,
           categoria: 'Profundización de Gestión del Jefe',
@@ -219,7 +273,7 @@ const seleccionarOpcion = (opcion: OpcionPregunta) => {
     }
   }
 
-  // Detección de alerta crítica
+  // 4. Detección de alerta crítica
   if (opcion.esAlerta || (opcion.valor <= 2 && preguntaActual.value.esSensibleAcoso)) {
     if (!alertaDetectadaEnSesion.value) {
       alertaDetectadaEnSesion.value = true
@@ -388,7 +442,15 @@ const finalizarYEnviar = async () => {
         :dispositivoUUID="dispositivoUUID"
       />
 
-      <!-- PREGUNTA ACTIVA (Componente Modular con Temporizador Antirapidez) -->
+      <!-- PASO PREVIO 1: CONSENTIMIENTO INFORMADO & AVISO LEGAL -->
+      <PantallaConsentimientoEncuesta
+        v-else-if="!consentimientoOtorgado"
+        :tituloEncuesta="encuesta?.titulo || 'Evaluación de Clima y Salud Laboral'"
+        :departamento="encuesta?.departamento"
+        @consentimientoOtorgado="manejarConsentimientoOtorgado"
+      />
+
+      <!-- PASO 2: PREGUNTA ACTIVA (Componente Modular con Temporizador Antirapidez) -->
       <EncuestaPreguntaItem
         v-else-if="preguntaActual"
         :preguntaActual="preguntaActual"
@@ -415,5 +477,11 @@ const finalizarYEnviar = async () => {
       <p>© 2026 HablandoContigo · Auditoría de Clima y Gestión Humana con Cero Falsas Alarmas</p>
     </footer>
 
+    <!-- Modales de Marco Legal y Regulatorio -->
+    <ModalTerminosCondiciones />
+    <ModalPoliticaPrivacidad />
+    <ModalConsentimientoInformado />
+
   </div>
 </template>
+

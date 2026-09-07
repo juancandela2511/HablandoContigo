@@ -65,8 +65,37 @@ const {
   promedioSaludActual
 } = useEstadisticas()
 
+// Filtro de Modalidad de Dashboard: Clima Laboral vs Encuestas Rápidas vs Consolidado
+const modoDashboard = ref<'clima' | 'rapida' | 'consolidado'>('clima')
+
 // Filtro de Encuesta Específica o Consolidado General
 const encuestaFiltro = ref('todas')
+
+// Resetear encuestaFiltro cuando cambia la modalidad
+watch(modoDashboard, () => {
+  encuestaFiltro.value = 'todas'
+})
+
+// Encuestas filtradas según la modalidad seleccionada
+const encuestasDisponiblesSegunModo = computed(() => {
+  if (modoDashboard.value === 'consolidado') return encuestas.value
+  if (modoDashboard.value === 'clima') {
+    return encuestas.value.filter(e => 
+      e.id === 'enc-001' || 
+      (e as any).tipo === 'clima' || 
+      e.titulo.toLowerCase().includes('clima') || 
+      e.titulo.toLowerCase().includes('diagnóstico') || 
+      (e.preguntas && e.preguntas.length >= 10)
+    )
+  }
+  return encuestas.value.filter(e => 
+    (e as any).tipo === 'rapida' || 
+    (e as any).tipo === 'pulso' || 
+    e.titulo.toLowerCase().includes('pulso') || 
+    e.titulo.toLowerCase().includes('rápida') || 
+    (e.preguntas && e.preguntas.length < 10)
+  )
+})
 
 // Navegación de Pestañas (Inicia en Estadísticas Generales)
 const pestanaActiva = ref<'general' | 'preguntas' | 'alertas' | 'auditoria'>('general')
@@ -95,9 +124,18 @@ const encuestaSeleccionadaObj = computed(() => {
   return encuestas.value.find(e => e.id === encuestaFiltro.value) || null
 })
 
-// Respuestas válidas en el alcance actual (filtradas por encuesta, depto y sin descartadas)
+// Respuestas válidas en el alcance actual (filtradas por modalidad, encuesta, depto y sin descartadas)
 const respuestasValidasAlcance = computed(() => {
+  const idsValidos = new Set(encuestasDisponiblesSegunModo.value.map(e => e.id))
+
   return respuestasAnonimas.value.filter(r => {
+    if (modoDashboard.value !== 'consolidado' && !idsValidos.has(r.idEncuesta)) {
+      if (modoDashboard.value === 'clima' && (!r.idEncuesta || r.idEncuesta === 'enc-001')) {
+        // mantener compatibilidad con respuestas por defecto
+      } else {
+        return false
+      }
+    }
     if (encuestaFiltro.value !== 'todas' && r.idEncuesta !== encuestaFiltro.value) return false
     if (departamentoFiltro.value !== 'todos') {
       const enc = encuestas.value.find(e => e.id === r.idEncuesta)
@@ -362,11 +400,12 @@ const manejarEliminarRespuestaIndividual = async (idRespuesta: string) => {
 
         <!-- Top Bar: Encabezado y Filtros (Componente Modular) -->
         <DashboardEncabezado
+          v-model:modoVista="modoDashboard"
           v-model:departamentoSeleccionado="departamentoFiltro"
           v-model:periodoSeleccionado="filtroPeriodoTemporal"
           v-model:encuestaSeleccionada="encuestaFiltro"
           :departamentosDisponibles="departamentosDisponibles"
-          :encuestasDisponibles="encuestas"
+          :encuestasDisponibles="encuestasDisponiblesSegunModo"
           @abrirModalExportar="modalExportarAbierto = true"
           @purgarEstadisticas="manejarPurgarTodasEstadisticas"
         />

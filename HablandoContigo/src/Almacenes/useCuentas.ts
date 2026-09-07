@@ -23,30 +23,38 @@ export interface PermisosRol {
   cuentas: boolean
   cambiarContrasenasOtros: boolean
   configuracion: boolean
+  /** Permiso para editar la encuesta troncal de Clima Laboral (false = solo lectura) */
+  editarEncuestaClima: boolean
 }
 
 export const PERMISOS_POR_ROL: Record<RolCuenta, PermisosRol> = {
   'Super Administrador': {
     proyectos: true, dashboard: true, alertas: true,
-    cuentas: true, cambiarContrasenasOtros: true, configuracion: true
+    cuentas: true, cambiarContrasenasOtros: true, configuracion: true,
+    editarEncuestaClima: true
   },
   'Adminsitrador General': {
     proyectos: true, dashboard: true, alertas: true,
-    cuentas: true, cambiarContrasenasOtros: true, configuracion: true
+    cuentas: true, cambiarContrasenasOtros: true, configuracion: true,
+    editarEncuestaClima: true
   },
   'Administrador': {
     proyectos: true, dashboard: true, alertas: true,
-    cuentas: false, cambiarContrasenasOtros: false, configuracion: true
+    cuentas: false, cambiarContrasenasOtros: false, configuracion: true,
+    editarEncuestaClima: true
   },
   'Supervisor': {
     proyectos: true, dashboard: false, alertas: false,
-    cuentas: false, cambiarContrasenasOtros: false, configuracion: true
+    cuentas: false, cambiarContrasenasOtros: false, configuracion: true,
+    editarEncuestaClima: false
   },
   'Analista RRHH': {
     proyectos: false, dashboard: true, alertas: false,
-    cuentas: false, cambiarContrasenasOtros: false, configuracion: true
+    cuentas: false, cambiarContrasenasOtros: false, configuracion: true,
+    editarEncuestaClima: false
   }
 }
+
 
 export const DOMINIOS_EMPRESA_PERMITIDOS = ['ontime.es', 'ontime', 'siticore', 'hablandocontigo']
 
@@ -76,8 +84,73 @@ export interface CuentaAdmin {
   fotoUrl?: string
 }
 
-// Estado reactivo global — alimentado 100% desde Supabase
-const cuentas = ref<CuentaAdmin[]>([])
+// Estado reactivo global — pre-poblado con cuentas oficiales y sincronizado con Supabase
+const cuentas = ref<CuentaAdmin[]>([
+  {
+    id: 'usr-superadmin',
+    nombre: 'Juan Sebastian Candela',
+    email: 'admin@ontime.es',
+    rol: 'Super Administrador',
+    departamento: 'Dirección General',
+    estado: 'Activo',
+    verificado: true,
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300',
+    fotoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300',
+    fechaCreacion: 'Hoy',
+    ultimoAcceso: 'Ahora mismo',
+    encuestasAsignadas: 3,
+    tokenVerificacion: '842913',
+    pinVerificacion: '842913'
+  },
+  {
+    id: 'cta-002',
+    nombre: 'Carolina Gómez',
+    email: 'carolina.gomez@ontime.es',
+    rol: 'Administrador',
+    departamento: 'Recursos Humanos y Cultura',
+    estado: 'Activo',
+    verificado: true,
+    avatar: '',
+    fotoUrl: '',
+    fechaCreacion: 'Hoy',
+    ultimoAcceso: 'Reciente',
+    encuestasAsignadas: 1,
+    tokenVerificacion: '519203',
+    pinVerificacion: '519203'
+  },
+  {
+    id: 'cta-003',
+    nombre: 'Andrés Morales',
+    email: 'andres.morales@ontime.es',
+    rol: 'Supervisor',
+    departamento: 'Operaciones y Contact Center',
+    estado: 'Activo',
+    verificado: true,
+    avatar: '',
+    fotoUrl: '',
+    fechaCreacion: 'Hoy',
+    ultimoAcceso: 'Reciente',
+    encuestasAsignadas: 1,
+    tokenVerificacion: '194820',
+    pinVerificacion: '194820'
+  },
+  {
+    id: 'cta-004',
+    nombre: 'Valeria Martínez',
+    email: 'valeria.martinez@ontime.es',
+    rol: 'Analista RRHH',
+    departamento: 'Recursos Humanos y Cultura',
+    estado: 'Activo',
+    verificado: true,
+    avatar: '',
+    fotoUrl: '',
+    fechaCreacion: 'Hoy',
+    ultimoAcceso: 'Reciente',
+    encuestasAsignadas: 0,
+    tokenVerificacion: '302914',
+    pinVerificacion: '302914'
+  }
+])
 const cargandoCuentas = ref(false)
 
 export function useCuentas() {
@@ -115,11 +188,10 @@ export function useCuentas() {
           pinVerificacion: item.pin_verificacion || item.token_verificacion || '842913'
         }))
       } else if (data && data.length === 0) {
-        console.info('Tabla cuentas_admin vacía en Supabase. Inicializando cuentas base...')
         await sembrarCuentasInicialesEnSupabase()
       }
     } catch (e: any) {
-      mostrarError('Error al cargar cuentas', `No se pudieron obtener las cuentas desde Supabase. ${e.message || ''}`)
+      console.warn('Aviso al cargar cuentas desde Supabase:', e.message)
     } finally {
       cargandoCuentas.value = false
     }

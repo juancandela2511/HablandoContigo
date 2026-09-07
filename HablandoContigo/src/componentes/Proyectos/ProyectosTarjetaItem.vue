@@ -21,10 +21,11 @@
 -->
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { Encuesta } from '@/Almacenes/useEncuestas'
-import { Copy, ExternalLink, Trash2, Eraser, Pencil } from 'lucide-vue-next'
+import { Copy, ExternalLink, Trash2, Eraser, Pencil, Building2, Zap, Sparkles } from 'lucide-vue-next'
 
-defineProps<{
+const props = defineProps<{
   encuesta: Encuesta
 }>()
 
@@ -35,6 +36,15 @@ defineEmits<{
   (e: 'eliminarEncuesta', id: string): void
   (e: 'vaciarEstadisticas', id: string): void
 }>()
+
+const esClimaLaboral = computed(() => {
+  const t = (props.encuesta.titulo || '').toLowerCase()
+  return props.encuesta.id === 'enc-001' || 
+    (props.encuesta as any).tipo === 'clima' || 
+    t.includes('clima') || 
+    t.includes('diagnóstico') || 
+    (props.encuesta.preguntas && props.encuesta.preguntas.length >= 10)
+})
 </script>
 
 <template>
@@ -42,10 +52,30 @@ defineEmits<{
     <div class="space-y-3">
       
       <div class="flex items-start justify-between gap-2">
-        <span class="px-2.5 py-1 rounded-xl text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sky-700 dark:text-sky-400">
-          {{ encuesta.departamento }}
-        </span>
-        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800">
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <!-- Badge de Modalidad -->
+          <span 
+            v-if="esClimaLaboral"
+            class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 dark:bg-sky-950/80 text-sky-800 dark:text-sky-300 border border-sky-300 dark:border-sky-800 flex items-center gap-1 shadow-sm"
+          >
+            <Building2 class="w-3 h-3 text-sky-500" />
+            <span>🌳 Clima Laboral ({{ encuesta.preguntas?.length || 34 }} Preg.)</span>
+          </span>
+
+          <span 
+            v-else
+            class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 flex items-center gap-1 shadow-sm"
+          >
+            <Zap class="w-3 h-3 text-amber-500" />
+            <span>⚡ Pulso Rápido ({{ encuesta.preguntas?.length || 1 }} Preg.)</span>
+          </span>
+
+          <span class="px-2 py-0.5 rounded-xl text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+            {{ encuesta.departamento }}
+          </span>
+        </div>
+
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800 shrink-0">
           <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
           {{ encuesta.estado }}
         </span>

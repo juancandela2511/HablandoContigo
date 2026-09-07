@@ -36,6 +36,15 @@ import {
 import PlanetaHero3D from '@/componentes/Inicio/PlanetaHero3D.vue'
 import ModalEncuestaDemo from '@/componentes/Inicio/ModalEncuestaDemo.vue'
 
+// Componentes del Marco Legal
+import {
+  PiePaginaLegal,
+  ModalTerminosCondiciones,
+  ModalPoliticaPrivacidad,
+  ModalConsentimientoInformado,
+  ModalPoliticaCookies
+} from '@/componentes/Legal'
+
 const router = useRouter()
 const { encuestas } = useEncuestas()
 const modalEncuestasAbierto = ref(false)
@@ -45,6 +54,7 @@ const irAEncuesta = (id: string) => {
   router.push(`/responder/${id}`)
 }
 </script>
+
 
 <template>
   <div class="min-h-screen bg-slate-50 dark:bg-[#05070c] text-slate-900 dark:text-slate-100 font-['Inter',sans-serif] overflow-x-hidden relative selection:bg-sky-500/30 transition-colors duration-300">
@@ -96,6 +106,15 @@ const irAEncuesta = (id: string) => {
       @cerrar="modalEncuestasAbierto = false"
       @seleccionarEncuesta="irAEncuesta"
     />
+
+    <!-- Pie de Página Legal y Regulatorio -->
+    <PiePaginaLegal />
+
+    <!-- Modales de Marco Legal y Regulatorio -->
+    <ModalTerminosCondiciones />
+    <ModalPoliticaPrivacidad />
+    <ModalConsentimientoInformado />
+    <ModalPoliticaCookies />
 
   </div>
 </template>

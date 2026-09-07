@@ -1,22 +1,16 @@
 <!--
   ============================================================================
-  VISTA ESTUDIO DE PROYECTOS Y GENERADOR CON IA (ProyectosView.vue)
+  VISTA ESTUDIO DE PROYECTOS Y MODALIDADES EXCLUSIVAS (ProyectosView.vue)
   ============================================================================
   
   ¿QUÉ ES Y QUÉ HACE?
-  Orquestador de campañas de encuestas y estudio de IA:
-  - Top Bar con navegación y botón de creación de proyecto.
-  - Galería de encuestas creadas (`ProyectosGaleria.vue`).
-  - Paso 1 del creador asistido con IA (`ProyectosCreadorPasoPrompt.vue`).
-  - Paso 2 del editor y balanceo de preguntas (`ProyectosCreadorPasoEditor.vue`).
-  - Modal de distribución y enlace anónimo copiable (`ModalEnlacePublicado.vue`).
-  
-  ¿PARA QUÉ SIRVE?
-  - Ofrecer una interfaz ágil, modular y libre de código monolítico para crear diagnósticos de clima.
-  
-  ¿CON QUÉ ESTÁ VINCULADO / CONECTADO?
-  - useAuth.ts, useEncuestas.ts, useHighlight.ts, iaEncuestasService.ts.
-  - Subcomponentes en `src/componentes/Proyectos/`.
+  Orquesta las 2 modalidades exclusivas de gestión de encuestas:
+  1. Modalidad Troncal de Clima Laboral:
+     - Encuesta fija y editable con Asistente Virtual IA con voz hablada (TTS) y burbuja de opiniones.
+  2. Modalidad de Encuestas Rápidas / Pulso del Día:
+     - Lanzamiento exprés de 1 clic para chequear el estado diario del equipo ("¿Cómo están hoy?").
+  3. Galería y Centro de Distribución:
+     - Listado de encuestas, copiado de enlace anónimo, visualización y estadísticas.
 -->
 
 <script setup lang="ts">
@@ -26,206 +20,167 @@ import { useAuth } from '@/Almacenes/useAuth'
 import { useEncuestas } from '@/Almacenes/useEncuestas'
 import { useHighlight } from '@/Almacenes/useHighlight'
 import { 
-  generarEncuestaConIA, 
-  optimizarEncuestaBaseConIA, 
-  type PreguntaEncuesta 
-} from '@/Servicios/iaEncuestasService'
-import {
-  PREGUNTAS_DEFECTO_CUESTIONARIO,
-  PREGUNTAS_SEGUIMIENTO_DEFECTO
-} from '@/Config/preguntasCuestionario'
-import { Sparkles } from 'lucide-vue-next'
+  Sparkles, 
+  ArrowLeft, 
+  Building2, 
+  Zap, 
+  LayoutGrid, 
+  Volume2,
+  Sliders
+} from 'lucide-vue-next'
 
 import ProyectosGaleria from '@/componentes/Proyectos/ProyectosGaleria.vue'
-import ProyectosCreadorPasoPrompt from '@/componentes/Proyectos/ProyectosCreadorPasoPrompt.vue'
-import ProyectosCreadorPasoEditor from '@/componentes/Proyectos/ProyectosCreadorPasoEditor.vue'
+import ProyectosSelectorModalidades from '@/componentes/Proyectos/ProyectosSelectorModalidades.vue'
+import ProyectosModoClimaFijo from '@/componentes/Proyectos/ProyectosModoClimaFijo.vue'
+import ProyectosModoEncuestaRapida from '@/componentes/Proyectos/ProyectosModoEncuestaRapida.vue'
 import ModalEnlacePublicado from '@/componentes/Proyectos/ModalEnlacePublicado.vue'
 
 const router = useRouter()
 const { usuarioActual } = useAuth()
 const { elementoResaltadoId } = useHighlight()
-const { encuestas, crearEncuesta, editarEncuesta, eliminarEncuesta, vaciarEstadisticasEncuesta } = useEncuestas()
+const { 
+  encuestas, 
+  crearEncuesta, 
+  editarEncuesta, 
+  eliminarEncuesta, 
+  vaciarEstadisticasEncuesta 
+} = useEncuestas()
 
-// Modos de vista: 'lista' | 'crear'
-const vistaActual = ref<'lista' | 'crear'>('lista')
+// Modos de vista: 'galeria' | 'selector' | 'clima_fijo' | 'encuesta_rapida'
+const vistaActual = ref<'galeria' | 'selector' | 'clima_fijo' | 'encuesta_rapida'>('galeria')
 
-// Modo edición de encuesta existente
-const modoEdicion = ref(false)
-const idEncuestaEditando = ref('')
+// Encuesta específica en edición (si aplica)
+const encuestaEditando = ref<any>(null)
 
-// Modo de creación: 'prompt' (nueva con IA) | 'refinar_base' (optimizar borrador del usuario)
-const modoCreacion = ref<'prompt' | 'refinar_base'>('prompt')
-
-// Estado del Generador con IA
-const promptContexto = ref('')
-const departamentoSeleccionado = ref('Operaciones y Contact Center')
-const extensionSeleccionada = ref<'rapida' | 'estandar' | 'extensa'>('estandar')
-const generacionEnProgreso = ref(false)
-const pasoCreacion = ref<1 | 2>(1)
-
-// Datos de la encuesta en edición
-const tituloEncuesta = ref('')
-const descripcionEncuesta = ref('')
-const preguntasGeneradas = ref<PreguntaEncuesta[]>([])
-const preguntasSeguimiento = ref<PreguntaEncuesta[]>([])
-
-// Modal de éxito
+// Modal de distribución y enlace publicado
 const modalEnlaceAbierto = ref(false)
 const encuestaPublicadaId = ref('')
 
-const sugerenciasPrompt = computed(() => {
-  if (modoCreacion.value === 'refinar_base') {
-    return [
-      '1. ¿Cómo te la llevas con tu jefe? 2. ¿Sientes que tus líderes te escuchan? 3. ¿Existe acoso en tu equipo? 4. ¿La carga de trabajo es excesiva?',
-      '1. ¿Qué tal es la comunicación con la gerencia? 2. ¿Has presenciado tratos humillantes o favoritismo? 3. ¿Recomendarías trabajar aquí?',
-      '1. ¿Tu jefe directo te trata con respeto? 2. ¿Cuentas con las herramientas de trabajo necesarias? 3. ¿Qué sugerencias tienes para la operación?'
-    ]
-  }
-  return [
-    'Evaluar convivencia, liderazgo de supervisores y detectar posibles situaciones de acoso laboral.',
-    'Diagnóstico de sobrecarga de tareas, estrés operativo y ambiente de compañerismo en turno tarde.',
-    'Medir seguridad psicológica para proponer ideas y calidad de retroalimentación de directivos.'
-  ]
+// Encuesta troncal de clima laboral principal (la fija del sistema)
+const encuestaClimaPrincipal = computed(() => {
+  return encuestas.value.find(e => 
+    e.id === 'enc-001' || 
+    (e as any).tipo === 'clima' || 
+    e.titulo.toLowerCase().includes('clima') ||
+    e.titulo.toLowerCase().includes('diagnóstico')
+  ) || encuestas.value[0] || null
 })
 
-const iniciarEdicionEncuesta = (encuesta: any) => {
-  modoEdicion.value = true
-  idEncuestaEditando.value = encuesta.id
-  tituloEncuesta.value = encuesta.titulo || ''
-  descripcionEncuesta.value = encuesta.descripcion || ''
-  departamentoSeleccionado.value = encuesta.departamento || 'General'
-  preguntasGeneradas.value = JSON.parse(JSON.stringify(encuesta.preguntas || []))
-  preguntasSeguimiento.value = JSON.parse(JSON.stringify(encuesta.preguntasSeguimiento || []))
-  
-  vistaActual.value = 'crear'
-  pasoCreacion.value = 2
+/**
+ * Abre el selector o entra directo a una modalidad
+ */
+const abrirSelector = () => {
+  encuestaEditando.value = null
+  vistaActual.value = 'selector'
 }
 
-const iniciarGeneracionIA = async () => {
-  modoEdicion.value = false
-  idEncuestaEditando.value = ''
-  if (!promptContexto.value.trim()) {
-    alert(modoCreacion.value === 'refinar_base' 
-      ? 'Por favor escribe o pega el borrador de preguntas de tu encuesta base.' 
-      : 'Por favor escribe una breve descripción de la encuesta que deseas crear.')
-    return
-  }
-
-  generacionEnProgreso.value = true
-  try {
-    let resultado
-    if (modoCreacion.value === 'refinar_base') {
-      resultado = await optimizarEncuestaBaseConIA(
-        promptContexto.value,
-        departamentoSeleccionado.value
-      )
-    } else {
-      resultado = await generarEncuestaConIA(
-        promptContexto.value, 
-        departamentoSeleccionado.value,
-        extensionSeleccionada.value
-      )
-    }
-    tituloEncuesta.value = resultado.titulo
-    descripcionEncuesta.value = resultado.descripcion
-    preguntasGeneradas.value = resultado.preguntas
-    preguntasSeguimiento.value = resultado.preguntasSeguimiento
-    pasoCreacion.value = 2
-  } catch (error) {
-    console.error('Error procesando encuesta:', error)
-  } finally {
-    generacionEnProgreso.value = false
+/**
+ * Maneja la elección entre las 2 modalidades exclusivas
+ */
+const manejarSeleccionModalidad = (modalidad: 'clima_fijo' | 'encuesta_rapida') => {
+  if (modalidad === 'clima_fijo') {
+    encuestaEditando.value = encuestaClimaPrincipal.value
+    vistaActual.value = 'clima_fijo'
+  } else {
+    vistaActual.value = 'encuesta_rapida'
   }
 }
 
-const iniciarCreacionManual = () => {
-  modoEdicion.value = false
-  idEncuestaEditando.value = ''
-  tituloEncuesta.value = 'Nueva Encuesta de Diagnóstico Laboral'
-  descripcionEncuesta.value = 'Cuestionario estructurado manualmente para evaluar la convivencia, bienestar y condiciones laborales.'
-  departamentoSeleccionado.value = 'General'
-  preguntasGeneradas.value = JSON.parse(JSON.stringify(PREGUNTAS_DEFECTO_CUESTIONARIO))
-  preguntasSeguimiento.value = JSON.parse(JSON.stringify(PREGUNTAS_SEGUIMIENTO_DEFECTO))
-  vistaActual.value = 'crear'
-  pasoCreacion.value = 2
-}
+/**
+ * Guarda o actualiza la encuesta troncal de clima laboral
+ */
+const manejarGuardarClima = async (datos: any) => {
+  const idExistente = encuestaEditando.value?.id || encuestaClimaPrincipal.value?.id
 
-const agregarPreguntaManual = () => {
-  const nueva: PreguntaEncuesta = {
-    id: `p-custom-${Date.now().toString().slice(-4)}`,
-    categoria: 'Clima General',
-    texto: '¿Cómo te sientes en relación con este aspecto en tu día a día laboral?',
-    tipo: 'escala',
-    esRelleno: false,
-    esSensibleAcoso: false,
-    opciones: [
-      { id: 'opt-1', texto: '1 - Muy bajo / Malestar', valor: 1, esAlerta: false },
-      { id: 'opt-2', texto: '2 - Regular / Insuficiente', valor: 2, esAlerta: false },
-      { id: 'opt-3', texto: '3 - Aceptable', valor: 3, esAlerta: false },
-      { id: 'opt-4', texto: '4 - Bueno y motivador', valor: 4, esAlerta: false },
-      { id: 'opt-5', texto: '5 - Excelente / Plena satisfacción', valor: 5, esAlerta: false }
-    ]
-  }
-  preguntasGeneradas.value.push(nueva)
-}
-
-const eliminarPregunta = (id: string) => {
-  preguntasGeneradas.value = preguntasGeneradas.value.filter(p => p.id !== id)
-}
-
-const publicarEncuesta = async () => {
-  if (preguntasGeneradas.value.length === 0) {
-    alert('La encuesta debe contener al menos una pregunta.')
-    return
-  }
-
-  if (modoEdicion.value && idEncuestaEditando.value) {
-    const ok = await editarEncuesta(idEncuestaEditando.value, {
-      titulo: tituloEncuesta.value,
-      descripcion: descripcionEncuesta.value,
-      departamento: departamentoSeleccionado.value,
-      preguntas: preguntasGeneradas.value,
-      preguntasSeguimiento: preguntasSeguimiento.value
+  if (idExistente) {
+    const ok = await editarEncuesta(idExistente, {
+      titulo: datos.titulo,
+      descripcion: datos.descripcion,
+      departamento: datos.departamento,
+      preguntas: datos.preguntas,
+      preguntasSeguimiento: datos.preguntasSeguimiento || []
     })
 
     if (ok) {
-      vistaActual.value = 'lista'
-      modoEdicion.value = false
-      idEncuestaEditando.value = ''
-      pasoCreacion.value = 1
+      encuestaPublicadaId.value = idExistente
+      modalEnlaceAbierto.value = true
+      vistaActual.value = 'galeria'
+      encuestaEditando.value = null
     }
-    return
+  } else {
+    const creada = await crearEncuesta({
+      titulo: datos.titulo || 'Diagnóstico Oficial de Clima Laboral',
+      descripcion: datos.descripcion || 'Encuesta troncal fija y continua.',
+      departamento: datos.departamento || 'General',
+      creadoPor: usuarioActual.value?.nombre || 'Administrador',
+      estado: 'Activa',
+      preguntas: datos.preguntas,
+      preguntasSeguimiento: datos.preguntasSeguimiento || []
+    })
+
+    if (creada) {
+      encuestaPublicadaId.value = creada.id
+      modalEnlaceAbierto.value = true
+      vistaActual.value = 'galeria'
+      encuestaEditando.value = null
+    }
   }
-
-  const creada = await crearEncuesta({
-    titulo: tituloEncuesta.value || 'Encuesta de Clima Laboral',
-    descripcion: descripcionEncuesta.value || 'Evaluación anónima de clima.',
-    departamento: departamentoSeleccionado.value,
-    creadoPor: usuarioActual.value?.nombre || 'Administrador',
-    estado: 'Activa',
-    preguntas: preguntasGeneradas.value,
-    preguntasSeguimiento: preguntasSeguimiento.value
-  })
-
-  // Si creada es null, Supabase falló y ya se mostró el toast de error
-  if (!creada) return
-
-  encuestaPublicadaId.value = creada.id
-  modalEnlaceAbierto.value = true
-  vistaActual.value = 'lista'
-  pasoCreacion.value = 1
-  promptContexto.value = ''
 }
 
+/**
+ * Lanza una encuesta rápida / pulso del día instantáneo
+ */
+const manejarLanzarRapida = async (datos: any) => {
+  const creada = await crearEncuesta({
+    titulo: datos.titulo,
+    descripcion: datos.descripcion,
+    departamento: datos.departamento || 'General',
+    creadoPor: usuarioActual.value?.nombre || 'Administrador',
+    estado: 'Activa',
+    preguntas: datos.preguntas,
+    preguntasSeguimiento: []
+  })
+
+  if (creada) {
+    encuestaPublicadaId.value = creada.id
+    modalEnlaceAbierto.value = true
+    vistaActual.value = 'galeria'
+  }
+}
+
+/**
+ * Edita cualquier encuesta existente desde la galería
+ */
+const manejarEditarEncuesta = (encuesta: any) => {
+  encuestaEditando.value = encuesta
+  vistaActual.value = 'clima_fijo'
+}
+
+/**
+ * Copia el enlace anónimo de respuesta
+ */
 const copiarEnlace = (id: string) => {
   const url = `${window.location.origin}/responder/${id}`
   navigator.clipboard.writeText(url)
 }
 
+/**
+ * Redirige al formulario interactivo anónimo
+ */
 const irAResponder = (id: string) => {
   router.push(`/responder/${id}`)
 }
 
+/**
+ * Abre la vista de configuración en la pestaña de voz
+ */
+const irAAjustesVoz = () => {
+  router.push('/configuracion')
+}
+
+/**
+ * Vacía las respuestas y reinicia el acumulado
+ */
 const manejarVaciarEstadisticas = async (id: string) => {
   if (confirm('¿Deseas vaciar y reiniciar todas las respuestas registradas de esta encuesta? Esta acción limpiará la base de datos.')) {
     await vaciarEstadisticasEncuesta(id)
@@ -243,94 +198,97 @@ const manejarVaciarEstadisticas = async (id: string) => {
 
     <div class="max-w-7xl mx-auto space-y-8 relative z-10">
       
-      <!-- Top Bar -->
+      <!-- Top Bar de Navegación -->
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-slate-800">
         <div>
           <div class="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
             <span>Gestión Estratégica</span>
             <span class="text-slate-400 dark:text-slate-600">/</span>
-            <span class="text-sky-600 dark:text-sky-400 font-semibold">Proyectos de Clima con IA</span>
+            <span class="text-sky-600 dark:text-sky-400 font-semibold">
+              {{ 
+                vistaActual === 'galeria' ? 'Centro de Encuestas' :
+                vistaActual === 'selector' ? 'Seleccionar Modalidad' :
+                vistaActual === 'clima_fijo' ? 'Modalidad 1: Clima Laboral Fijo' :
+                'Modalidad 2: Encuesta Rápida Diaria'
+              }}
+            </span>
           </div>
           <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
-            <span>Proyectos de Encuestas</span>
-            <span class="text-xs font-semibold px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-950/80 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-sky-400">
-              Generador IA Inteligente
+            <span>Encuestas y Diagnósticos</span>
+            <span class="text-xs font-semibold px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-950/80 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-sky-400 flex items-center gap-1.5">
+              <Sparkles class="w-3.5 h-3.5 text-sky-500" />
+              2 Modalidades Oficiales
             </span>
           </h1>
           <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">
-            Crea campañas de clima laboral con generación automática de preguntas, filtros adaptativos y detección de alertas de acoso.
+            Gestiona la encuesta troncal de clima laboral con Asistente Asesor IA hablante o lanza encuestas rápidas para chequear el ánimo diario.
           </p>
         </div>
 
         <div class="flex items-center gap-3">
+          <!-- Botón cuando está en galería -->
           <button
-            v-if="vistaActual === 'lista'"
-            @click="vistaActual = 'crear'; pasoCreacion = 1"
+            v-if="vistaActual === 'galeria'"
+            @click="abrirSelector"
             class="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-lg shadow-blue-500/25 active:scale-95 transition-all cursor-pointer"
           >
             <Sparkles class="w-4 h-4 text-white animate-pulse" />
-            <span>Crear Proyecto </span>
+            <span>Gestionar / Lanzar Encuestas</span>
           </button>
           
+          <!-- Botón para volver a la galería -->
           <button
             v-else
-            @click="vistaActual = 'lista'"
-            class="px-4 py-2.5 rounded-2xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-300 text-xs font-semibold transition-all cursor-pointer"
+            @click="vistaActual = 'galeria'"
+            class="px-4 py-2.5 rounded-2xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-300 text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer"
           >
-            Volver a Proyectos
+            <ArrowLeft class="w-4 h-4" />
+            <span>Volver a Mis Encuestas</span>
           </button>
         </div>
       </div>
 
-      <!-- VISTA 1: LISTADO DE PROYECTOS (Componente Modular) -->
+      <!-- VISTA 1: GALERÍA Y LISTADO DE ENCUESTAS ACTIVAS -->
       <ProyectosGaleria
-        v-if="vistaActual === 'lista'"
+        v-if="vistaActual === 'galeria'"
         :encuestas="encuestas"
         :elementoResaltadoId="elementoResaltadoId"
-        @crearNuevo="vistaActual = 'crear'; modoEdicion = false; pasoCreacion = 1"
+        @crearNuevo="abrirSelector"
         @copiarEnlace="copiarEnlace"
         @irAResponder="irAResponder"
-        @editarEncuesta="iniciarEdicionEncuesta"
+        @editarEncuesta="manejarEditarEncuesta"
         @eliminarEncuesta="eliminarEncuesta"
         @vaciarEstadisticas="manejarVaciarEstadisticas"
       />
 
-      <!-- VISTA 2: ESTUDIO DE CREACIÓN / EDICIÓN (Componentes Modulares) -->
-      <div v-else class="space-y-6 max-w-4xl mx-auto">
-        
-        <!-- PASO 1: Prompt y Descripción (Solo al crear nueva) -->
-        <ProyectosCreadorPasoPrompt
-          v-if="pasoCreacion === 1"
-          v-model:departamentoSeleccionado="departamentoSeleccionado"
-          v-model:promptContexto="promptContexto"
-          v-model:extensionSeleccionada="extensionSeleccionada"
-          v-model:modoCreacion="modoCreacion"
-          :generacionEnProgreso="generacionEnProgreso"
-          :sugerenciasPrompt="sugerenciasPrompt"
-          @aplicarSugerencia="promptContexto = $event"
-          @iniciarGeneracion="iniciarGeneracionIA"
-          @crearManual="iniciarCreacionManual"
+      <!-- VISTA 2: SELECTOR DE LAS 2 MODALIDADES EXCLUSIVAS -->
+      <div v-else-if="vistaActual === 'selector'" class="py-4 animate-fade-in">
+        <ProyectosSelectorModalidades
+          @seleccionarModalidad="manejarSeleccionModalidad"
         />
+      </div>
 
-        <!-- PASO 2: Editor y Ajuste de Preguntas -->
-        <ProyectosCreadorPasoEditor
-          v-else
-          v-model:tituloEncuesta="tituloEncuesta"
-          v-model:descripcionEncuesta="descripcionEncuesta"
-          :preguntasGeneradas="preguntasGeneradas"
-          :preguntasSeguimiento="preguntasSeguimiento"
-          :esModoEdicion="modoEdicion"
-          @volverAlPrompt="modoEdicion ? vistaActual = 'lista' : pasoCreacion = 1"
-          @agregarPregunta="agregarPreguntaManual"
-          @eliminarPregunta="eliminarPregunta"
-          @publicarEncuesta="publicarEncuesta"
+      <!-- VISTA 3: MODALIDAD 1 - CLIMA LABORAL TRONCAL CON ASISTENTE PARLANTE -->
+      <div v-else-if="vistaActual === 'clima_fijo'" class="animate-fade-in">
+        <ProyectosModoClimaFijo
+          :encuestaInicial="encuestaEditando || encuestaClimaPrincipal"
+          @guardar="manejarGuardarClima"
+          @volver="vistaActual = 'selector'"
+          @abrirAjustesVoz="irAAjustesVoz"
         />
+      </div>
 
+      <!-- VISTA 4: MODALIDAD 2 - ENCUESTAS RÁPIDAS / PULSO DEL DÍA -->
+      <div v-else-if="vistaActual === 'encuesta_rapida'" class="animate-fade-in">
+        <ProyectosModoEncuestaRapida
+          @lanzarEncuestaRapida="manejarLanzarRapida"
+          @volver="vistaActual = 'selector'"
+        />
       </div>
 
     </div>
 
-    <!-- Modal de Enlace Publicado -->
+    <!-- Modal de Enlace Publicado y Código QR -->
     <ModalEnlacePublicado
       :abierto="modalEnlaceAbierto"
       :encuestaId="encuestaPublicadaId"

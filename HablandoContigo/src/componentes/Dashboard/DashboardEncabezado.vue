@@ -18,7 +18,7 @@
 -->
 
 <script setup lang="ts">
-import { ChevronRight, Download, Eraser } from 'lucide-vue-next'
+import { ChevronRight, Download, Eraser, Building2, Zap, BarChart3 } from 'lucide-vue-next'
 
 defineProps<{
   departamentoSeleccionado: string
@@ -26,12 +26,14 @@ defineProps<{
   departamentosDisponibles: string[]
   encuestaSeleccionada?: string
   encuestasDisponibles?: { id: string; titulo: string }[]
+  modoVista?: 'clima' | 'rapida' | 'consolidado'
 }>()
 
 defineEmits<{
   (e: 'update:departamentoSeleccionado', valor: string): void
   (e: 'update:periodoSeleccionado', valor: string): void
   (e: 'update:encuestaSeleccionada', valor: string): void
+  (e: 'update:modoVista', valor: 'clima' | 'rapida' | 'consolidado'): void
   (e: 'abrirModalExportar'): void
   (e: 'purgarEstadisticas'): void
 }>()
@@ -39,18 +41,63 @@ defineEmits<{
 
 <template>
   <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-slate-800">
-    <div>
-      <div class="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+    <div class="space-y-2">
+      <div class="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
         <span>Gestión de Talento</span>
         <ChevronRight class="w-3.5 h-3.5 text-slate-400 dark:text-slate-600" />
-        <span class="text-sky-600 dark:text-sky-400 font-semibold">Analítica y Diagnóstico de Clima</span>
+        <span class="text-sky-600 dark:text-sky-400 font-semibold">Analítica y Diagnóstico</span>
       </div>
       <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
         <span>Dashboard Estadístico y de Bienestar</span>
       </h1>
-      <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">
+      <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
         Monitoreo en tiempo real de seguridad psicológica, prevención de acoso laboral y salud organizacional.
       </p>
+
+      <!-- Selector Segmentado: Clima Laboral vs Encuestas Rápidas vs Consolidado -->
+      <div class="inline-flex items-center gap-1 p-1 rounded-2xl bg-slate-100 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 mt-2">
+        <button
+          type="button"
+          @click="$emit('update:modoVista', 'clima')"
+          :class="[
+            'px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer',
+            (modoVista || 'clima') === 'clima'
+              ? 'bg-sky-500 text-white shadow-md ring-2 ring-sky-400/30'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+          ]"
+        >
+          <Building2 class="w-3.5 h-3.5" />
+          <span>🌳 Clima Laboral (Integral)</span>
+        </button>
+
+        <button
+          type="button"
+          @click="$emit('update:modoVista', 'rapida')"
+          :class="[
+            'px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer',
+            modoVista === 'rapida'
+              ? 'bg-amber-500 text-white shadow-md ring-2 ring-amber-400/30'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+          ]"
+        >
+          <Zap class="w-3.5 h-3.5" />
+          <span>⚡ Encuestas Rápidas (Pulso)</span>
+        </button>
+
+        <button
+          type="button"
+          @click="$emit('update:modoVista', 'consolidado')"
+          :class="[
+            'px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer',
+            modoVista === 'consolidado'
+              ? 'bg-slate-800 dark:bg-slate-700 text-white shadow-md ring-2 ring-slate-400/30'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+          ]"
+        >
+          <BarChart3 class="w-3.5 h-3.5" />
+          <span>📊 Consolidado Global</span>
+        </button>
+      </div>
     </div>
 
     <!-- Controles de Filtros y Exportación -->

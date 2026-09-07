@@ -28,7 +28,8 @@ import {
   User,
   KeyRound,
   ShieldAlert,
-  Database
+  Database,
+  Volume2
 } from 'lucide-vue-next'
 
 import PerfilFotoUploader from '@/componentes/Configuracion/PerfilFotoUploader.vue'
@@ -36,12 +37,13 @@ import PerfilPermisosCard from '@/componentes/Configuracion/PerfilPermisosCard.v
 import PerfilFormularioDatos from '@/componentes/Configuracion/PerfilFormularioDatos.vue'
 import PerfilCambioContrasena from '@/componentes/Configuracion/PerfilCambioContrasena.vue'
 import PerfilDesactivarCuenta from '@/componentes/Configuracion/PerfilDesactivarCuenta.vue'
+import PerfilAjustesVozAsistente from '@/componentes/Configuracion/PerfilAjustesVozAsistente.vue'
 
 const { usuarioActual, actualizarPerfil, subirFotoPerfil } = useAuth()
 const { elementoResaltadoId } = useHighlight()
 
-// Pestaña activa ('perfil' | 'seguridad' | 'riesgo')
-const pestanaActiva = ref<'perfil' | 'seguridad' | 'riesgo'>('perfil')
+// Pestaña activa ('perfil' | 'seguridad' | 'asistente' | 'riesgo')
+const pestanaActiva = ref<'perfil' | 'seguridad' | 'asistente' | 'riesgo'>('perfil')
 
 // Campos del formulario
 const nombre = ref(usuarioActual.value?.nombre || '')
@@ -181,6 +183,19 @@ const guardarPerfil = async () => {
         </button>
 
         <button
+          @click="pestanaActiva = 'asistente'"
+          :class="[
+            'px-4 py-2.5 rounded-2xl flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap',
+            pestanaActiva === 'asistente'
+              ? 'bg-sky-600 text-white shadow-md shadow-sky-600/25 font-bold'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/60 dark:hover:bg-slate-800'
+          ]"
+        >
+          <Volume2 class="w-4 h-4" />
+          <span>Voz & Asistente IA</span>
+        </button>
+
+        <button
           @click="pestanaActiva = 'riesgo'"
           :class="[
             'px-4 py-2.5 rounded-2xl flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap',
@@ -252,7 +267,12 @@ const guardarPerfil = async () => {
         <PerfilCambioContrasena @mostrarAlerta="mostrarAlerta" />
       </div>
 
-      <!-- CONTENIDO PESTAÑA 3: DESACTIVAR CUENTA -->
+      <!-- CONTENIDO PESTAÑA 3: AJUSTES DE VOZ Y ASISTENTE IA -->
+      <div v-else-if="pestanaActiva === 'asistente'" class="max-w-2xl mx-auto animate-fade-in">
+        <PerfilAjustesVozAsistente />
+      </div>
+
+      <!-- CONTENIDO PESTAÑA 4: DESACTIVAR CUENTA -->
       <div v-else-if="pestanaActiva === 'riesgo'" class="max-w-2xl mx-auto animate-fade-in">
         <PerfilDesactivarCuenta @mostrarAlerta="mostrarAlerta" />
       </div>

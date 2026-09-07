@@ -29,7 +29,9 @@ import ConfiguracionView from '@/vistas/Configuracion/ConfiguracionView.vue'
 import ResponderEncuestaView from '@/vistas/Encuestas/ResponderEncuestaView.vue'
 import VistaGenerica from '@/vistas/Comunes/VistaGenerica.vue'
 import Error404View from '@/vistas/Comunes/Error404View.vue'
+import CatalogoErroresView from '@/vistas/Errores/CatalogoErroresView.vue'
 import { useAuth } from '@/Almacenes/useAuth'
+
 
 /**
  * Definición estructurada de rutas del ecosistema HablandoContigo
@@ -126,6 +128,19 @@ const rutas: Array<RouteRecordRaw> = [
     }
   },
   {
+    path: '/admin/errores',
+    name: 'CatalogoErrores',
+    component: CatalogoErroresView,
+    meta: {
+      requiereAuth: true,
+      rolesPermitidos: ['Super Administrador', 'Administrador', 'Supervisor', 'Analista RRHH']
+    }
+  },
+  {
+    path: '/errores',
+    redirect: '/admin/errores'
+  },
+  {
     path: '/404',
     name: 'Error404',
     component: Error404View
@@ -137,6 +152,7 @@ const rutas: Array<RouteRecordRaw> = [
     component: Error404View
   }
 ]
+
 
 /**
  * Instancia del enrutador de Vue

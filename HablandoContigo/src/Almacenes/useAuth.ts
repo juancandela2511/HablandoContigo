@@ -105,7 +105,8 @@ export function useAuth() {
         alertas: false,
         cuentas: false,
         cambiarContrasenasOtros: false,
-        configuracion: true
+        configuracion: true,
+        editarEncuestaClima: false
       }
     }
     return PERMISOS_POR_ROL[usuarioActual.value.rol]

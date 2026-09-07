@@ -15,6 +15,11 @@ import { useTiposAlertas } from '@/Almacenes/useTiposAlertas'
 import { obtenerODefinirDispositivoUUID, obtenerFechaYHoraActual, type UbicacionExacta } from '@/Servicios/deviceService'
 import type { PreguntaEncuesta, AlertaGeminiEstricta } from '@/Servicios/iaEncuestasService'
 import { useNotificaciones } from '@/Almacenes/useNotificaciones'
+import { 
+  PLANTILLA_CLIMA_INTEGRAL_DETALLADA, 
+  TITULO_ENCUESTA_CLIMA_INTEGRAL, 
+  DESCRIPCION_ENCUESTA_CLIMA_INTEGRAL 
+} from '@/Config/preguntasCuestionario'
 
 const { mostrarError, mostrarExito } = useToast()
 
@@ -79,8 +84,23 @@ export interface RegistroRespuesta {
   puntajeGeneral: number
 }
 
-// Estados reactivos globales — cargados 100% desde Supabase
-const encuestas = ref<Encuesta[]>([])
+// Estados reactivos globales con pre-población inmediata de la encuesta oficial (0ms latency)
+const encuestas = ref<Encuesta[]>([
+  {
+    id: 'enc-001',
+    titulo: TITULO_ENCUESTA_CLIMA_INTEGRAL,
+    descripcion: DESCRIPCION_ENCUESTA_CLIMA_INTEGRAL,
+    departamento: 'General',
+    creadoPor: 'Super Administrador',
+    fechaCreacion: 'Hoy',
+    estado: 'Activa',
+    preguntas: JSON.parse(JSON.stringify(PLANTILLA_CLIMA_INTEGRAL_DETALLADA)),
+    preguntasSeguimiento: [],
+    totalRespuestas: 0,
+    alertasRegistradas: 0,
+    puntajePromedio: 5.0
+  }
+])
 const respuestasAnonimas = ref<RegistroRespuesta[]>([])
 const cargandoEncuestas = ref(false)
 
@@ -98,6 +118,43 @@ export function useEncuestas() {
         .order('creado_en', { ascending: false })
 
       if (error) throw new Error(error.message)
+
+      if (!data || data.length === 0) {
+        // Si Supabase está recién creado y no tiene encuestas, sembrar 'enc-001' con 34 preguntas
+        const encuestaSemilla = {
+          id: 'enc-001',
+          titulo: TITULO_ENCUESTA_CLIMA_INTEGRAL,
+          descripcion: DESCRIPCION_ENCUESTA_CLIMA_INTEGRAL,
+          departamento: 'General',
+          creado_por: 'Super Administrador',
+          fecha_creacion: 'Hoy',
+          estado: 'Activa',
+          preguntas: PLANTILLA_CLIMA_INTEGRAL_DETALLADA,
+          preguntas_seguimiento: [],
+          total_respuestas: 0,
+          alertas_registradas: 0,
+          puntaje_promedio: 5.0
+        }
+        try {
+          await supabase.from('encuestas').upsert(encuestaSemilla)
+        } catch {}
+
+        encuestas.value = [{
+          id: 'enc-001',
+          titulo: TITULO_ENCUESTA_CLIMA_INTEGRAL,
+          descripcion: DESCRIPCION_ENCUESTA_CLIMA_INTEGRAL,
+          departamento: 'General',
+          creadoPor: 'Super Administrador',
+          fechaCreacion: 'Hoy',
+          estado: 'Activa',
+          preguntas: JSON.parse(JSON.stringify(PLANTILLA_CLIMA_INTEGRAL_DETALLADA)),
+          preguntasSeguimiento: [],
+          totalRespuestas: 0,
+          alertasRegistradas: 0,
+          puntajePromedio: 5.0
+        }]
+        return
+      }
 
       encuestas.value = (data || []).map((item: any) => ({
         id: item.id,
@@ -251,16 +308,37 @@ export function useEncuestas() {
     if (snapshot) Object.assign(snapshot, datos)
 
     try {
-      const payload: any = {}
-      if (datos.titulo !== undefined) payload.titulo = datos.titulo
-      if (datos.descripcion !== undefined) payload.descripcion = datos.descripcion
-      if (datos.departamento !== undefined) payload.departamento = datos.departamento
-      if (datos.estado !== undefined) payload.estado = datos.estado
-      if (datos.preguntas !== undefined) payload.preguntas = datos.preguntas
-      if (datos.preguntasSeguimiento !== undefined) payload.preguntas_seguimiento = datos.preguntasSeguimiento
+      const payload: any = {
+        id: id,
+        titulo: datos.titulo ?? snapshot?.titulo ?? 'Encuesta',
+        descripcion: datos.descripcion ?? snapshot?.descripcion ?? '',
+        departamento: datos.departamento ?? snapshot?.departamento ?? 'General',
+        estado: datos.estado ?? snapshot?.estado ?? 'Activa',
+        preguntas: datos.preguntas ?? snapshot?.preguntas ?? [],
+        preguntas_seguimiento: datos.preguntasSeguimiento ?? snapshot?.preguntasSeguimiento ?? [],
+        creado_por: snapshot?.creadoPor ?? 'Super Administrador',
+        fecha_creacion: snapshot?.fechaCreacion ?? 'Oficial'
+      }
 
-      const { error } = await supabase.from('encuestas').update(payload).eq('id', id)
+      const { error } = await supabase.from('encuestas').upsert(payload)
       if (error) throw new Error(error.message)
+
+      if (!snapshot) {
+        encuestas.value.unshift({
+          id,
+          titulo: payload.titulo,
+          descripcion: payload.descripcion,
+          departamento: payload.departamento,
+          creadoPor: payload.creado_por,
+          fechaCreacion: payload.fecha_creacion,
+          estado: payload.estado,
+          preguntas: payload.preguntas,
+          preguntasSeguimiento: payload.preguntas_seguimiento,
+          totalRespuestas: 0,
+          alertasRegistradas: 0,
+          puntajePromedio: 5.0
+        })
+      }
 
       // 🔔 Notificación de actividad: Encuesta / Módulo editado
       try {
@@ -334,8 +412,29 @@ export function useEncuestas() {
     }
   }
 
-  const obtenerEncuestaPorId = (id: string): Encuesta | undefined =>
-    encuestas.value.find(e => e.id === id)
+  const obtenerEncuestaPorId = (id: string): Encuesta | undefined => {
+    const encontrada = encuestas.value.find(e => e.id === id)
+    if (encontrada) return encontrada
+
+    // Fallback de contingencia si la encuesta solicitada es la principal o está cargando
+    if (id === 'enc-001' || encuestas.value.length === 0) {
+      return {
+        id: id || 'enc-001',
+        titulo: TITULO_ENCUESTA_CLIMA_INTEGRAL,
+        descripcion: DESCRIPCION_ENCUESTA_CLIMA_INTEGRAL,
+        departamento: 'General',
+        creadoPor: 'Super Administrador',
+        fechaCreacion: 'Oficial',
+        estado: 'Activa',
+        preguntas: PLANTILLA_CLIMA_INTEGRAL_DETALLADA,
+        preguntasSeguimiento: [],
+        totalRespuestas: 0,
+        alertasRegistradas: 0,
+        puntajePromedio: 5.0
+      }
+    }
+    return undefined
+  }
 
   /**
    * Registra una respuesta anónima en Supabase. Si falla → toast de error → NO guarda localmente.
