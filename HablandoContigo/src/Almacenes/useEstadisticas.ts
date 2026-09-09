@@ -613,6 +613,169 @@ export function useEstadisticas() {
     })
   })
 
+  // Detección de Antigüedad, Proyección de Retención y Rutas de Carrera
+  const estadisticasAntiguedad = computed(() => {
+    const conteo = {
+      'menos-6m': { etiqueta: 'Menos de 6 meses', count: 0, sumaPuntaje: 0 },
+      '6m-1a': { etiqueta: 'De 6 meses a 1 año', count: 0, sumaPuntaje: 0 },
+      '1a-3a': { etiqueta: 'De 1 a 3 años', count: 0, sumaPuntaje: 0 },
+      'mas-3a': { etiqueta: 'Más de 3 años', count: 0, sumaPuntaje: 0 }
+    }
+
+    respuestasFiltradas.value.forEach(r => {
+      const respP1 = r.respuestas?.find(i => i.idPregunta === 'b1-p1-antiguedad' || i.textoPregunta?.includes('laborando'))
+      const texto = String(respP1?.respuesta || respP1?.comentario || '').toLowerCase()
+      const val = r.puntajeGeneral * 20
+
+      if (texto.includes('menos de 6') || texto.includes('0-6')) {
+        conteo['menos-6m'].count++
+        conteo['menos-6m'].sumaPuntaje += val
+      } else if (texto.includes('6 meses') || texto.includes('6m-1a')) {
+        conteo['6m-1a'].count++
+        conteo['6m-1a'].sumaPuntaje += val
+      } else if (texto.includes('1 a 3') || texto.includes('1-3')) {
+        conteo['1a-3a'].count++
+        conteo['1a-3a'].sumaPuntaje += val
+      } else if (texto.includes('más de 3') || texto.includes('mas de 3') || texto.includes('+3')) {
+        conteo['mas-3a'].count++
+        conteo['mas-3a'].sumaPuntaje += val
+      } else {
+        conteo['1a-3a'].count++
+        conteo['1a-3a'].sumaPuntaje += val
+      }
+    })
+
+    const total = respuestasFiltradas.value.length || 1
+
+    return Object.entries(conteo).map(([key, item]) => {
+      const porcentaje = Math.round((item.count / total) * 100)
+      const promedio = item.count > 0 ? Math.round(item.sumaPuntaje / item.count) : 0
+      const riesgoRotacion = promedio < 60 ? 'Alto' : promedio < 75 ? 'Moderado' : 'Bajo'
+
+      let carrerasRecomendadas: string[] = []
+      let recomendacionIA = ''
+
+      if (key === 'menos-6m') {
+        carrerasRecomendadas = ['Programa de Onboarding Intensivo', 'Certificación en Operaciones Básicas']
+        recomendacionIA = 'Acompañamiento estrecho en los primeros 90 días para mitigar deserciones tempranas.'
+      } else if (key === '6m-1a') {
+        carrerasRecomendadas = ['Capacitación en Tecnología / IT', 'Gestión de Clientes Complejos']
+        recomendacionIA = 'Etapa ideal para detectar talentos con aptitud técnica e invitarlos a semilleros de desarrollo.'
+      } else if (key === '1a-3a') {
+        carrerasRecomendadas = ['Liderazgo y Supervisión de Operaciones', 'Especialización en Gestión Humana / RRHH']
+        recomendacionIA = 'Momento óptimo para programas de ascenso interno a Supervisores o Analistas de Calidad.'
+      } else {
+        carrerasRecomendadas = ['Mentores Senior de Equipo', 'Gestión de Proyectos & Cuadro directivo']
+        recomendacionIA = 'Colaboradores con alta fidelización; requieren planes de incentivos y liderazgo de proyectos estratégicos.'
+      }
+
+      return {
+        id: key,
+        etiqueta: item.etiqueta,
+        cantidad: item.count,
+        porcentaje,
+        promedioSatisfaccion: promedio,
+        riesgoRotacion,
+        carrerasRecomendadas,
+        recomendacionIA
+      }
+    })
+  })
+
+  // Detección por IA de Colaboradores Mencionados en comentarios abiertos
+  const colaboradoresMencionados = computed(() => {
+    const mencionesMap: Record<string, { nombre: string; rol?: string; positivo: number; negativo: number; comentarios: string[] }> = {}
+
+    respuestasFiltradas.value.forEach(r => {
+      r.respuestas?.forEach(item => {
+        const txt = String(item.respuesta || item.comentario || '')
+        if (txt.length < 5) return
+
+        // Extraer menciones con expresiones regulares de nombres propios (ej. "Carlos Pérez", "Laura", "Supervisor Juan")
+        const regexNombres = /(?:supervisor|jefe|coordinador|líder|lider|compañero|compañera|señor|señora|ing|lic)?\s+([A-Z][a-záéíóúñ]+(?:\s+[A-Z][a-záéíóúñ]+)?)/g
+        let match: RegExpExecArray | null
+
+        while ((match = regexNombres.exec(txt)) !== null) {
+          const nombreEncontrado = match[1]?.trim()
+          if (!nombreEncontrado || nombreEncontrado.length < 3) continue
+
+          const ignorar = ['Que', 'Para', 'Como', 'Esta', 'Todo', 'Nada', 'Este', 'Pero', 'Otros', 'Operaciones', 'Tecnología', 'Gestión']
+          if (ignorar.includes(nombreEncontrado)) continue
+
+          const norm = nombreEncontrado.toLowerCase()
+          if (!mencionesMap[norm]) {
+            mencionesMap[norm] = { nombre: nombreEncontrado, positivo: 0, negativo: 0, comentarios: [] }
+          }
+
+          mencionesMap[norm]!.comentarios.push(txt)
+          if (txt.toLowerCase().includes('excelente') || txt.toLowerCase().includes('gracias') || txt.toLowerCase().includes('buen')) {
+            mencionesMap[norm]!.positivo++
+          } else if (txt.toLowerCase().includes('gritos') || txt.toLowerCase().includes('favoritismo') || txt.toLowerCase().includes('acoso') || txt.toLowerCase().includes('maltrato')) {
+            mencionesMap[norm]!.negativo++
+          }
+        }
+      })
+    })
+
+    return Object.values(mencionesMap).map(item => {
+      const sentimiento = item.negativo > item.positivo ? 'Atención/Fricción' : item.positivo > 0 ? 'Positivo' : 'Neutro'
+      return {
+        id: `mencion-${item.nombre.toLowerCase().replace(/\s+/g, '-')}`,
+        nombre: item.nombre,
+        conteoMenciones: item.comentarios.length,
+        sentimiento,
+        frasesEjemplo: item.comentarios.slice(0, 2),
+        estadoEncasillado: item.negativo > 0 ? 'Pendiente' : 'Descartado'
+      }
+    })
+  })
+
+  // Encasillamiento Inteligente de Sugerencias Organizacionales
+  const sugerenciasClasificadas = computed(() => {
+    const categorias = {
+      'Procesos & Tecnología': { count: 0, frases: ['Mejorar sistema de llamadas', 'Actualizar computadores'], accion: 'Inversión en renovación tecnológica y optimización de software.' },
+      'Infraestructura & Espacios': { count: 0, frases: ['Aire acondicionado en piso 2', 'Ajuste de sillas ergonómicas'], accion: 'Mantenimiento físico y ergonomía en puestos de trabajo.' },
+      'Salario & Beneficios': { count: 0, frases: ['Bonos por cumplimiento', 'Flexibilidad horaria'], accion: 'Revisión de escala de incentivos y vales de bienestar.' },
+      'Clima & Reconocimiento': { count: 0, frases: ['Reconocimiento a logros', 'Mejor comunicación con jefes'], accion: 'Talleres de liderazgo empático y eventos de integración.' }
+    }
+
+    let total = 0
+    respuestasFiltradas.value.forEach(r => {
+      r.respuestas?.forEach(item => {
+        const rawTxt = String(item.respuesta || item.comentario || '')
+        const txt = rawTxt.toLowerCase()
+        if (!txt || txt.length < 5) return
+
+        if (txt.includes('tecnología') || txt.includes('equipo') || txt.includes('sistema') || txt.includes('internet') || txt.includes('software')) {
+          categorias['Procesos & Tecnología'].count++
+          categorias['Procesos & Tecnología'].frases.push(rawTxt)
+          total++
+        } else if (txt.includes('aire') || txt.includes('silla') || txt.includes('baño') || txt.includes('piso') || txt.includes('espacio')) {
+          categorias['Infraestructura & Espacios'].count++
+          categorias['Infraestructura & Espacios'].frases.push(rawTxt)
+          total++
+        } else if (txt.includes('salario') || txt.includes('pago') || txt.includes('bono') || txt.includes('sueldo') || txt.includes('beneficio')) {
+          categorias['Salario & Beneficios'].count++
+          categorias['Salario & Beneficios'].frases.push(rawTxt)
+          total++
+        } else if (txt.includes('clima') || txt.includes('jefe') || txt.includes('trato') || txt.includes('reconocimiento') || txt.includes('apoyo')) {
+          categorias['Clima & Reconocimiento'].count++
+          categorias['Clima & Reconocimiento'].frases.push(rawTxt)
+          total++
+        }
+      })
+    })
+
+    const totCalc = total || 1
+    return Object.entries(categorias).map(([cat, val]) => ({
+      categoria: cat,
+      cantidad: val.count,
+      porcentaje: Math.round((val.count / totCalc) * 100),
+      ejemplosTexto: val.frases.slice(0, 3),
+      accionSugerida: val.accion
+    }))
+  })
+
   // Estructura completa sincronizada
   const datosEstadisticas = computed<EstadisticasCompletas>(() => {
     return {
@@ -780,6 +943,9 @@ export function useEstadisticas() {
     fallosAreasFiltrados,
     matrizCalorFiltrada,
     promedioSaludActual,
+    estadisticasAntiguedad,
+    colaboradoresMencionados,
+    sugerenciasClasificadas,
     simularImpacto,
     actualizarDimensionesRadiales,
     restaurarDimensionesPorDefecto

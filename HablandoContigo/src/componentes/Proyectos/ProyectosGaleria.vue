@@ -96,7 +96,7 @@ const encuestasFiltradas = computed(() => {
           ]"
         >
           <Building2 class="w-3.5 h-3.5" />
-          <span>🌳 Clima Laboral</span>
+          <span> Clima Laboral</span>
         </button>
 
         <button
@@ -110,7 +110,7 @@ const encuestasFiltradas = computed(() => {
           ]"
         >
           <Zap class="w-3.5 h-3.5" />
-          <span>⚡ Encuestas Rápidas</span>
+          <span> Encuestas Rápidas</span>
         </button>
       </div>
 

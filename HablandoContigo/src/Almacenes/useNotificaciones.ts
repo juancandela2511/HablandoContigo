@@ -17,8 +17,9 @@ export type TipoNotificacion =
   | 'alerta_clima' | 'sistema' | 'seguridad_perfil' | 'acoso'
   | 'depresion' | 'renuncia' | 'social' | 'burnout'
   | 'alerta' | 'encuesta' | 'cuenta' | 'informe' | 'modulo' | 'seguridad'
+  | 'actualizacion' | 'anuncio' | 'manual'
 
-const TIPOS_ACTIVIDADES_SISTEMA = ['encuesta', 'informe', 'cuenta', 'modulo', 'seguridad', 'seguridad_perfil', 'sistema']
+const TIPOS_ACTIVIDADES_SISTEMA = ['encuesta', 'informe', 'cuenta', 'modulo', 'seguridad', 'seguridad_perfil', 'sistema', 'actualizacion', 'anuncio', 'manual']
 
 export const esNotificacionActividad = (tipo: string): boolean => {
   return TIPOS_ACTIVIDADES_SISTEMA.includes(tipo)
@@ -401,6 +402,58 @@ export function useNotificaciones() {
     }
   }
 
+  /**
+   * Publica un anuncio o actualización del sistema para todo el equipo en las notificaciones
+   */
+  const publicarAnuncioActualizacion = async (datos: {
+    titulo: string
+    mensaje: string
+    tipo?: 'actualizacion' | 'anuncio'
+    departamento?: string
+    fechaProgramada?: string
+    rutaDestino?: string
+  }) => {
+    const ahora = new Date()
+    const horaStr = ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    const fechaStr = datos.fechaProgramada || 'Hoy'
+
+    await agregarNotificacion({
+      tipo: datos.tipo || 'actualizacion',
+      titulo: datos.titulo,
+      descripcion: datos.mensaje,
+      mensaje: datos.mensaje,
+      departamento: datos.departamento || 'Sistema General',
+      fecha: fechaStr,
+      hora: horaStr,
+      leida: false,
+      rutaDestino: datos.rutaDestino || '/configuracion'
+    })
+
+    mostrarExito('Anuncio publicado', `La notificación "${datos.titulo}" se publicó exitosamente.`)
+  }
+
+  /**
+   * Genera notificación automática cuando se actualiza o regenera el Manual de Usuario
+   */
+  const notificarActualizacionManual = async (version: string = 'v2.6') => {
+    const ahora = new Date()
+    const horaStr = ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+
+    await agregarNotificacion({
+      tipo: 'manual',
+      titulo: `Manual de Usuario Actualizado (${version})`,
+      descripcion: 'Se ha sincronizado la versión más reciente del manual oficial de la plataforma.',
+      mensaje: `El Manual de Usuario oficial de HablandoContigo ha sido actualizado a la versión ${version} con especificación de roles, 8 bloques y asistente de voz en toda la app.`,
+      departamento: 'Documentación Oficial',
+      fecha: 'Hoy',
+      hora: horaStr,
+      leida: false,
+      rutaDestino: '/configuracion'
+    })
+
+    mostrarExito('Manual Actualizado', `Se generó la versión ${version} y se notificó en el sistema.`)
+  }
+
   // Cargar al instanciar
   cargarNotificacionesDesdeSupabase()
 
@@ -424,6 +477,8 @@ export function useNotificaciones() {
     limpiarAlertasConvivencia,
     eliminarAlertasDeEncuesta,
     actualizarEstadoAlerta,
-    agregarNotificacion
+    agregarNotificacion,
+    publicarAnuncioActualizacion,
+    notificarActualizacionManual
   }
 }

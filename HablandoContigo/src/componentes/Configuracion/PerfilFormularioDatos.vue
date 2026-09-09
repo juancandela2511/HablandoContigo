@@ -20,13 +20,14 @@
 -->
 
 <script setup lang="ts">
-import { User, Mail, Building, Shield, Save } from 'lucide-vue-next'
+import { User, Mail, Building, Shield, Save, UserCheck } from 'lucide-vue-next'
 
 defineProps<{
   nombre: string
   email: string
   departamento: string
   rol: string
+  genero?: string
   biografia: string
   guardando: boolean
 }>()
@@ -36,6 +37,7 @@ defineEmits<{
   (e: 'update:email', valor: string): void
   (e: 'update:departamento', valor: string): void
   (e: 'update:rol', valor: string): void
+  (e: 'update:genero', valor: string): void
   (e: 'update:biografia', valor: string): void
   (e: 'guardar'): void
 }>()
@@ -48,19 +50,41 @@ defineEmits<{
       Información del Administrador
     </h3>
 
-    <!-- Nombre Completo -->
-    <div class="space-y-1.5 text-left">
-      <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300">Nombre Completo</label>
-      <div class="relative">
-        <User class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-        <input
-          :value="nombre"
-          @input="$emit('update:nombre', ($event.target as HTMLInputElement).value)"
-          type="text"
-          required
-          placeholder="Ej. Nombre y Apellidos"
-          class="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-sky-500 transition-all"
-        />
+    <!-- Nombre Completo y Género / Trato en Grid de 2 Columnas -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <!-- Nombre Completo -->
+      <div class="sm:col-span-2 space-y-1.5 text-left">
+        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300">Nombre Completo</label>
+        <div class="relative">
+          <User class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <input
+            :value="nombre"
+            @input="$emit('update:nombre', ($event.target as HTMLInputElement).value)"
+            type="text"
+            required
+            placeholder="Ej. Nombre y Apellidos"
+            class="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-sky-500 transition-all"
+          />
+        </div>
+      </div>
+
+      <!-- Género / Trato del Asistente -->
+      <div class="space-y-1.5 text-left">
+        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300" title="Define si el asistente te llama 'señor' o 'señora'">
+          Género / Trato IA
+        </label>
+        <div class="relative">
+          <UserCheck class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <select
+            :value="genero || 'Masculino'"
+            @change="$emit('update:genero', ($event.target as HTMLSelectElement).value)"
+            class="w-full pl-10 pr-3 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-sky-500 transition-all cursor-pointer font-medium"
+          >
+            <option value="Masculino">Masculino (Señor)</option>
+            <option value="Femenino">Femenino (Señora)</option>
+            <option value="Otro">Neutro / Administrador</option>
+          </select>
+        </div>
       </div>
     </div>
 

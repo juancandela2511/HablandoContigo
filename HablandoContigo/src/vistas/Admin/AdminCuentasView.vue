@@ -24,6 +24,7 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/Almacenes/useAuth'
 import { useCuentas, type CuentaAdmin, type RolCuenta, type EstadoCuenta } from '@/Almacenes/useCuentas'
+import { useTokensAcceso } from '@/Almacenes/useTokensAcceso'
 import { useHighlight } from '@/Almacenes/useHighlight'
 import { CheckCircle2, ChevronRight, LogOut } from 'lucide-vue-next'
 
@@ -34,6 +35,7 @@ import AdminTablaCuentas from '@/componentes/Admin/AdminTablaCuentas.vue'
 import ModalCuentaFormulario from '@/componentes/Admin/ModalCuentaFormulario.vue'
 import ModalEliminarCuenta from '@/componentes/Admin/ModalEliminarCuenta.vue'
 import ModalVerificacionCorreo from '@/componentes/Admin/ModalVerificacionCorreo.vue'
+import ModalGestionTokensAcceso from '@/componentes/Admin/ModalGestionTokensAcceso.vue'
 
 const router = useRouter()
 const { usuarioActual, cerrarSesion } = useAuth()
@@ -78,6 +80,9 @@ const cuentaAEliminar = ref<CuentaAdmin | null>(null)
 
 const modalVerificacionAbierto = ref(false)
 const cuentaParaVerificar = ref<CuentaAdmin | null>(null)
+
+const modalTokensAbierto = ref(false)
+const { tokensActivos } = useTokensAcceso()
 
 // Notificaciones temporales Toast
 const mensajeToast = ref<string | null>(null)
@@ -305,7 +310,9 @@ const manejarCerrarSesion = async () => {
         v-model:filtroDepartamento="filtroDepartamento"
         v-model:filtroEstado="filtroEstado"
         :departamentosUnicos="departamentosUnicos"
+        :tokensActivosCount="tokensActivos.length"
         @abrirModalCrear="abrirModalCrear"
+        @abrirModalTokens="modalTokensAbierto = true"
       />
 
       <!-- Tabla Principal de Cuentas (Componente Modular) -->
@@ -322,6 +329,11 @@ const manejarCerrarSesion = async () => {
     </div>
 
     <!-- Modales Modulares -->
+    <ModalGestionTokensAcceso
+      :abierto="modalTokensAbierto"
+      @cerrar="modalTokensAbierto = false"
+    />
+
     <ModalCuentaFormulario
       :abierto="modalAbierto"
       :modoEdicion="modoEdicion"

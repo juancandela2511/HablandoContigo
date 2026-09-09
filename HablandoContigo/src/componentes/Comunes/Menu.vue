@@ -38,6 +38,7 @@ import {
   LayoutDashboard,
   HelpCircle,
   ShieldAlert,
+  BrainCircuit,
   Laptop,
   X
 } from 'lucide-vue-next'
@@ -103,6 +104,15 @@ const enlacesNavegacion = computed(() => {
   }
   if (permisosUsuario.value?.cuentas) {
     items.push({ nombre: 'Cuentas', tipo: 'ruta', ruta: '/admin/cuentas', icono: Users })
+  }
+  if (esSuperAdmin.value || usuarioActual.value?.rol === 'Super Administrador' || permisosUsuario.value?.alertas) {
+    items.push({
+      nombre: 'Reconocimiento IA',
+      tipo: 'ruta',
+      ruta: '/reconocimiento-ia',
+      icono: BrainCircuit,
+      badge: 'IA'
+    })
   }
   if (esSuperAdmin.value || usuarioActual.value?.rol === 'Super Administrador') {
     items.push({

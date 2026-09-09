@@ -2,23 +2,18 @@
   ============================================================================
   MODAL DE GESTIÓN Y CALIBRACIÓN DE ALERTAS CON IA (ModalGestionTiposAlertas.vue)
   ============================================================================
-  
-  ¿QUÉ ES Y QUÉ HACE?
-  Centro de configuración y calibración de alertas psicosociales para el Super Administrador.
-  Construido con arquitectura modular:
-  - ModalBase: Envoltorio modal estandarizado.
-  - FormularioCrearAlerta: Formulario desacoplado con selectores de modo y nivel.
-  - ListaTiposAlertas: Visualización y filtrado de alertas con TarjetaTipoAlertaItem.
 -->
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import {
   useTiposAlertas,
-  type NivelAlerta
+  type NivelAlerta,
+  type ModoEnfoqueAlerta,
+  type SeveridadAlerta
 } from '@/Almacenes/useTiposAlertas'
 import { ModalBase, BotonBase, InsigniaPill } from '@/componentes/ElementosBase'
-import { AlertTriangle, RotateCcw } from 'lucide-vue-next'
+import { AlertTriangle, RotateCcw, Plus, ShieldAlert } from 'lucide-vue-next'
 import FormularioCrearAlerta from './Modales/GestionTiposAlertas/FormularioCrearAlerta.vue'
 import ListaTiposAlertas from './Modales/GestionTiposAlertas/ListaTiposAlertas.vue'
 
@@ -32,29 +27,54 @@ const emit = defineEmits<{
 
 const {
   tiposAlertas,
-  actualizarTipoAlerta,
+  crearTipoAlerta,
+  editarTipoAlerta,
+  eliminarTipoAlerta,
   toggleActiva,
   restablecerValoresPorDefecto,
   obtenerClaseColorNivel
 } = useTiposAlertas()
 
-const tiposFiltrados = computed(() => tiposAlertas.value.slice(0, 3))
+const mostrandoFormularioCrear = ref(false)
 
-const procesarEdicionAlerta = (datos: { id: string; nombre: string; descripcion: string; palabrasClave: string[] }) => {
-  actualizarTipoAlerta(datos.id, {
-    nombre: datos.nombre,
-    descripcion: datos.descripcion,
-    palabrasClave: datos.palabrasClave
-  })
+const procesarCrearAlerta = (datos: {
+  nombre: string
+  descripcion: string
+  nivel: NivelAlerta
+  modoEnfoque: ModoEnfoqueAlerta
+  enfoqueDetalle: string
+  palabrasClave?: string[]
+  protocoloAccion: string
+  icono?: string
+  color?: string
+}) => {
+  crearTipoAlerta(datos)
+  mostrandoFormularioCrear.value = false
+}
+
+const procesarEdicionAlerta = (datos: {
+  id: string
+  nombre: string
+  descripcion: string
+  palabrasClave: string[]
+  icono?: string
+  color?: string
+  nivel?: NivelAlerta
+}) => {
+  editarTipoAlerta(datos.id, datos)
+}
+
+const procesarEliminarAlerta = (id: string) => {
+  eliminarTipoAlerta(id)
 }
 </script>
 
 <template>
   <ModalBase
     :abierto="abierto"
-    titulo="Calibración de Alertas y Protocolos"
-    subtitulo="Configura el nombre, de qué trata y las palabras clave de cada alerta para que el sistema las detecte con precisión."
-    anchoMaximo="3xl"
+    titulo="Calibración y Catálogo de Alertas de IA"
+    subtitulo="Crea, edita o elimina alertas personalizadas, asigna íconos, colores y palabras clave para que la IA encasille las respuestas."
+    anchoMaximo="4xl"
     @cerrar="emit('cerrar')"
   >
     <template #icono>
@@ -65,18 +85,42 @@ const procesarEdicionAlerta = (datos: { id: string; nombre: string; descripcion:
 
     <template #insignia>
       <InsigniaPill variante="alerta" tamano="sm">
-        3 ALERTAS ACTIVAS
+        {{ tiposAlertas.length }} ALERTAS CONFIGURADAS
       </InsigniaPill>
     </template>
 
     <div class="space-y-4 text-left">
-      <!-- Lista de las 3 Alertas -->
+      <!-- Botón para mostrar Formulario de Creación -->
+      <div class="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
+        <span class="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+          <ShieldAlert class="w-4 h-4 text-rose-500" />
+          <span>Gestión de Criterios y Alertas</span>
+        </span>
+        <button
+          type="button"
+          @click="mostrandoFormularioCrear = !mostrandoFormularioCrear"
+          class="px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+        >
+          <Plus class="w-3.5 h-3.5" />
+          <span>{{ mostrandoFormularioCrear ? 'Ocultar Formulario' : '+ Crear Nueva Alerta' }}</span>
+        </button>
+      </div>
+
+      <!-- Formulario de Creación de Alerta -->
+      <FormularioCrearAlerta
+        v-if="mostrandoFormularioCrear"
+        @guardar="procesarCrearAlerta"
+        @cancelar="mostrandoFormularioCrear = false"
+      />
+
+      <!-- Lista de Alertas -->
       <ListaTiposAlertas
         :tiposAlertas="tiposAlertas"
-        :tiposFiltrados="tiposFiltrados"
+        :tiposFiltrados="tiposAlertas"
         :obtenerClaseColorNivel="obtenerClaseColorNivel"
         @guardarEdicion="procesarEdicionAlerta"
         @toggleActiva="toggleActiva"
+        @eliminar="procesarEliminarAlerta"
       />
     </div>
 
@@ -103,3 +147,4 @@ const procesarEdicionAlerta = (datos: { id: string; nombre: string; descripcion:
     </template>
   </ModalBase>
 </template>
+

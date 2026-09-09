@@ -10,7 +10,7 @@
 -->
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import {
   Save,
   ArrowLeft,
@@ -42,9 +42,9 @@ import {
 } from '@/Config/preguntasCuestionario'
 import { useAuth } from '@/Almacenes/useAuth'
 import { PERMISOS_POR_ROL } from '@/Almacenes/useCuentas'
-import { useAsistenteVoz } from '@/Almacenes/useAsistenteVoz'
+import { useAsistenteVoz, registrarContextoEncuesta, desregistrarContextoEncuesta } from '@/Almacenes/useAsistenteVoz'
+import { useEncuestas } from '@/Almacenes/useEncuestas'
 import { useToast } from '@/Almacenes/useToast'
-import AsistenteBurbujaClima from '@/componentes/Asistente/AsistenteBurbujaClima.vue'
 import ModalEditorPregunta from '@/componentes/Proyectos/ModalEditorPregunta.vue'
 import TarjetaPreguntaClima from '@/componentes/Proyectos/TarjetaPreguntaClima.vue'
 import PerfilAjustesVozAsistente from '@/componentes/Configuracion/PerfilAjustesVozAsistente.vue'
@@ -62,7 +62,8 @@ const emit = defineEmits<{
 
 const { usuarioActual, permisosUsuario } = useAuth()
 const { analizarYGenerarSugerencia, ajustes } = useAsistenteVoz()
-const { mostrarExito, mostrarInfo } = useToast()
+const { editarEncuesta } = useEncuestas()
+const { mostrarExito } = useToast()
 
 const modalAjustesVozAbierto = ref(false)
 
@@ -82,6 +83,23 @@ const preguntas = ref<PreguntaEncuesta[]>(
   props.encuestaInicial?.preguntas && props.encuestaInicial.preguntas.length > 0
     ? JSON.parse(JSON.stringify(props.encuestaInicial.preguntas))
     : JSON.parse(JSON.stringify(PLANTILLA_CLIMA_INTEGRAL_DETALLADA))
+)
+
+// ─── Sincronizar Contexto de la Encuesta con el Asistente Global ───────────────
+onMounted(() => {
+  registrarContextoEncuesta(preguntas.value, aplicarAccionesJarvis, agregarPreguntaSugerida)
+})
+
+onUnmounted(() => {
+  desregistrarContextoEncuesta()
+})
+
+watch(
+  preguntas,
+  (nuevas) => {
+    registrarContextoEncuesta(nuevas, aplicarAccionesJarvis, agregarPreguntaSugerida)
+  },
+  { deep: true }
 )
 
 // ─── Agrupación de Preguntas por Bloques ──────────────────────────────────────
@@ -160,17 +178,17 @@ const cerrarModal = () => {
 // ─── Acciones de Gestión de Preguntas ─────────────────────────────────────────
 onMounted(() => {
   setTimeout(() => {
-    analizarYGenerarSugerencia(preguntas.value, true)
+    analizarYGenerarSugerencia(preguntas.value, false)
   }, 600)
 })
 
 const restaurarPlantillaOficial = () => {
   if (!puedeEditar.value) return
-  if (confirm('¿Deseas restaurar la plantilla oficial de Contigo Call Center con sus 34 preguntas y 8 bloques?')) {
+  if (confirm('¿Deseas restaurar la plantilla oficial de Contigo Call Center con sus preguntas atómicas estructuradas en 8 bloques?')) {
     titulo.value = TITULO_ENCUESTA_CLIMA_INTEGRAL
     descripcion.value = DESCRIPCION_ENCUESTA_CLIMA_INTEGRAL
     preguntas.value = JSON.parse(JSON.stringify(PLANTILLA_CLIMA_INTEGRAL_DETALLADA))
-    analizarYGenerarSugerencia(preguntas.value, true)
+    analizarYGenerarSugerencia(preguntas.value, false)
   }
 }
 
@@ -195,11 +213,41 @@ const agregarPreguntaEnBloque = (bloqueNumero: number) => {
 
 const destacarPregunta = (idPregunta: string) => {
   preguntaDestacadaId.value = idPregunta
+  nextTick(() => {
+    const el = document.getElementById(`pregunta-${idPregunta}`) || document.getElementById(idPregunta)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  })
   setTimeout(() => {
     if (preguntaDestacadaId.value === idPregunta) {
       preguntaDestacadaId.value = null
     }
-  }, 5000)
+  }, 6000)
+}
+
+const autoGuardarEnSilencio = async () => {
+  if (!puedeEditar.value) return
+  const idEncuesta = props.encuestaInicial?.id || 'enc-001'
+  try {
+    await editarEncuesta(idEncuesta, {
+      titulo: titulo.value,
+      descripcion: descripcion.value,
+      departamento: departamento.value,
+      preguntas: preguntas.value,
+      preguntasSeguimiento: [
+        {
+          id: `seg-${Date.now()}`,
+          categoria: 'Propuestas y Bienestar',
+          texto: '¿Deseas compartir alguna recomendación confidencial adicional?',
+          tipo: 'texto',
+          opciones: []
+        }
+      ]
+    })
+  } catch (e) {
+    console.warn('AutoGuardado en silencio:', e)
+  }
 }
 
 const aplicarAccionesJarvis = (acciones: AccionJarvis[]) => {
@@ -234,8 +282,8 @@ const aplicarAccionesJarvis = (acciones: AccionJarvis[]) => {
           index = preguntas.value.findIndex(p => p.id === accion.idPregunta)
         }
 
-        if (index !== -1 && preguntas.value[index]) {
-          const target = preguntas.value[index]
+        const target = index !== -1 ? preguntas.value[index] : undefined
+        if (target) {
           if (accion.textoPregunta) target.texto = accion.textoPregunta
           if (accion.categoria) target.categoria = accion.categoria
           if (accion.tipoPregunta) target.tipo = accion.tipoPregunta
@@ -254,8 +302,8 @@ const aplicarAccionesJarvis = (acciones: AccionJarvis[]) => {
           index = preguntas.value.findIndex(p => p.id === accion.idPregunta)
         }
 
-        if (index !== -1 && accion.opciones && preguntas.value[index]) {
-          const target = preguntas.value[index]
+        const target = index !== -1 ? preguntas.value[index] : undefined
+        if (target && accion.opciones) {
           target.opciones = accion.opciones
           destacarPregunta(target.id)
           mostrarExito(`🤖 ${nombreAsis}`, `Opciones de la pregunta #${index + 1} actualizadas`)
@@ -271,14 +319,15 @@ const aplicarAccionesJarvis = (acciones: AccionJarvis[]) => {
           index = preguntas.value.findIndex(p => p.id === accion.idPregunta)
         }
 
-        if (index !== -1 && preguntas.value[index]) {
-          const target = preguntas.value[index]
-          if (Array.isArray(target?.opciones)) {
+        const target = index !== -1 ? preguntas.value[index] : undefined
+        if (target) {
+          if (Array.isArray(target.opciones)) {
             if (accion.opcionTexto) {
-              const opcMatch = target.opciones.find(o => 
-                o.texto.toLowerCase().includes(accion.opcionTexto!.toLowerCase()) ||
-                accion.opcionTexto!.toLowerCase().includes(o.texto.toLowerCase())
-              )
+              const cleanBuscado = accion.opcionTexto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+              const opcMatch = target.opciones.find(o => {
+                const cleanOpc = o.texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+                return cleanOpc.includes(cleanBuscado) || cleanBuscado.includes(cleanOpc)
+              })
               if (opcMatch) {
                 opcMatch.esAlerta = accion.esAlerta !== undefined ? accion.esAlerta : true
               }
@@ -303,8 +352,8 @@ const aplicarAccionesJarvis = (acciones: AccionJarvis[]) => {
           index = preguntas.value.findIndex(p => p.id === accion.idPregunta)
         }
 
-        if (index !== -1 && accion.opcionTexto && preguntas.value[index]) {
-          const target = preguntas.value[index]
+        const target = index !== -1 ? preguntas.value[index] : undefined
+        if (target && accion.opcionTexto) {
           if (!Array.isArray(target.opciones)) {
             target.opciones = []
           }
@@ -377,14 +426,14 @@ const aplicarAccionesJarvis = (acciones: AccionJarvis[]) => {
         titulo.value = TITULO_ENCUESTA_CLIMA_INTEGRAL
         descripcion.value = DESCRIPCION_ENCUESTA_CLIMA_INTEGRAL
         preguntas.value = JSON.parse(JSON.stringify(PLANTILLA_CLIMA_INTEGRAL_DETALLADA))
-        mostrarExito(`🤖 ${nombreAsis}`, 'Plantilla oficial restaurada (34 preguntas · 8 bloques)')
+        mostrarExito(`🤖 ${nombreAsis}`, 'Plantilla oficial restaurada (8 bloques oficiales)')
         break
       }
     }
   })
 
-  // Auto-guardado en Supabase al ejecutar órdenes por voz
-  guardarEncuesta()
+  // Auto-guardado en Supabase al ejecutar órdenes por voz (sin salir del editor)
+  autoGuardarEnSilencio()
   analizarYGenerarSugerencia(preguntas.value, false)
 }
 
@@ -538,12 +587,12 @@ const guardarEncuesta = () => {
         variante="fantasma"
         tamano="pequeno"
         @click="restaurarPlantillaOficial"
-        title="Restablece las 34 preguntas oficiales de Contigo Call Center"
+        title="Restablece la plantilla oficial de preguntas de Contigo Call Center"
       >
         <template #iconoIzquierdo>
           <RotateCcw class="w-3.5 h-3.5 text-amber-500" />
         </template>
-        Restaurar 34 Preguntas Oficiales
+        Restaurar Plantilla Oficial
       </BotonBase>
     </div>
 
@@ -666,14 +715,6 @@ const guardarEncuesta = () => {
       </section>
 
     </div>
-
-    <!-- ── BURBUJA FLOTANTE Y ARRASTRABLE DEL ASISTENTE JARVIS ── -->
-    <AsistenteBurbujaClima
-      :preguntasActuales="preguntas"
-      @aplicarPregunta="agregarPreguntaSugerida"
-      @ejecutarAcciones="aplicarAccionesJarvis"
-      @abrirAjustes="modalAjustesVozAbierto = true"
-    />
 
     <!-- ── MODAL EDITOR AVANZADO DE PREGUNTA (DOBLE CLIC) ── -->
     <ModalEditorPregunta

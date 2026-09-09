@@ -13,17 +13,17 @@
 -->
 
 <script setup lang="ts">
-import { Sparkles, BarChart3, KeyRound, Sliders, Info, ChevronRight, Bell, Check } from 'lucide-vue-next'
+import { Sparkles, BarChart3, KeyRound, Sliders, Info, ChevronRight, Bell, Check, Megaphone, BookOpen } from 'lucide-vue-next'
 import type { NotificacionItem } from '@/Almacenes/useNotificaciones'
 
 defineProps<{
   notificaciones: NotificacionItem[]
-  filtroActual: 'todas' | 'encuestas' | 'informes' | 'seguridad' | 'modulos'
+  filtroActual: 'todas' | 'encuestas' | 'informes' | 'actualizaciones' | 'seguridad' | 'modulos'
   noLeidas: number
 }>()
 
 const emit = defineEmits<{
-  (e: 'cambiarFiltro', filtro: 'todas' | 'encuestas' | 'informes' | 'seguridad' | 'modulos'): void
+  (e: 'cambiarFiltro', filtro: 'todas' | 'encuestas' | 'informes' | 'actualizaciones' | 'seguridad' | 'modulos'): void
   (e: 'marcarTodasLeidas'): void
   (e: 'clickNotificacion', notif: NotificacionItem): void
 }>()
@@ -34,7 +34,7 @@ const emit = defineEmits<{
     <!-- Pestañas de Filtrado Rápido -->
     <div class="flex items-center gap-1 px-3 py-2 bg-slate-50 dark:bg-slate-950/50 border-b border-slate-200/80 dark:border-slate-800 text-[11px] overflow-x-auto no-scrollbar">
       <button
-        v-for="filtro in ['todas', 'encuestas', 'informes', 'seguridad', 'modulos'] as const"
+        v-for="filtro in ['todas', 'actualizaciones', 'encuestas', 'informes', 'seguridad', 'modulos'] as const"
         :key="filtro"
         type="button"
         @click="emit('cambiarFiltro', filtro)"
@@ -75,14 +75,18 @@ const emit = defineEmits<{
         <div 
           :class="[
             'w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border text-xs',
-            notif.tipo === 'encuesta' ? 'bg-emerald-100 dark:bg-emerald-950/80 border-emerald-300 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400' :
+            notif.tipo === 'actualizacion' || notif.tipo === 'anuncio' ? 'bg-cyan-100 dark:bg-cyan-950/80 border-cyan-300 dark:border-cyan-800 text-cyan-600 dark:text-cyan-400' :
+            notif.tipo === 'manual' ? 'bg-emerald-100 dark:bg-emerald-950/80 border-emerald-300 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400' :
+            notif.tipo === 'encuesta' ? 'bg-purple-100 dark:bg-purple-950/80 border-purple-300 dark:border-purple-800 text-purple-600 dark:text-purple-400' :
             notif.tipo === 'informe' ? 'bg-indigo-100 dark:bg-indigo-950/80 border-indigo-300 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400' :
             notif.tipo === 'seguridad' || notif.tipo === 'seguridad_perfil' ? 'bg-amber-100 dark:bg-amber-950/80 border-amber-300 dark:border-amber-800 text-amber-600 dark:text-amber-400' :
             notif.tipo === 'modulo' ? 'bg-sky-100 dark:bg-sky-950/80 border-sky-300 dark:border-sky-800 text-sky-600 dark:text-sky-400' :
             'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300'
           ]"
         >
-          <Sparkles v-if="notif.tipo === 'encuesta'" class="w-4 h-4" />
+          <Megaphone v-if="notif.tipo === 'actualizacion' || notif.tipo === 'anuncio'" class="w-4 h-4" />
+          <BookOpen v-else-if="notif.tipo === 'manual'" class="w-4 h-4" />
+          <Sparkles v-else-if="notif.tipo === 'encuesta'" class="w-4 h-4" />
           <BarChart3 v-else-if="notif.tipo === 'informe'" class="w-4 h-4" />
           <KeyRound v-else-if="notif.tipo === 'seguridad' || notif.tipo === 'seguridad_perfil'" class="w-4 h-4" />
           <Sliders v-else-if="notif.tipo === 'modulo'" class="w-4 h-4" />

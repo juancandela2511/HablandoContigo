@@ -34,7 +34,8 @@ import ModalCambioClavePrimerIngreso from '@/componentes/Autenticacion/ModalCamb
 const route = useRoute()
 const router = useRouter()
 const { 
-  iniciarSesion, 
+  iniciarSesion,
+  iniciarSesionConToken,
   cargando, 
   errorAutenticacion, 
   cuentaPendienteVerificacion, 
@@ -48,6 +49,7 @@ const { mensajeError: errorConexion, tieneError, verificarConexionSupabase } = u
 
 const mensajeExito = ref(false)
 const cuentaDesactivadaNotif = ref(route.query.desactivada === '1')
+const sesionExpiradaNotif = ref(route.query.expirado === '1')
 const cuentaActivadaNotif = ref(false)
 const sembrandoCuentas = ref(false)
 const siembraExitosa = ref(false)
@@ -101,6 +103,16 @@ const manejarEnvio = async (credenciales: { email: string; pass: string }) => {
   } else if (cuentaPendienteVerificacion.value) {
     cuentaParaVerificar.value = cuentaPendienteVerificacion.value
     modalVerificacionAbierto.value = true
+  }
+}
+
+const manejarEnvioToken = async (codigo: string) => {
+  const res = await iniciarSesionConToken(codigo)
+  if (res.ok) {
+    mensajeExito.value = true
+    setTimeout(() => {
+      router.push(res.rutaInicial || '/proyectos')
+    }, 600)
   }
 }
 
@@ -167,6 +179,11 @@ const alActualizarClavePrimerIngreso = () => {
           <span>Tu cuenta ha sido desactivada correctamente. Los accesos han sido suspendidos.</span>
         </div>
 
+        <div v-if="sesionExpiradaNotif" class="mb-5 p-3.5 rounded-xl bg-amber-950/70 border border-amber-800/80 text-amber-300 text-xs flex items-start gap-2.5 text-left animate-fade-in">
+          <Info class="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+          <span>Tu sesión temporal por Token o PIN ha expirado automáticamente por límite de tiempo. Por favor ingresa una nueva clave válida.</span>
+        </div>
+
         <div v-if="errorAutenticacion" class="mb-5 p-3.5 rounded-xl bg-red-950/70 border border-red-800/80 text-red-300 text-xs space-y-2 text-left">
           <div class="flex items-start gap-2.5">
             <AlertCircle class="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
@@ -185,13 +202,14 @@ const alActualizarClavePrimerIngreso = () => {
 
         <div v-if="mensajeExito" class="mb-5 p-3.5 rounded-xl bg-emerald-950/70 border border-emerald-800/80 text-emerald-300 text-xs flex items-center gap-2.5 text-left">
           <CheckCircle2 class="w-4 h-4 text-emerald-400 shrink-0" />
-          <span>¡Acceso concedido! Redirigiendo según tus permisos de rol...</span>
+          <span>¡Acceso concedido! Redirigiendo según tus permisos autorizados...</span>
         </div>
 
-        <!-- Formulario Desacoplado -->
+        <!-- Formulario Desacoplado con soporte de Tokens -->
         <FormularioLogin
           :cargando="cargando"
           @enviar="manejarEnvio"
+          @enviarToken="manejarEnvioToken"
         />
 
         <p class="text-center text-[11px] text-slate-500 mt-5 flex items-center justify-center gap-1.5">

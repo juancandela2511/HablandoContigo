@@ -6,7 +6,23 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Sparkles, Target, Globe2, Check } from 'lucide-vue-next'
+import {
+  Sparkles,
+  Target,
+  Globe2,
+  Check,
+  ShieldAlert,
+  Flame,
+  HeartCrack,
+  AlertTriangle,
+  UserX,
+  Skull,
+  Clock,
+  Coins,
+  Scale,
+  Zap,
+  Palette
+} from 'lucide-vue-next'
 import { BotonBase } from '@/componentes/ElementosBase'
 import type { NivelAlerta, ModoEnfoqueAlerta } from '@/Almacenes/useTiposAlertas'
 
@@ -19,9 +35,37 @@ const emit = defineEmits<{
     enfoqueDetalle: string
     palabrasClave?: string[]
     protocoloAccion: string
+    icono?: string
+    color?: string
   }): void
   (e: 'cancelar'): void
 }>()
+
+const ICONOS_DISPONIBLES = [
+  { id: 'ShieldAlert', label: 'Escudo', componente: ShieldAlert },
+  { id: 'Flame', label: 'Fuego', componente: Flame },
+  { id: 'HeartCrack', label: 'Corazón Roto', componente: HeartCrack },
+  { id: 'AlertTriangle', label: 'Peligro', componente: AlertTriangle },
+  { id: 'UserX', label: 'Usuario X', componente: UserX },
+  { id: 'Skull', label: 'Crítico', componente: Skull },
+  { id: 'Clock', label: 'Tiempo', componente: Clock },
+  { id: 'Coins', label: 'Monedas', componente: Coins },
+  { id: 'Scale', label: 'Justicia', componente: Scale },
+  { id: 'Zap', label: 'Rayo', componente: Zap }
+]
+
+const PALETA_COLORES = [
+  { hex: '#ef4444', nombre: 'Rojo Carmesí' },
+  { hex: '#f43f5e', nombre: 'Rosa Intenso' },
+  { hex: '#f59e0b', nombre: 'Ámbar Cálido' },
+  { hex: '#eab308', nombre: 'Amarillo Dorado' },
+  { hex: '#10b981', nombre: 'Esmeralda' },
+  { hex: '#0ea5e9', nombre: 'Azul Cielo' },
+  { hex: '#6366f1', nombre: 'Índigo' },
+  { hex: '#8b5cf6', nombre: 'Violeta' },
+  { hex: '#ec4899', nombre: 'Fucsia' },
+  { hex: '#64748b', nombre: 'Pizarra' }
+]
 
 const nuevoNombre = ref('')
 const nuevoNivel = ref<NivelAlerta>(1)
@@ -30,6 +74,8 @@ const nuevoEnfoqueDetalle = ref('')
 const nuevaDescripcion = ref('')
 const nuevasPalabrasClave = ref('')
 const nuevoProtocolo = ref('')
+const iconoSeleccionado = ref('ShieldAlert')
+const colorSeleccionado = ref('#ef4444')
 
 const guardar = () => {
   if (!nuevoNombre.value.trim()) {
@@ -55,7 +101,9 @@ const guardar = () => {
       ? (nuevoEnfoqueDetalle.value.trim() || nuevaDescripcion.value.trim())
       : 'Vas a estar pendiente de todo el entorno y señales del clima.',
     palabrasClave: keywords.length > 0 ? keywords : undefined,
-    protocoloAccion: nuevoProtocolo.value.trim() || 'Atención prioritaria y activación de protocolo de Talento Humano.'
+    protocoloAccion: nuevoProtocolo.value.trim() || 'Atención prioritaria y activación de protocolo de Talento Humano.',
+    icono: iconoSeleccionado.value,
+    color: colorSeleccionado.value
   })
 }
 </script>
@@ -105,6 +153,58 @@ const guardar = () => {
           <option :value="3">🟡 Nivel 3 (Moderado / Atención)</option>
           <option :value="4">🟢 Nivel 4 (Bajo / Preventivo)</option>
         </select>
+      </div>
+    </div>
+
+    <!-- Ícono y Color de la Alerta -->
+    <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+      <!-- Selector de Ícono -->
+      <div class="sm:col-span-7 space-y-1.5">
+        <label class="text-[11px] font-bold text-slate-700 dark:text-slate-300 block">
+          Ícono Identificador:
+        </label>
+        <div class="flex flex-wrap gap-1.5">
+          <button
+            v-for="ico in ICONOS_DISPONIBLES"
+            :key="ico.id"
+            type="button"
+            @click="iconoSeleccionado = ico.id"
+            :class="[
+              'p-2 rounded-xl border transition-all cursor-pointer flex items-center justify-center',
+              iconoSeleccionado === ico.id
+                ? 'bg-sky-500 text-white border-sky-600 shadow-md scale-105'
+                : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-sky-400'
+            ]"
+            :title="ico.label"
+          >
+            <component :is="ico.componente" class="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      <!-- Selector de Color -->
+      <div class="sm:col-span-5 space-y-1.5">
+        <label class="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+          <Palette class="w-3.5 h-3.5 text-sky-500" />
+          <span>Color de la Alerta:</span>
+        </label>
+        <div class="flex flex-wrap items-center gap-2">
+          <button
+            v-for="c in PALETA_COLORES"
+            :key="c.hex"
+            type="button"
+            @click="colorSeleccionado = c.hex"
+            class="w-6 h-6 rounded-full border-2 transition-transform cursor-pointer"
+            :style="{ backgroundColor: c.hex, borderColor: colorSeleccionado === c.hex ? '#ffffff' : 'transparent' }"
+            :class="{ 'scale-125 shadow-md ring-2 ring-sky-500': colorSeleccionado === c.hex }"
+            :title="c.nombre"
+          ></button>
+          <input
+            v-model="colorSeleccionado"
+            type="color"
+            class="w-7 h-7 rounded-lg cursor-pointer border-0 bg-transparent p-0"
+          />
+        </div>
       </div>
     </div>
 

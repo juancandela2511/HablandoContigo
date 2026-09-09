@@ -5,11 +5,41 @@
 -->
 
 <script setup lang="ts">
-import { Building2, Zap, ArrowRight, Sparkles, Volume2, Clock, CheckCircle2 } from 'lucide-vue-next'
+import { computed } from 'vue'
+import { Building2, Zap, ArrowRight, Sparkles, Volume2, Clock, CheckCircle2, Lock } from 'lucide-vue-next'
+import { useAuth } from '@/Almacenes/useAuth'
 
 const emit = defineEmits<{
   (e: 'seleccionarModalidad', modalidad: 'clima_fijo' | 'encuesta_rapida'): void
 }>()
+
+const { usuarioActual, permisosUsuario } = useAuth()
+
+const puedeEditarClima = computed(() => {
+  if (usuarioActual.value?.esSesionTemporal && usuarioActual.value.permisosToken) {
+    return Boolean(usuarioActual.value.permisosToken.editarEncuestaClima)
+  }
+  return true
+})
+
+const puedeCrearRapidas = computed(() => {
+  if (usuarioActual.value?.esSesionTemporal && usuarioActual.value.permisosToken) {
+    return Boolean(usuarioActual.value.permisosToken.crearEncuestasRapidas)
+  }
+  return true
+})
+
+const alHacerClicModalidad = (modalidad: 'clima_fijo' | 'encuesta_rapida') => {
+  if (modalidad === 'clima_fijo' && !puedeEditarClima.value) {
+    alert('Tu Token de acceso temporal solo te permite gestionar Encuestas Rápidas (IA). La edición de la Encuesta Troncal de Clima está restringida por el Administrador.')
+    return
+  }
+  if (modalidad === 'encuesta_rapida' && !puedeCrearRapidas.value) {
+    alert('Tu Token de acceso temporal no tiene autorización para crear encuestas rápidas.')
+    return
+  }
+  emit('seleccionarModalidad', modalidad)
+}
 </script>
 
 <template>
@@ -34,8 +64,13 @@ const emit = defineEmits<{
       
       <!-- MODALIDAD 1: CLIMA LABORAL TRONCAL FIJO -->
       <div
-        @click="emit('seleccionarModalidad', 'clima_fijo')"
-        class="group relative p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 hover:border-sky-500 dark:hover:border-sky-500 shadow-xl hover:shadow-2xl transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden"
+        @click="alHacerClicModalidad('clima_fijo')"
+        :class="[
+          'group relative p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border-2 shadow-xl hover:shadow-2xl transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden',
+          puedeEditarClima
+            ? 'border-slate-200 dark:border-slate-800 hover:border-sky-500 dark:hover:border-sky-500'
+            : 'border-slate-300 dark:border-slate-800 opacity-60 hover:opacity-80'
+        ]"
       >
         <div class="absolute top-0 right-0 w-36 h-36 bg-sky-500/10 rounded-full blur-3xl group-hover:bg-sky-500/20 transition-all pointer-events-none" />
 
@@ -44,10 +79,16 @@ const emit = defineEmits<{
             <div class="w-14 h-14 rounded-2xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-600 dark:text-sky-400 group-hover:scale-110 transition-transform">
               <Building2 class="w-7 h-7 stroke-[1.8]" />
             </div>
-            <span class="text-[10px] font-mono px-2.5 py-1 rounded-full bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 font-extrabold border border-sky-300 dark:border-sky-800 flex items-center gap-1">
-              <Volume2 class="w-3 h-3 text-sky-500" />
-              Asistente con Voz
-            </span>
+            <div class="flex items-center gap-1.5">
+              <span v-if="!puedeEditarClima" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center gap-1">
+                <Lock class="w-3 h-3" />
+                Restringido por Token
+              </span>
+              <span v-else class="text-[10px] font-mono px-2.5 py-1 rounded-full bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 font-extrabold border border-sky-300 dark:border-sky-800 flex items-center gap-1">
+                <Volume2 class="w-3 h-3 text-sky-500" />
+                Asistente con Voz
+              </span>
+            </div>
           </div>
 
           <div class="space-y-1.5">

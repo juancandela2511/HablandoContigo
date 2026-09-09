@@ -26,23 +26,28 @@ import { ref, computed } from 'vue'
 import { supabase } from '@/supabase'
 import { PERMISOS_POR_ROL, validarDominioCorporativo, type RolCuenta, type PermisosRol } from '@/Almacenes/useCuentas'
 import { useToast } from '@/Almacenes/useToast'
+import { useTokensAcceso, type PermisosTokenAcceso, type PresetRolToken } from '@/Almacenes/useTokensAcceso'
 
-const { mostrarError, mostrarExito } = useToast()
+const { mostrarError, mostrarExito, mostrarAdvertencia } = useToast()
+
+export type GeneroUsuario = 'Masculino' | 'Femenino' | 'Otro'
 
 /**
  * Modelo de Usuario Administrativo
  */
 export interface Usuario {
-  /** Identificador único del usuario (ej. 'usr-admin-01') */
+  /** Identificador único del usuario (ej. 'usr-admin-01' o ID de token) */
   id: string
-  /** Nombre completo del administrador */
+  /** Nombre completo del administrador o destinatario del token */
   nombre: string
-  /** Correo electrónico institucional */
+  /** Correo electrónico institucional o identificador temporal */
   email: string
   /** Rol con jerarquía de permisos en la plataforma */
   rol: RolCuenta
   /** Departamento o área a la que pertenece */
   departamento: string
+  /** Género / Identidad para trato personalizado del asistente ('Masculino' | 'Femenino' | 'Otro') */
+  genero?: GeneroUsuario
   /** Ruta o DataURL de la foto de perfil */
   avatar: string
   /** URL dinámica remota o local de la foto de perfil */
@@ -53,6 +58,34 @@ export interface Usuario {
   biografia?: string
   /** Número de teléfono o contacto directo */
   telefono?: string
+  /** Identifica si el usuario ingresó mediante un Token/PIN temporal */
+  esSesionTemporal?: boolean
+  /** ID del token temporal utilizado */
+  tokenAccesoId?: string
+  /** Código del token (ej. 'TOK-84920') */
+  codigoToken?: string
+  /** Fecha/hora ISO exacta de expiración del token */
+  tokenExpiraEn?: string
+  /** Permisos granulares asignados al token */
+  permisosToken?: PermisosTokenAcceso
+  /** Ruta a la que debe redirigirse al ingresar */
+  rutaInicialToken?: string
+  /** Preset asignado al token */
+  presetToken?: PresetRolToken
+}
+
+/**
+ * Obtiene el trato vocativo respetuoso según el género configurado en el perfil
+ */
+export function obtenerTratoUsuario(usuario?: Usuario | null): { trato: string; vocativo: string; saludo: string; esFemenino: boolean } {
+  const g = (usuario?.genero || 'Masculino').toLowerCase()
+  if (g.includes('fem') || g === 'mujer' || g === 'f') {
+    return { trato: 'señora', vocativo: 'señora', saludo: 'Hola señora', esFemenino: true }
+  }
+  if (g.includes('otro') || g.includes('neutro') || g.includes('binario')) {
+    return { trato: 'administrador', vocativo: 'administrador', saludo: 'Hola', esFemenino: false }
+  }
+  return { trato: 'señor', vocativo: 'señor', saludo: 'Hola señor', esFemenino: false }
 }
 
 /** Clave de persistencia de sesión en el almacenamiento local */
@@ -67,7 +100,17 @@ function obtenerUsuarioInicial(): Usuario | null {
   const sesionGuardada = localStorage.getItem(CLAVE_ALMACENAMIENTO_SESION)
   if (sesionGuardada) {
     try {
-      return JSON.parse(sesionGuardada)
+      const u: Usuario = JSON.parse(sesionGuardada)
+      // Si era sesión temporal, validar si expiró
+      if (u.esSesionTemporal && u.tokenExpiraEn) {
+        const ahora = Date.now()
+        const expira = new Date(u.tokenExpiraEn).getTime()
+        if (ahora >= expira) {
+          localStorage.removeItem(CLAVE_ALMACENAMIENTO_SESION)
+          return null
+        }
+      }
+      return u
     } catch {
       return null
     }
@@ -91,14 +134,50 @@ const CLAVE_ALMACENAMIENTO_CUENTAS = 'hablandocontigo_cuentas_admin'
  */
 export function useAuth() {
   /** Indica si hay un usuario con sesión activa */
-  const estaAutenticado = computed(() => usuarioActual.value !== null)
+  const estaAutenticado = computed(() => {
+    if (!usuarioActual.value) return false
+    if (usuarioActual.value.esSesionTemporal && usuarioActual.value.tokenExpiraEn) {
+      const expira = new Date(usuarioActual.value.tokenExpiraEn).getTime()
+      if (Date.now() >= expira) return false
+    }
+    return true
+  })
   
   /** Indica si el usuario actual posee permisos de Super Administrador */
-  const esSuperAdmin = computed(() => usuarioActual.value?.rol === 'Super Administrador')
+  const esSuperAdmin = computed(() => {
+    if (usuarioActual.value?.esSesionTemporal) return false
+    return usuarioActual.value?.rol === 'Super Administrador'
+  })
 
-  /** Permisos granulares del usuario según su rol (RBAC) */
+  /** Permisos granulares del usuario según su rol o token temporal (RBAC) */
   const permisosUsuario = computed<PermisosRol>(() => {
-    if (!usuarioActual.value?.rol || !PERMISOS_POR_ROL[usuarioActual.value.rol]) {
+    if (!usuarioActual.value) {
+      return {
+        proyectos: false,
+        dashboard: false,
+        alertas: false,
+        cuentas: false,
+        cambiarContrasenasOtros: false,
+        configuracion: false,
+        editarEncuestaClima: false
+      }
+    }
+
+    // Si es sesión temporal con token, mapear permisos asignados por el Admin
+    if (usuarioActual.value.esSesionTemporal && usuarioActual.value.permisosToken) {
+      const pt = usuarioActual.value.permisosToken
+      return {
+        proyectos: Boolean(pt.proyectos),
+        dashboard: Boolean(pt.dashboard),
+        alertas: Boolean(pt.alertas),
+        cuentas: Boolean(pt.cuentas),
+        cambiarContrasenasOtros: false,
+        configuracion: Boolean(pt.configuracion),
+        editarEncuestaClima: Boolean(pt.editarEncuestaClima)
+      }
+    }
+
+    if (!usuarioActual.value.rol || !PERMISOS_POR_ROL[usuarioActual.value.rol]) {
       return {
         proyectos: false,
         dashboard: false,
@@ -311,6 +390,75 @@ export function useAuth() {
     } catch (errorCapturado: any) {
       errorAutenticacion.value = errorCapturado?.message || 'Error al iniciar sesión. Verifica tus datos.'
       return false
+    } finally {
+      cargando.value = false
+    }
+  }
+
+  /**
+   * Inicia sesión validando un Token / PIN de acceso temporal emitido por el Administrador
+   */
+  const iniciarSesionConToken = async (codigoToken: string): Promise<{ ok: boolean; rutaInicial: string; mensaje: string }> => {
+    cargando.value = true
+    errorAutenticacion.value = null
+
+    try {
+      if (!codigoToken || !codigoToken.trim()) {
+        errorAutenticacion.value = 'Por favor ingresa el Token o PIN de acceso temporal.'
+        return { ok: false, rutaInicial: '/login', mensaje: 'El token o PIN es requerido.' }
+      }
+
+      const { validarYConsumirToken } = useTokensAcceso()
+      const resultado = await validarYConsumirToken(codigoToken)
+
+      if (!resultado.valido || !resultado.token) {
+        errorAutenticacion.value = resultado.mensaje
+        return { ok: false, rutaInicial: '/login', mensaje: resultado.mensaje }
+      }
+
+      const token = resultado.token
+
+      // Mapear rol visual según permisos del token
+      let rolAsignado: RolCuenta = 'Supervisor'
+      if (token.preset === 'solo_dashboard') rolAsignado = 'Analista RRHH'
+      if (token.preset === 'auditor_completo') rolAsignado = 'Supervisor'
+      if (token.permisos.cuentas) rolAsignado = 'Administrador'
+
+      const usuarioTemporal: Usuario = {
+        id: token.id,
+        nombre: token.nombreDestinatario,
+        email: `token-${token.codigoToken.toLowerCase().replace(/[^a-z0-9]/g, '')}@temporal.acceso`,
+        rol: rolAsignado,
+        departamento: 'Acceso Temporal Restringido',
+        avatar: '',
+        fotoUrl: '',
+        biografia: `Sesión temporal restringida por Token (${token.codigoToken}). Creado por ${token.creadoPor}.`,
+        ultimoAcceso: 'Ahora mismo',
+        esSesionTemporal: true,
+        tokenAccesoId: token.id,
+        codigoToken: token.codigoToken,
+        tokenExpiraEn: token.expiraEn,
+        permisosToken: token.permisos,
+        rutaInicialToken: token.rutaInicial || '/proyectos',
+        presetToken: token.preset
+      }
+
+      usuarioActual.value = usuarioTemporal
+      localStorage.setItem(CLAVE_ALMACENAMIENTO_SESION, JSON.stringify(usuarioTemporal))
+
+      mostrarExito(
+        'Acceso Temporal Concedido',
+        `Bienvenido, ${token.nombreDestinatario}. Tienes acceso restringido válido hasta las ${new Date(token.expiraEn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`
+      )
+
+      return {
+        ok: true,
+        rutaInicial: token.rutaInicial || '/proyectos',
+        mensaje: resultado.mensaje
+      }
+    } catch (err: any) {
+      errorAutenticacion.value = err?.message || 'Error al validar el token de acceso.'
+      return { ok: false, rutaInicial: '/login', mensaje: err?.message || 'Error inesperado.' }
     } finally {
       cargando.value = false
     }
@@ -683,6 +831,7 @@ export function useAuth() {
     cargando,
     errorAutenticacion,
     iniciarSesion,
+    iniciarSesionConToken,
     accesoRapidoAdmin,
     subirFotoPerfil,
     actualizarPerfil,

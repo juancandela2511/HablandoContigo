@@ -26,6 +26,7 @@ import {
   AlignLeft
 } from 'lucide-vue-next'
 import type { PreguntaEncuesta, OpcionPregunta } from '@/Servicios/iaEncuestasService'
+import { useTiposAlertas } from '@/Almacenes/useTiposAlertas'
 import BotonBase from '@/componentes/ElementosBase/BotonBase.vue'
 
 // ─── Props & Emits ────────────────────────────────────────────────────────────
@@ -38,6 +39,8 @@ const emit = defineEmits<{
   (e: 'cerrar'): void
   (e: 'guardar', pregunta: PreguntaEncuesta): void
 }>()
+
+const { tiposAlertas, tiposActivos, obtenerEtiquetaNivel } = useTiposAlertas()
 
 // ─── Estado local del editor ──────────────────────────────────────────────────
 const copia = ref<PreguntaEncuesta | null>(null)
@@ -70,6 +73,29 @@ const opcionesConAlerta = computed(() =>
 // ─── Acciones sobre opciones ──────────────────────────────────────────────────
 const toggleAlerta = (opc: OpcionPregunta) => {
   opc.esAlerta = !opc.esAlerta
+  if (opc.esAlerta && !opc.tipoAlertaId) {
+    const primera = tiposActivos.value[0] || tiposAlertas.value[0]
+    if (primera) {
+      opc.tipoAlertaId = primera.id
+      opc.nombreAlerta = primera.nombre
+      opc.severidadAlerta = primera.severidad
+    }
+  }
+}
+
+const alCambiarSelectAlerta = (opc: OpcionPregunta) => {
+  if (!opc.tipoAlertaId) {
+    opc.esAlerta = false
+    opc.nombreAlerta = undefined
+    opc.severidadAlerta = undefined
+    return
+  }
+  const tipo = tiposAlertas.value.find(t => t.id === opc.tipoAlertaId)
+  if (tipo) {
+    opc.esAlerta = true
+    opc.nombreAlerta = tipo.nombre
+    opc.severidadAlerta = tipo.severidad
+  }
 }
 
 const agregarOpcion = () => {
@@ -210,78 +236,109 @@ const guardar = () => {
                 </div>
 
                 <!-- Lista de opciones -->
-                <div class="space-y-2">
+                <div class="space-y-2.5">
                   <div
                     v-for="(opc, idx) in copia.opciones"
                     :key="opc.id"
                     :class="[
-                      'flex items-center gap-2.5 p-3 rounded-2xl border transition-all',
+                      'p-3 rounded-2xl border transition-all space-y-2',
                       opc.esAlerta
-                        ? 'bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-900/60'
+                        ? 'bg-rose-50/70 dark:bg-rose-950/30 border-rose-300 dark:border-rose-900/60 shadow-sm'
                         : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800'
                     ]"
                   >
-                    <!-- Número de orden -->
-                    <span
-                      :class="[
-                        'w-6 h-6 flex-shrink-0 rounded-full text-[10px] font-mono font-black flex items-center justify-center',
-                        opc.esAlerta
-                          ? 'bg-rose-200 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300'
-                          : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                      ]"
+                    <!-- Fila Principal: Texto, Puntos, Toggle Alerta y Borrar -->
+                    <div class="flex items-center gap-2.5">
+                      <!-- Número de orden -->
+                      <span
+                        :class="[
+                          'w-6 h-6 flex-shrink-0 rounded-full text-[10px] font-mono font-black flex items-center justify-center',
+                          opc.esAlerta
+                            ? 'bg-rose-200 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300'
+                            : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                        ]"
+                      >
+                        {{ idx + 1 }}
+                      </span>
+
+                      <!-- Input texto de la opción -->
+                      <input
+                        v-model="opc.texto"
+                        type="text"
+                        :class="[
+                          'flex-1 min-w-0 px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border text-xs outline-none focus:ring-2 transition-all',
+                          opc.esAlerta
+                            ? 'border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 font-semibold focus:ring-rose-400'
+                            : 'border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:ring-sky-400'
+                        ]"
+                        :placeholder="'Opción ' + (idx + 1) + ' (Ej. Más de 6 meses, Pésimo, etc.)'"
+                      />
+
+                      <!-- Input valor numérico -->
+                      <input
+                        v-model.number="opc.valor"
+                        type="number"
+                        min="0"
+                        max="10"
+                        class="w-14 flex-shrink-0 px-2 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-center text-slate-600 dark:text-slate-400 outline-none focus:ring-2 focus:ring-sky-400"
+                        title="Puntaje / Valor numérico de la opción (1 = Crítico / Alerta, 5 = Excelente)"
+                      />
+
+                      <!-- Toggle Alerta -->
+                      <button
+                        type="button"
+                        @click="toggleAlerta(opc)"
+                        :class="[
+                          'flex-shrink-0 px-2.5 py-1.5 rounded-xl flex items-center gap-1.5 text-[10px] font-bold transition-all cursor-pointer shadow-sm',
+                          opc.esAlerta
+                            ? 'bg-rose-500 hover:bg-rose-600 text-white ring-2 ring-rose-400/30'
+                            : 'bg-slate-100 dark:bg-slate-800 hover:bg-rose-100 dark:hover:bg-rose-950/40 text-slate-500 hover:text-rose-500'
+                        ]"
+                        :title="opc.esAlerta ? 'Desactivar alerta en esta opción' : 'Activar alerta y asociar a un tipo de alerta específico'"
+                      >
+                        <Bell v-if="opc.esAlerta" class="w-3.5 h-3.5" />
+                        <BellOff v-else class="w-3.5 h-3.5" />
+                        <span>{{ opc.esAlerta ? 'ALERTA' : '+ Alerta' }}</span>
+                      </button>
+
+                      <!-- Eliminar opción -->
+                      <button
+                        type="button"
+                        @click="eliminarOpcion(idx)"
+                        :disabled="copia.opciones.length <= 1"
+                        class="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+                        title="Eliminar esta opción"
+                      >
+                        <Trash2 class="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <!-- Fila Secundaria: ASOCIACIÓN DIRECTA CON TIPO DE ALERTA -->
+                    <div
+                      v-if="opc.esAlerta"
+                      class="pt-2 border-t border-rose-200 dark:border-rose-900/50 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs bg-rose-100/50 dark:bg-rose-950/40 p-2.5 rounded-xl"
                     >
-                      {{ idx + 1 }}
-                    </span>
+                      <div class="flex items-center gap-1.5 text-rose-700 dark:text-rose-300 font-bold shrink-0">
+                        <AlertTriangle class="w-3.5 h-3.5 text-rose-500" />
+                        <span>Asociar con Alerta:</span>
+                      </div>
 
-                    <!-- Input texto -->
-                    <input
-                      v-model="opc.texto"
-                      type="text"
-                      :class="[
-                        'flex-1 min-w-0 px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-900 border text-xs outline-none focus:ring-2 transition-all',
-                        opc.esAlerta
-                          ? 'border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 font-semibold focus:ring-rose-400'
-                          : 'border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:ring-sky-400'
-                      ]"
-                      :placeholder="'Opción ' + (idx + 1)"
-                    />
-
-                    <!-- Input valor numérico -->
-                    <input
-                      v-model.number="opc.valor"
-                      type="number"
-                      min="0"
-                      max="10"
-                      class="w-14 flex-shrink-0 px-2 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-center text-slate-600 dark:text-slate-400 outline-none focus:ring-2 focus:ring-sky-400"
-                      title="Valor numérico de la opción"
-                    />
-
-                    <!-- Toggle Alerta -->
-                    <button
-                      type="button"
-                      @click="toggleAlerta(opc)"
-                      :class="[
-                        'flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all cursor-pointer',
-                        opc.esAlerta
-                          ? 'bg-rose-500 hover:bg-rose-600 text-white shadow-md'
-                          : 'bg-slate-100 dark:bg-slate-800 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-slate-400 hover:text-rose-500'
-                      ]"
-                      :title="opc.esAlerta ? 'Desactivar alerta en esta opción' : 'Activar alerta: notificar si el empleado selecciona esta opción'"
-                    >
-                      <Bell v-if="opc.esAlerta" class="w-4 h-4" />
-                      <BellOff v-else class="w-4 h-4" />
-                    </button>
-
-                    <!-- Eliminar opción -->
-                    <button
-                      type="button"
-                      @click="eliminarOpcion(idx)"
-                      :disabled="copia.opciones.length <= 1"
-                      class="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
-                      title="Eliminar esta opción"
-                    >
-                      <Trash2 class="w-3.5 h-3.5" />
-                    </button>
+                      <div class="flex-1 min-w-0 flex items-center gap-2">
+                        <select
+                          v-model="opc.tipoAlertaId"
+                          @change="alCambiarSelectAlerta(opc)"
+                          class="w-full px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-rose-300 dark:border-rose-800 text-xs font-semibold text-rose-800 dark:text-rose-200 outline-none focus:ring-2 focus:ring-rose-500 cursor-pointer"
+                        >
+                          <option
+                            v-for="tipo in tiposAlertas"
+                            :key="tipo.id"
+                            :value="tipo.id"
+                          >
+                            [{{ obtenerEtiquetaNivel(tipo.nivel) }}] {{ tipo.nombre }}
+                          </option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -302,17 +359,21 @@ const guardar = () => {
                 >
                   <div class="flex items-start gap-2">
                     <AlertTriangle class="w-4 h-4 text-rose-500 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p class="text-xs font-bold text-rose-700 dark:text-rose-300 mb-1">
-                        Opciones que generarán ALERTA al seleccionarse:
+                    <div class="space-y-1">
+                      <p class="text-xs font-bold text-rose-700 dark:text-rose-300">
+                        Opciones vinculadas a ALERTAS organizacionales:
                       </p>
-                      <ul class="space-y-0.5">
+                      <ul class="space-y-1">
                         <li
                           v-for="opc in opcionesConAlerta"
                           :key="opc.id"
-                          class="text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1"
+                          class="text-[11px] text-rose-700 dark:text-rose-300 font-medium flex flex-wrap items-center gap-1.5 bg-rose-100/60 dark:bg-rose-950/50 p-1.5 rounded-lg border border-rose-200 dark:border-rose-900/40"
                         >
-                          <Bell class="w-3 h-3" /> {{ opc.texto }}
+                          <span class="font-bold text-rose-900 dark:text-white">"{{ opc.texto }}"</span>
+                          <span class="text-slate-400 font-mono">➔</span>
+                          <span class="px-2 py-0.5 rounded-full bg-rose-500 text-white font-bold text-[10px]">
+                            {{ opc.nombreAlerta || 'Alerta Asignada' }}
+                          </span>
                         </li>
                       </ul>
                     </div>

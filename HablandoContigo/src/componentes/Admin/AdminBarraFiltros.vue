@@ -5,7 +5,7 @@
 -->
 
 <script setup lang="ts">
-import { Search, Filter, UserPlus } from 'lucide-vue-next'
+import { Search, Filter, UserPlus, KeyRound } from 'lucide-vue-next'
 import { BotonBase } from '@/componentes/ElementosBase'
 
 defineProps<{
@@ -14,6 +14,7 @@ defineProps<{
   filtroDepartamento: string
   filtroEstado: string
   departamentosUnicos: string[]
+  tokensActivosCount?: number
 }>()
 
 defineEmits<{
@@ -22,6 +23,7 @@ defineEmits<{
   (e: 'update:filtroDepartamento', valor: string): void
   (e: 'update:filtroEstado', valor: string): void
   (e: 'abrirModalCrear'): void
+  (e: 'abrirModalTokens'): void
 }>()
 </script>
 
@@ -40,8 +42,24 @@ defineEmits<{
         />
       </div>
 
-      <!-- Botones de Acción usando BotonBase -->
+      <!-- Botones de Acción -->
       <div class="flex items-center gap-2.5 shrink-0">
+        <!-- Botón Tokens y PINs Temporales -->
+        <button
+          type="button"
+          @click="$emit('abrirModalTokens')"
+          class="px-4 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-amber-400 border border-amber-500/40 hover:border-amber-400 text-xs sm:text-sm font-bold flex items-center gap-2 shadow-lg shadow-amber-500/10 transition-all cursor-pointer active:scale-95"
+        >
+          <KeyRound class="w-4 h-4 text-amber-400" />
+          <span>Tokens de Acceso</span>
+          <span 
+            v-if="tokensActivosCount && tokensActivosCount > 0"
+            class="px-1.5 py-0.2 rounded-full bg-amber-500 text-slate-950 font-black text-[10px]"
+          >
+            {{ tokensActivosCount }}
+          </span>
+        </button>
+
         <BotonBase
           variante="gradiente"
           tamano="pequeno"

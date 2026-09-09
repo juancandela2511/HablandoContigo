@@ -94,5 +94,5 @@ export function useToast() {
     toasts.value = toasts.value.filter(t => t.id !== id)
   }
 
-  return { toasts, mostrarError, mostrarExito, mostrarAviso, eliminar }
+  return { toasts, mostrarError, mostrarExito, mostrarAviso, mostrarAdvertencia: mostrarAviso, eliminar }
 }

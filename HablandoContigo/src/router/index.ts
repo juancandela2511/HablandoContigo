@@ -20,16 +20,21 @@
  */
 
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+// Rutas públicas: cargadas de forma inmediata (el usuario las ve primero)
 import HeroPrincipal from '@/vistas/Inicio/HeroPrincipal.vue'
 import LoginView from '@/vistas/Auth/LoginView.vue'
-import AdminCuentasView from '@/vistas/Admin/AdminCuentasView.vue'
-import ProyectosView from '@/vistas/Proyectos/ProyectosView.vue'
-import DashboardView from '@/vistas/Dashboard/DashboardView.vue'
-import ConfiguracionView from '@/vistas/Configuracion/ConfiguracionView.vue'
 import ResponderEncuestaView from '@/vistas/Encuestas/ResponderEncuestaView.vue'
-import VistaGenerica from '@/vistas/Comunes/VistaGenerica.vue'
-import Error404View from '@/vistas/Comunes/Error404View.vue'
-import CatalogoErroresView from '@/vistas/Errores/CatalogoErroresView.vue'
+
+// Rutas protegidas: lazy-loaded (se descargan solo cuando el usuario navega a ellas)
+const AdminCuentasView = () => import('@/vistas/Admin/AdminCuentasView.vue')
+const ProyectosView = () => import('@/vistas/Proyectos/ProyectosView.vue')
+const DashboardView = () => import('@/vistas/Dashboard/DashboardView.vue')
+const ConfiguracionView = () => import('@/vistas/Configuracion/ConfiguracionView.vue')
+const ReconocimientoIAView = () => import('@/vistas/IA/ReconocimientoIAView.vue')
+const VistaGenerica = () => import('@/vistas/Comunes/VistaGenerica.vue')
+const Error404View = () => import('@/vistas/Comunes/Error404View.vue')
+const CatalogoErroresView = () => import('@/vistas/Errores/CatalogoErroresView.vue')
+
 import { useAuth } from '@/Almacenes/useAuth'
 
 
@@ -104,6 +109,15 @@ const rutas: Array<RouteRecordRaw> = [
     }
   },
   {
+    path: '/reconocimiento-ia',
+    name: 'ReconocimientoIA',
+    component: ReconocimientoIAView,
+    meta: {
+      requiereAuth: true,
+      rolesPermitidos: ['Super Administrador', 'Administrador', 'Adminsitrador General', 'Supervisor', 'Analista RRHH']
+    }
+  },
+  {
     path: '/team',
     redirect: '/admin/cuentas'
   },
@@ -166,10 +180,21 @@ const enrutador = createRouter({
 })
 
 /**
- * Guardia de navegación global para proteger rutas con `meta.requiereAuth` y control de roles (RBAC)
+ * Guardia de navegación global para proteger rutas con `meta.requiereAuth` y control de roles (RBAC) y Tokens Temporales
  */
 enrutador.beforeEach((rutaHacia, rutaDesde, siguiente) => {
   const { estaAutenticado, usuarioActual, permisosUsuario } = useAuth()
+
+  // 1. Validar si la sesión temporal por Token ya expiró
+  if (usuarioActual.value?.esSesionTemporal && usuarioActual.value.tokenExpiraEn) {
+    const ahora = Date.now()
+    const expira = new Date(usuarioActual.value.tokenExpiraEn).getTime()
+    if (ahora >= expira) {
+      localStorage.removeItem('hablandocontigo_usuario_sesion')
+      siguiente({ path: '/login', query: { expirado: '1' } })
+      return
+    }
+  }
 
   if (rutaHacia.meta.requiereAuth && !estaAutenticado.value) {
     // Si intenta ingresar a una sección protegida sin sesión, redirigir al login
@@ -178,7 +203,13 @@ enrutador.beforeEach((rutaHacia, rutaDesde, siguiente) => {
   }
 
   if (rutaHacia.path === '/login' && estaAutenticado.value) {
-    // Si ya está autenticado, redirigir a su vista principal según rol
+    // Si ya está autenticado con token temporal, redirigir a su ruta inicial asignada
+    if (usuarioActual.value?.esSesionTemporal) {
+      siguiente(usuarioActual.value.rutaInicialToken || '/proyectos')
+      return
+    }
+
+    // Si ya está autenticado con cuenta estándar, redirigir a su vista principal según rol
     if (usuarioActual.value?.rol === 'Super Administrador') {
       siguiente('/admin/cuentas')
     } else if (usuarioActual.value?.rol === 'Supervisor') {
@@ -189,7 +220,32 @@ enrutador.beforeEach((rutaHacia, rutaDesde, siguiente) => {
     return
   }
 
-  // Verificación estricta de permisos por Rol (RBAC)
+  // 2. Control de Permisos Especiales para Sesiones Temporales por Token
+  if (usuarioActual.value?.esSesionTemporal) {
+    const p = permisosUsuario.value
+    const path = rutaHacia.path
+
+    if (path.startsWith('/admin/cuentas') && !p?.cuentas) {
+      siguiente(usuarioActual.value.rutaInicialToken || (p?.proyectos ? '/proyectos' : (p?.dashboard ? '/dashboard' : '/configuracion')))
+      return
+    }
+    if (path.startsWith('/proyectos') && !p?.proyectos) {
+      siguiente(p?.dashboard ? '/dashboard' : '/configuracion')
+      return
+    }
+    if (path.startsWith('/dashboard') && !p?.dashboard) {
+      siguiente(p?.proyectos ? '/proyectos' : '/configuracion')
+      return
+    }
+    if (path.startsWith('/configuracion') && !p?.configuracion) {
+      siguiente(p?.proyectos ? '/proyectos' : (p?.dashboard ? '/dashboard' : '/login'))
+      return
+    }
+    siguiente()
+    return
+  }
+
+  // 3. Verificación estricta de permisos por Rol estándar (RBAC)
   const rolesPermitidos = rutaHacia.meta.rolesPermitidos as string[] | undefined
   if (rolesPermitidos && usuarioActual.value) {
     const tienePermiso = rolesPermitidos.includes(usuarioActual.value.rol)

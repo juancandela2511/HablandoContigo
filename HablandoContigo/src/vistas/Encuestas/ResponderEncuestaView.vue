@@ -24,7 +24,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, onBeforeRouteLeave } from 'vue-router'
-import { useEncuestas, type Encuesta } from '@/Almacenes/useEncuestas'
+import { useEncuestas, type Encuesta, type RespuestaItem } from '@/Almacenes/useEncuestas'
 import { obtenerODefinirDispositivoUUID, obtenerFechaYHoraActual, obtenerUbicacionExactaDispositivo, iniciarCapturaUbicacion } from '@/Servicios/deviceService'
 import { 
   type PreguntaEncuesta, 
@@ -97,6 +97,69 @@ const manejarPopState = () => {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// CONTROL DE INACTIVIDAD Y LLAMADO DE ATENCIÓN ("¡EY, PRESTA ATENCIÓN!")
+// ─────────────────────────────────────────────────────────────────────────────
+const LIMITE_INACTIVIDAD_SEGUNDOS = 15
+const segundosSinActividad = ref(0)
+const inactividadModalAbierto = ref(false)
+let timerInactividad: ReturnType<typeof setInterval> | null = null
+
+const reproducirSonidoAtencion = () => {
+  try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
+    if (!AudioCtx) return
+    const ctx = new AudioCtx()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(587.33, ctx.currentTime) // Re
+    osc.frequency.setValueAtTime(880, ctx.currentTime + 0.15) // La
+
+    gain.gain.setValueAtTime(0.2, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5)
+
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+
+    osc.start()
+    osc.stop(ctx.currentTime + 0.5)
+  } catch {
+    // Silencioso si el navegador bloquea autoplay
+  }
+
+  if (typeof navigator !== 'undefined' && navigator.vibrate) {
+    navigator.vibrate([200, 100, 200, 100, 300])
+  }
+}
+
+const registrarActividadUsuario = () => {
+  if (!inactividadModalAbierto.value) {
+    segundosSinActividad.value = 0
+  }
+}
+
+const reiniciarTimerInactividad = () => {
+  if (timerInactividad) clearInterval(timerInactividad)
+  segundosSinActividad.value = 0
+  timerInactividad = setInterval(() => {
+    if (!completada.value && consentimientoOtorgado.value) {
+      segundosSinActividad.value++
+      if (segundosSinActividad.value >= LIMITE_INACTIVIDAD_SEGUNDOS && !inactividadModalAbierto.value) {
+        inactividadModalAbierto.value = true
+        reproducirSonidoAtencion()
+      }
+    }
+  }, 1000)
+}
+
+const reanudarEncuestaPorActividad = () => {
+  inactividadModalAbierto.value = false
+  segundosSinActividad.value = 0
+  reproducirSonidoAtencion()
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // CONTROL DE TIEMPO Y PREVENCIÓN DE RESPUESTAS POR RESPONDER ("RESPONDER PORQUE SÍ")
 // ─────────────────────────────────────────────────────────────────────────────
 const TIEMPO_MINIMO_CERRADA = 4 // Mínimo 4 segundos para preguntas cerradas/escalas
@@ -132,6 +195,7 @@ const reiniciarCronometroPregunta = () => {
   if (timerPregunta) clearInterval(timerPregunta)
   tiempoInicioPregunta.value = Date.now()
   segundosTranscurridos.value = 0
+  segundosSinActividad.value = 0
   timerPregunta = setInterval(() => {
     segundosTranscurridos.value++
   }, 1000)
@@ -142,6 +206,7 @@ const manejarConsentimientoOtorgado = () => {
   registrarConsentimientoEncuesta(dispositivoUUID.value, idEncuesta.value)
   tiempoInicioGlobal.value = Date.now()
   reiniciarCronometroPregunta()
+  reiniciarTimerInactividad()
 }
 
 onMounted(() => {
@@ -154,7 +219,14 @@ onMounted(() => {
   tiempoInicioGlobal.value = Date.now()
   if (consentimientoOtorgado.value) {
     reiniciarCronometroPregunta()
+    reiniciarTimerInactividad()
   }
+
+  // Escuchadores de actividad del usuario
+  window.addEventListener('mousemove', registrarActividadUsuario)
+  window.addEventListener('keydown', registrarActividadUsuario)
+  window.addEventListener('touchstart', registrarActividadUsuario)
+  window.addEventListener('scroll', registrarActividadUsuario)
 
   // Bloqueo de salida en navegador y retroceso de historial
   window.history.pushState(null, '', window.location.href)
@@ -164,7 +236,6 @@ onMounted(() => {
   // Iniciar detección de ubicación exacta inmediatamente en segundo plano
   iniciarCapturaUbicacion()
 
-
   let encuestaEncontrada = obtenerEncuestaPorId(idEncuesta.value)
   if (!encuestaEncontrada && encuestas.value.length > 0) {
     encuestaEncontrada = encuestas.value[0]
@@ -173,14 +244,17 @@ onMounted(() => {
   if (encuestaEncontrada) {
     encuesta.value = encuestaEncontrada
     const pregs = [...encuestaEncontrada.preguntas]
-
-    // Las preguntas condicionales (12b, 28, etc.) inician fuera de la cola principal y se insertan según la respuesta
     colaPreguntas.value = pregs.filter(p => !p.esCondicional)
   }
 })
 
 onUnmounted(() => {
   if (timerPregunta) clearInterval(timerPregunta)
+  if (timerInactividad) clearInterval(timerInactividad)
+  window.removeEventListener('mousemove', registrarActividadUsuario)
+  window.removeEventListener('keydown', registrarActividadUsuario)
+  window.removeEventListener('touchstart', registrarActividadUsuario)
+  window.removeEventListener('scroll', registrarActividadUsuario)
   window.removeEventListener('beforeunload', manejarBloqueoSalir)
   window.removeEventListener('popstate', manejarPopState)
 })
@@ -200,7 +274,10 @@ const seleccionarOpcion = (opcion: OpcionPregunta) => {
   respuestasUsuario.value[preguntaActual.value.id] = {
     texto: opcion.texto,
     valor: opcion.valor,
-    esAlerta: opcion.esAlerta
+    esAlerta: opcion.esAlerta,
+    tipoAlertaId: opcion.tipoAlertaId,
+    nombreAlerta: opcion.nombreAlerta,
+    severidadAlerta: opcion.severidadAlerta
   }
 
   const todasLasPreguntas = encuesta.value?.preguntas || []
@@ -208,7 +285,48 @@ const seleccionarOpcion = (opcion: OpcionPregunta) => {
   const idPreguntaActual = preguntaActual.value.id
   const textoOpcion = (opcion.texto || '').trim().toLowerCase()
 
-  // 1. Bifurcación Pregunta 12 (Conflictos de Convivencia)
+  // ─── Motor Dinámico de Preguntas Condicionales / Bifurcaciones ───
+  todasLasPreguntas.forEach(subPreg => {
+    if (subPreg.esCondicional && subPreg.disparadorPor === idPreguntaActual) {
+      const valores = subPreg.valoresDisparo || ['Sí', 'si', 'Otro', 'otro']
+      const debeDispararse = valores.some(v => 
+        textoOpcion === v.toLowerCase() || 
+        textoOpcion.startsWith(v.toLowerCase()) || 
+        (opcion.texto || '').trim().toLowerCase() === v.toLowerCase()
+      )
+
+      if (debeDispararse) {
+        if (!colaPreguntas.value.some(p => p.id === subPreg.id)) {
+          colaPreguntas.value.splice(indicePreguntaActual.value + 1, 0, subPreg)
+        }
+      } else {
+        colaPreguntas.value = colaPreguntas.value.filter(p => p.id !== subPreg.id)
+        delete respuestasUsuario.value[subPreg.id]
+      }
+    }
+  })
+
+  // Casos específicos directos
+  if (idPreguntaActual === 'b1-p2-area') {
+    const idSub = 'b1-p2b-otro-area'
+    if (textoOpcion === 'otro') {
+      if (!colaPreguntas.value.some(p => p.id === idSub)) {
+        const subPreg = todasLasPreguntas.find(p => p.id === idSub) || {
+          id: idSub,
+          categoria: 'Bloque 1: Datos de Contexto y Segmentación',
+          texto: 'Pregunta 2b — ¿A qué área o departamento perteneces? (Especifique)',
+          tipo: 'texto' as const,
+          esCondicional: true,
+          opciones: []
+        }
+        colaPreguntas.value.splice(indicePreguntaActual.value + 1, 0, subPreg)
+      }
+    } else {
+      colaPreguntas.value = colaPreguntas.value.filter(p => p.id !== idSub)
+      delete respuestasUsuario.value[idSub]
+    }
+  }
+
   if (idPreguntaActual === 'b3-p12-conflictos') {
     const idSub = 'b3-p12b-conflictos-detalle'
     if (textoOpcion.startsWith('sí') || textoOpcion.startsWith('si')) {
@@ -216,7 +334,7 @@ const seleccionarOpcion = (opcion: OpcionPregunta) => {
         const subPreg = todasLasPreguntas.find(p => p.id === idSub) || {
           id: idSub,
           categoria: 'Bloque 3: Convivencia, Compañerismo y Trabajo en Equipo',
-          texto: 'Pregunta 12b — Si respondió "Sí" en la pregunta anterior, describa brevemente el contexto del conflicto:',
+          texto: 'Pregunta 12b — Describa brevemente el contexto del conflicto o situación presentada:',
           tipo: 'texto' as const,
           esCondicional: true,
           esSensibleAcoso: true,
@@ -230,15 +348,14 @@ const seleccionarOpcion = (opcion: OpcionPregunta) => {
     }
   }
 
-  // 2. Bifurcación Pregunta 27 (Estudios Académicos)
-  if (idPreguntaActual === 'b6-p27-estudia') {
-    const idSub = 'b6-p28-que-estudia'
+  if (idPreguntaActual === 'b6-p33-estudia' || idPreguntaActual === 'b6-p27-estudia') {
+    const idSub = idPreguntaActual === 'b6-p33-estudia' ? 'b6-p33b-que-estudia' : 'b6-p28-que-estudia'
     if (textoOpcion === 'sí' || textoOpcion === 'si') {
       if (!colaPreguntas.value.some(p => p.id === idSub)) {
         const subPreg = todasLasPreguntas.find(p => p.id === idSub) || {
           id: idSub,
           categoria: 'Bloque 6: Nivel Académico, Estudios y Talento Humano',
-          texto: 'Pregunta 28 — Si actualmente estudia, ¿qué está estudiando y en qué institución? (Ej. ADSO, Idiomas, etc.)',
+          texto: 'Pregunta 33b — Especifique qué área o programa de estudios se encuentra cursando actualmente:',
           tipo: 'texto' as const,
           esCondicional: true,
           opciones: []
@@ -248,28 +365,6 @@ const seleccionarOpcion = (opcion: OpcionPregunta) => {
     } else {
       colaPreguntas.value = colaPreguntas.value.filter(p => p.id !== idSub)
       delete respuestasUsuario.value[idSub]
-    }
-  }
-
-  // 3. Bifurcación condicional genérica de jefatura
-  if (idPreguntaActual === 'p-jefe-relacion') {
-    const idSubpregunta = 'p-jefe-subpregunta-falencias'
-    if (textoOpcion === 'bien') {
-      colaPreguntas.value = colaPreguntas.value.filter(p => p.id !== idSubpregunta)
-      delete respuestasUsuario.value[idSubpregunta]
-    } else if (textoOpcion === 'mal' || textoOpcion === 'regular') {
-      if (!colaPreguntas.value.some(p => p.id === idSubpregunta)) {
-        const subpregunta: PreguntaEncuesta = {
-          id: idSubpregunta,
-          categoria: 'Profundización de Gestión del Jefe',
-          texto: '¿Qué inconvenientes, recomendaciones o falencias tienes respecto a la gestión de tu jefe?',
-          tipo: 'texto',
-          opciones: [],
-          esSensibleAcoso: true,
-          esCondicional: true
-        }
-        colaPreguntas.value.splice(indicePreguntaActual.value + 1, 0, subpregunta)
-      }
     }
   }
 
@@ -369,7 +464,7 @@ const finalizarYEnviar = async () => {
   }
 
   if (encuesta.value) {
-    const respuestasFormateadas = Object.keys(respuestasUsuario.value).map(pregId => {
+    const respuestasFormateadas: RespuestaItem[] = Object.keys(respuestasUsuario.value).map(pregId => {
       const preg = colaPreguntas.value.find(p => p.id === pregId)
       const respVal = respuestasUsuario.value[pregId]
       return {
@@ -378,7 +473,10 @@ const finalizarYEnviar = async () => {
         categoria: preg?.categoria || 'General',
         respuesta: typeof respVal === 'object' ? respVal.texto : respVal,
         valor: typeof respVal === 'object' ? respVal.valor : undefined,
-        esAlerta: typeof respVal === 'object' ? respVal.esAlerta : false
+        esAlerta: typeof respVal === 'object' ? respVal.esAlerta : false,
+        tipoAlertaId: typeof respVal === 'object' ? respVal.tipoAlertaId : undefined,
+        nombreAlerta: typeof respVal === 'object' ? respVal.nombreAlerta : undefined,
+        severidadAlerta: typeof respVal === 'object' ? respVal.severidadAlerta : undefined
       }
     })
 
@@ -482,6 +580,56 @@ const finalizarYEnviar = async () => {
     <ModalPoliticaPrivacidad />
     <ModalConsentimientoInformado />
 
+    <!-- MODAL POPUP DE INACTIVIDAD: ¡EY, PRESTA ATENCIÓN! -->
+    <Teleport to="body">
+      <Transition
+        enter-active-class="transition duration-300 ease-out"
+        enter-from-class="opacity-0 scale-95"
+        enter-to-class="opacity-100 scale-100"
+        leave-active-class="transition duration-200 ease-in"
+        leave-from-class="opacity-100 scale-100"
+        leave-to-class="opacity-0 scale-95"
+      >
+        <div
+          v-if="inactividadModalAbierto"
+          class="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md font-['Poppins',sans-serif]"
+        >
+          <div class="relative w-full max-w-md p-6 sm:p-8 rounded-3xl bg-slate-900 border-2 border-amber-500/80 shadow-2xl text-center space-y-5 animate-pulse-subtle">
+            
+            <!-- Anillo pulsante de atención -->
+            <div class="relative w-20 h-20 mx-auto flex items-center justify-center">
+              <div class="absolute inset-0 rounded-full bg-amber-500/20 animate-ping"></div>
+              <div class="relative w-16 h-16 rounded-2xl bg-amber-500 text-slate-950 flex items-center justify-center font-black text-2xl shadow-lg">
+                ⚡
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <h3 class="text-lg sm:text-xl font-black text-white tracking-tight">
+                ¡Ey, presta atención! 🔔
+              </h3>
+              <p class="text-xs sm:text-sm text-slate-300 leading-relaxed font-medium">
+                Notamos que llevas un momento sin interactuar con la encuesta. Tu opinión anónima es clave para tomar medidas en la empresa.
+              </p>
+            </div>
+
+            <div class="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold">
+              <span>Por favor responde la pregunta en pantalla para poder continuar.</span>
+            </div>
+
+            <button
+              type="button"
+              @click="reanudarEncuestaPorActividad"
+              class="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-sm transition-all shadow-lg hover:shadow-amber-500/30 cursor-pointer active:scale-95 flex items-center justify-center gap-2"
+            >
+              <span>¡Estoy aquí! Continuar Respondiendo</span>
+            </button>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
   </div>
 </template>
+
 

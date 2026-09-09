@@ -23,6 +23,7 @@ import {
 } from 'lucide-vue-next'
 import type { PreguntaEncuesta, OpcionPregunta } from '@/Servicios/iaEncuestasService'
 import { useEncuestas } from '@/Almacenes/useEncuestas'
+import { useTiposAlertas } from '@/Almacenes/useTiposAlertas'
 
 const props = defineProps<{
   pregunta: PreguntaEncuesta
@@ -37,6 +38,7 @@ const emit = defineEmits<{
 }>()
 
 const { respuestasAnonimas } = useEncuestas()
+const { tiposAlertas, tiposActivos } = useTiposAlertas()
 
 // Estado para mostrar/ocultar panel de estadísticas detalladas
 const mostrarStats = ref(false)
@@ -45,6 +47,14 @@ const mostrarStats = ref(false)
 const toggleAlertaOpcion = (opc: OpcionPregunta) => {
   if (!props.puedeEditar) return
   opc.esAlerta = !opc.esAlerta
+  if (opc.esAlerta && !opc.tipoAlertaId) {
+    const primera = tiposActivos.value[0] || tiposAlertas.value[0]
+    if (primera) {
+      opc.tipoAlertaId = primera.id
+      opc.nombreAlerta = primera.nombre
+      opc.severidadAlerta = primera.severidad
+    }
+  }
 }
 
 // ─── Cálculo de Estadísticas por Pregunta ─────────────────────────────────────
@@ -110,6 +120,7 @@ const handleDblClick = () => {
 
 <template>
   <div
+    :id="`pregunta-${pregunta.id}`"
     :class="[
       'group relative p-4 sm:p-5 rounded-3xl bg-white dark:bg-slate-900 border transition-all shadow-sm',
       puedeEditar
@@ -225,12 +236,21 @@ const handleDblClick = () => {
           :class="[
             'px-2.5 py-1.5 rounded-xl border flex items-center justify-between gap-2 transition-all',
             opc.esAlerta
-              ? 'bg-rose-50/80 dark:bg-rose-950/40 border-rose-300 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 font-semibold'
+              ? 'bg-rose-50/90 dark:bg-rose-950/40 border-rose-300 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 font-semibold'
               : 'bg-slate-50 dark:bg-slate-950/40 border-slate-200/60 dark:border-slate-800 text-slate-700 dark:text-slate-300'
           ]"
-          @dblclick.stop
+          @dblclick.stop="puedeEditar ? $emit('abrirEditor', indice) : null"
         >
-          <span class="truncate min-w-0">{{ opc.texto }}</span>
+          <div class="flex items-center gap-1.5 min-w-0 flex-1">
+            <span class="truncate">{{ opc.texto }}</span>
+            <span
+              v-if="opc.esAlerta && opc.nombreAlerta"
+              class="hidden sm:inline-flex text-[9px] px-1.5 py-0.2 rounded-full bg-rose-200/80 dark:bg-rose-900/60 text-rose-800 dark:text-rose-200 font-bold truncate max-w-[130px] border border-rose-300 dark:border-rose-800"
+              :title="`Asociada a: ${opc.nombreAlerta}`"
+            >
+              {{ opc.nombreAlerta }}
+            </span>
+          </div>
 
           <!-- ── Botón Toggle Alerta en esta Opción ── -->
           <div class="flex items-center gap-1 flex-shrink-0">
@@ -244,7 +264,7 @@ const handleDblClick = () => {
                   ? 'bg-rose-500 text-white shadow-sm hover:bg-rose-600 ring-2 ring-rose-400/30'
                   : 'bg-slate-200 dark:bg-slate-800 text-slate-500 hover:text-rose-600 hover:bg-rose-100 dark:hover:bg-rose-950/50'
               ]"
-              :title="opc.esAlerta ? 'Clic para quitar la alerta de esta respuesta' : 'Clic para activar alerta cuando el empleado elija esta respuesta'"
+              :title="opc.esAlerta ? `Alerta vinculada a: ${opc.nombreAlerta || 'General'}. Clic para desactivar.` : 'Clic para activar alerta en esta respuesta'"
             >
               <Bell v-if="opc.esAlerta" class="w-3 h-3 text-white" />
               <BellOff v-else class="w-3 h-3" />
@@ -256,7 +276,7 @@ const handleDblClick = () => {
               v-else-if="opc.esAlerta"
               class="text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-rose-500 text-white font-black flex items-center gap-0.5"
             >
-              <Bell class="w-2.5 h-2.5" /> ALERTA
+              <Bell class="w-2.5 h-2.5" /> {{ opc.nombreAlerta || 'ALERTA' }}
             </span>
           </div>
         </div>

@@ -4,15 +4,17 @@
  * CLIMA LABORAL Y DESARROLLO ORGANIZACIONAL (preguntasCuestionario.ts)
  * ============================================================================
  *
- * 34 preguntas distribuidas en 8 bloques:
- *   Bloque 1 — Datos de Contexto y Segmentación (2 preguntas)
- *   Bloque 2 — Bienestar Emocional, Estrés y Condiciones (5 preguntas)
- *   Bloque 3 — Convivencia, Compañerismo y Trabajo en Equipo (5 preguntas)
- *   Bloque 4 — Liderazgo, Instrucciones y Feedback del Jefe Inmediato (5 preguntas)
- *   Bloque 5 — Capacitación, Plan Carrera, Beneficios y Gestión Humana (9 preguntas)
- *   Bloque 6 — Nivel Académico, Estudios y Talento Humano (3 preguntas)
- *   Bloque 7 — Proyección a Futuro y Visión en la Empresa (2 preguntas)
- *   Bloque 8 — Propuestas de Mejora y Diagnóstico Abierto (3 preguntas)
+ * Estructura oficial dividida en 8 bloques temáticos con preguntas atómicas
+ * (un solo concepto por pregunta para máxima precisión psicométrica).
+ *
+ * Bloque 1 — Datos de Contexto y Segmentación
+ * Bloque 2 — Bienestar Emocional, Estrés y Condiciones de Trabajo
+ * Bloque 3 — Convivencia, Compañerismo y Trabajo en Equipo
+ * Bloque 4 — Liderazgo, Instrucciones y Feedback del Jefe Inmediato
+ * Bloque 5 — Capacitación, Plan Carrera, Beneficios y Gestión Humana
+ * Bloque 6 — Nivel Académico, Estudios y Talento Humano
+ * Bloque 7 — Proyección a Futuro y Visión en la Empresa
+ * Bloque 8 — Propuestas de Mejora y Diagnóstico Abierto
  */
 
 import type { PreguntaEncuesta } from '@/Servicios/iaEncuestasService'
@@ -27,7 +29,7 @@ export const DESCRIPCION_ENCUESTA_CLIMA_INTEGRAL =
   'Nota de confidencialidad: Esta encuesta es 100% anónima. Su objetivo es identificar áreas de mejora y optimizar las condiciones de trabajo basándonos en tu opinión sincera. Por favor, responde cada pregunta de forma independiente.'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Metadatos de cada bloque (para separación visual en el editor)
+// Metadatos de cada bloque (para separación visual en el editor y dashboard)
 // ─────────────────────────────────────────────────────────────────────────────
 export interface MetadataBloque {
   id: string
@@ -53,7 +55,7 @@ export const BLOQUES_ENCUESTA_CLIMA: MetadataBloque[] = [
     id: 'bloque-2',
     numero: 2,
     titulo: 'Bienestar Emocional, Estrés y Condiciones de Trabajo',
-    descripcion: 'Evalúa cómo te sientes en tu entorno de trabajo y las condiciones físicas del puesto.',
+    descripcion: 'Evalúa cómo te sientes en tu entorno de trabajo, niveles de fatiga y condiciones del puesto.',
     icono: 'Heart',
     colorClase: 'from-violet-600 to-purple-700',
     textColorClase: 'text-violet-50'
@@ -62,7 +64,7 @@ export const BLOQUES_ENCUESTA_CLIMA: MetadataBloque[] = [
     id: 'bloque-3',
     numero: 3,
     titulo: 'Convivencia, Compañerismo y Trabajo en Equipo',
-    descripcion: 'Mide la calidad de las relaciones interpersonales y la colaboración dentro del equipo.',
+    descripcion: 'Mide la calidad de las relaciones interpersonales, respeto y colaboración.',
     icono: 'Handshake',
     colorClase: 'from-sky-600 to-blue-700',
     textColorClase: 'text-sky-50'
@@ -71,7 +73,7 @@ export const BLOQUES_ENCUESTA_CLIMA: MetadataBloque[] = [
     id: 'bloque-4',
     numero: 4,
     titulo: 'Liderazgo, Instrucciones y Feedback del Jefe Inmediato',
-    descripcion: 'Evalúa la claridad, accesibilidad y retroalimentación de tu líder directo.',
+    descripcion: 'Evalúa la claridad, accesibilidad, reconocimiento y retroalimentación de tu líder directo.',
     icono: 'Star',
     colorClase: 'from-amber-500 to-orange-600',
     textColorClase: 'text-amber-50'
@@ -80,7 +82,7 @@ export const BLOQUES_ENCUESTA_CLIMA: MetadataBloque[] = [
     id: 'bloque-5',
     numero: 5,
     titulo: 'Capacitación, Plan Carrera, Beneficios y Gestión Humana',
-    descripcion: 'Percepción sobre las oportunidades de crecimiento, compensaciones y el área de RRHH.',
+    descripcion: 'Percepción sobre oportunidades de crecimiento, compensaciones y el área de RRHH.',
     icono: 'TrendingUp',
     colorClase: 'from-emerald-600 to-teal-700',
     textColorClase: 'text-emerald-50'
@@ -107,23 +109,18 @@ export const BLOQUES_ENCUESTA_CLIMA: MetadataBloque[] = [
     id: 'bloque-8',
     numero: 8,
     titulo: 'Propuestas de Mejora y Diagnóstico Abierto',
-    descripcion: 'Espacio libre para sugerencias, mejoras estructurales y comentarios adicionales.',
+    descripcion: 'Espacio libre para sugerencias, mejoras de infraestructura, procesos y bienestar.',
     icono: 'MessageSquareText',
     colorClase: 'from-cyan-600 to-sky-700',
     textColorClase: 'text-cyan-50'
   }
 ]
 
-// Opciones reutilizables
-const opsSiAvecesNo = (prefijo: string) => [
+// Opciones reutilizables estándar
+const opsSiAvecesNo = (prefijo: string, alertaEnNo: boolean = false) => [
   { id: `${prefijo}-si`, texto: 'Sí', valor: 5, esAlerta: false },
   { id: `${prefijo}-av`, texto: 'Algunas veces', valor: 3, esAlerta: false },
-  { id: `${prefijo}-no`, texto: 'No', valor: 1, esAlerta: true }
-]
-
-const opsSiNo = (prefijo: string) => [
-  { id: `${prefijo}-si`, texto: 'Sí', valor: 5, esAlerta: false },
-  { id: `${prefijo}-no`, texto: 'No', valor: 1, esAlerta: false }
+  { id: `${prefijo}-no`, texto: 'No', valor: 1, esAlerta: alertaEnNo }
 ]
 
 const opsAcuerdo = (prefijo: string) => [
@@ -134,7 +131,7 @@ const opsAcuerdo = (prefijo: string) => [
 ]
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PLANTILLA OFICIAL — 34 PREGUNTAS / 8 BLOQUES
+// PLANTILLA OFICIAL ATÓMICA (UN SOLO CONCEPTO POR PREGUNTA)
 // ─────────────────────────────────────────────────────────────────────────────
 export const PLANTILLA_CLIMA_INTEGRAL_DETALLADA: PreguntaEncuesta[] = [
 
@@ -144,7 +141,7 @@ export const PLANTILLA_CLIMA_INTEGRAL_DETALLADA: PreguntaEncuesta[] = [
   {
     id: 'b1-p1-antiguedad',
     categoria: 'Bloque 1: Datos de Contexto y Segmentación',
-    texto: 'Pregunta 1 — ¿Cuál es su antigüedad en la empresa?',
+    texto: 'Pregunta 1 — ¿Cuánto tiempo tienes laborando en la empresa?',
     tipo: 'multiple',
     opciones: [
       { id: 'ant-1', texto: 'Menos de 6 meses', valor: 1, esAlerta: false },
@@ -156,18 +153,26 @@ export const PLANTILLA_CLIMA_INTEGRAL_DETALLADA: PreguntaEncuesta[] = [
   {
     id: 'b1-p2-area',
     categoria: 'Bloque 1: Datos de Contexto y Segmentación',
-    texto: 'Pregunta 2 — ¿A qué área o departamento pertenece?',
+    texto: 'Pregunta 2 — ¿A qué departamento o área perteneces?',
     tipo: 'multiple',
+    tieneBifurcacion: true,
     opciones: [
       { id: 'area-1', texto: 'Operaciones / Call Center', valor: 1, esAlerta: false },
       { id: 'area-2', texto: 'Gestión Humana / RRHH', valor: 2, esAlerta: false },
-      { id: 'area-3', texto: 'Calidad y Control', valor: 3, esAlerta: false },
-      { id: 'area-4', texto: 'Tecnología / IT', valor: 4, esAlerta: false },
-      { id: 'area-5', texto: 'Comercial / Ventas', valor: 5, esAlerta: false },
-      { id: 'area-6', texto: 'Finanzas / Contabilidad', valor: 6, esAlerta: false },
-      { id: 'area-7', texto: 'Administrativo / Gerencia', valor: 7, esAlerta: false },
-      { id: 'area-8', texto: 'Otro', valor: 8, esAlerta: false }
+      { id: 'area-3', texto: 'Tecnología / IT', valor: 3, esAlerta: false },
+      { id: 'area-4', texto: 'Administrativo / Gerencia', valor: 4, esAlerta: false },
+      { id: 'area-5', texto: 'Otro', valor: 5, esAlerta: false }
     ]
+  },
+  {
+    id: 'b1-p2b-otro-area',
+    categoria: 'Bloque 1: Datos de Contexto y Segmentación',
+    texto: 'Pregunta 2b — ¿A qué área o departamento perteneces? (Especifique)',
+    tipo: 'texto',
+    esCondicional: true,
+    disparadorPor: 'b1-p2-area',
+    valoresDisparo: ['Otro'],
+    opciones: []
   },
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -176,7 +181,7 @@ export const PLANTILLA_CLIMA_INTEGRAL_DETALLADA: PreguntaEncuesta[] = [
   {
     id: 'b2-p3-gusto',
     categoria: 'Bloque 2: Bienestar Emocional, Estrés y Condiciones de Trabajo',
-    texto: 'Pregunta 3 — En términos generales, ¿qué tan a gusto, motivado/a y cómodo/a se siente trabajando en esta empresa?',
+    texto: 'Pregunta 3 — ¿Cómo te sientes en tu entorno y puesto de trabajo actual?',
     tipo: 'multiple',
     opciones: [
       { id: 'b2p3-1', texto: 'Muy a gusto y motivado/a', valor: 5, esAlerta: false },
@@ -186,20 +191,23 @@ export const PLANTILLA_CLIMA_INTEGRAL_DETALLADA: PreguntaEncuesta[] = [
     ]
   },
   {
-    id: 'b2-p4-parte-equipo',
+    id: 'b2-p4-estres',
     categoria: 'Bloque 2: Bienestar Emocional, Estrés y Condiciones de Trabajo',
-    texto: 'Pregunta 4 — Siento que realmente hago parte del equipo de trabajo y que mi presencia y labor son valoradas.',
-    tipo: 'escala',
-    esSensibleAcoso: false,
-    opciones: opsAcuerdo('b2p4')
-  },
-  {
-    id: 'b2-p5-estres',
-    categoria: 'Bloque 2: Bienestar Emocional, Estrés y Condiciones de Trabajo',
-    texto: 'Pregunta 5 — Los trabajadores de la empresa sufren de alto estrés debido a la exigencia del trabajo.',
+    texto: 'Pregunta 4 — ¿Sientes niveles de estrés elevados en tus labores diarias?',
     tipo: 'multiple',
     opciones: [
-      { id: 'b2p5-si', texto: 'Sí', valor: 1, esAlerta: true },
+      { id: 'b2p4-si', texto: 'Sí', valor: 1, esAlerta: true, tipoAlertaId: 'tipo-depresion', nombreAlerta: 'Estrés Severo y Agotamiento Crónico', severidadAlerta: 'Crítica' },
+      { id: 'b2p4-av', texto: 'Algunas veces', valor: 3, esAlerta: false },
+      { id: 'b2p4-no', texto: 'No', valor: 5, esAlerta: false }
+    ]
+  },
+  {
+    id: 'b2-p5-fatiga',
+    categoria: 'Bloque 2: Bienestar Emocional, Estrés y Condiciones de Trabajo',
+    texto: 'Pregunta 5 — ¿Sientes fatiga o cansancio físico/mental constante asociado a tu trabajo?',
+    tipo: 'multiple',
+    opciones: [
+      { id: 'b2p5-si', texto: 'Sí', valor: 1, esAlerta: true, tipoAlertaId: 'tipo-depresion', nombreAlerta: 'Estrés Severo y Agotamiento Crónico', severidadAlerta: 'Crítica' },
       { id: 'b2p5-av', texto: 'Algunas veces', valor: 3, esAlerta: false },
       { id: 'b2p5-no', texto: 'No', valor: 5, esAlerta: false }
     ]
@@ -207,46 +215,50 @@ export const PLANTILLA_CLIMA_INTEGRAL_DETALLADA: PreguntaEncuesta[] = [
   {
     id: 'b2-p6-herramientas',
     categoria: 'Bloque 2: Bienestar Emocional, Estrés y Condiciones de Trabajo',
-    texto: 'Pregunta 6 — Cuento con los implementos, herramientas, equipos y mobiliario ergonómico óptimos para desarrollar mis funciones sin contratiempos.',
+    texto: 'Pregunta 6 — ¿Consideras que las herramientas y equipos de trabajo son adecuados para desempeñar tu labor?',
     tipo: 'multiple',
-    opciones: opsSiAvecesNo('b2p6')
+    opciones: opsSiAvecesNo('b2p6', true)
   },
   {
-    id: 'b2-p7-espacios',
+    id: 'b2-p7-condiciones-fisicas',
     categoria: 'Bloque 2: Bienestar Emocional, Estrés y Condiciones de Trabajo',
-    texto: 'Pregunta 7 — Considero que los espacios de trabajo (oficinas, iluminación, ventilación y zonas de descanso) son limpios, adecuados y seguros.',
+    texto: 'Pregunta 7 — ¿Consideras que las condiciones físicas de tu puesto (iluminación, espacio, ergonomía) son adecuadas?',
     tipo: 'multiple',
-    opciones: opsSiAvecesNo('b2p7')
+    opciones: opsSiAvecesNo('b2p7', true)
   },
 
   // ═══════════════════════════════════════════════════════════════════════════
   // BLOQUE 3: CONVIVENCIA, COMPAÑERISMO Y TRABAJO EN EQUIPO
   // ═══════════════════════════════════════════════════════════════════════════
   {
-    id: 'b3-p8-trabajo-equipo',
+    id: 'b3-p8-colaboracion',
     categoria: 'Bloque 3: Convivencia, Compañerismo y Trabajo en Equipo',
-    texto: 'Pregunta 8 — Mis compañeros y yo trabajamos juntos de manera práctica, coordinada y efectiva.',
-    tipo: 'escala',
+    texto: 'Pregunta 8 — ¿Existe un ambiente de colaboración y apoyo mutuo entre compañeros de trabajo?',
+    tipo: 'multiple',
     opciones: opsAcuerdo('b3p8')
   },
   {
-    id: 'b3-p9-comunicacion',
+    id: 'b3-p9-respeto',
     categoria: 'Bloque 3: Convivencia, Compañerismo y Trabajo en Equipo',
-    texto: 'Pregunta 9 — Existe buena comunicación entre los compañeros de trabajo.',
+    texto: 'Pregunta 9 — ¿Sientes que existe respeto dentro de tu equipo de trabajo?',
     tipo: 'multiple',
-    opciones: opsSiAvecesNo('b3p9')
+    opciones: [
+      { id: 'b3p9-si', texto: 'Sí', valor: 5, esAlerta: false },
+      { id: 'b3p9-av', texto: 'Algunas veces', valor: 3, esAlerta: false },
+      { id: 'b3p9-no', texto: 'No', valor: 1, esAlerta: true, tipoAlertaId: 'tipo-acoso', nombreAlerta: 'Acoso Laboral y Hostigamiento', severidadAlerta: 'Crítica' }
+    ]
   },
   {
-    id: 'b3-p10-trato-equitativo',
+    id: 'b3-p10-comunicacion',
     categoria: 'Bloque 3: Convivencia, Compañerismo y Trabajo en Equipo',
-    texto: 'Pregunta 10 — Es equitativo el trato y el trabajo en mi área.',
+    texto: 'Pregunta 10 — ¿Existe buena comunicación y fluidez de información con tus pares?',
     tipo: 'multiple',
-    opciones: opsSiAvecesNo('b3p10')
+    opciones: opsSiAvecesNo('b3p10', true)
   },
   {
-    id: 'b3-p11-convivencia',
+    id: 'b3-p11-clima-convivencia',
     categoria: 'Bloque 3: Convivencia, Compañerismo y Trabajo en Equipo',
-    texto: 'Pregunta 11 — ¿Cómo califica la convivencia general con los demás miembros de la empresa?',
+    texto: 'Pregunta 11 — ¿Cómo calificarías el clima general de convivencia en tu área?',
     tipo: 'multiple',
     opciones: [
       { id: 'b3p11-1', texto: 'Excelente (ambiente de apoyo y armonía)', valor: 5, esAlerta: false },
@@ -258,19 +270,19 @@ export const PLANTILLA_CLIMA_INTEGRAL_DETALLADA: PreguntaEncuesta[] = [
   {
     id: 'b3-p12-conflictos',
     categoria: 'Bloque 3: Convivencia, Compañerismo y Trabajo en Equipo',
-    texto: 'Pregunta 12 — ¿Existen actualmente problemas, roces o conflictos de convivencia con algún compañero o área específica? Si respondió Sí, indique brevemente el contexto.',
+    texto: 'Pregunta 12 — ¿Has tenido roces, conflictos o tensiones significativas con alguien en el equipo?',
     tipo: 'multiple',
     esSensibleAcoso: true,
     tieneBifurcacion: true,
     opciones: [
       { id: 'b3p12-no', texto: 'No, ninguno', valor: 5, esAlerta: false },
-      { id: 'b3p12-si', texto: 'Sí (indique el contexto en el campo de texto)', valor: 1, esAlerta: true }
+      { id: 'b3p12-si', texto: 'Sí (indique el contexto en el campo de texto)', valor: 1, esAlerta: true, tipoAlertaId: 'tipo-acoso', nombreAlerta: 'Acoso Laboral y Hostigamiento', severidadAlerta: 'Crítica' }
     ]
   },
   {
     id: 'b3-p12b-conflictos-detalle',
     categoria: 'Bloque 3: Convivencia, Compañerismo y Trabajo en Equipo',
-    texto: 'Pregunta 12b — Si respondió "Sí" en la pregunta anterior, describa brevemente el contexto del conflicto:',
+    texto: 'Pregunta 12b — Describa brevemente el contexto del conflicto o situación presentada:',
     tipo: 'texto',
     esCondicional: true,
     disparadorPor: 'b3-p12-conflictos',
@@ -282,50 +294,75 @@ export const PLANTILLA_CLIMA_INTEGRAL_DETALLADA: PreguntaEncuesta[] = [
   // BLOQUE 4: LIDERAZGO, INSTRUCCIONES Y FEEDBACK DEL JEFE INMEDIATO
   // ═══════════════════════════════════════════════════════════════════════════
   {
-    id: 'b4-p13-claridad-jefe',
+    id: 'b4-p13-instrucciones-claras',
     categoria: 'Bloque 4: Liderazgo, Instrucciones y Feedback del Jefe Inmediato',
-    texto: 'Pregunta 13 — Mi jefe inmediato es claro, preciso y oportuno con las instrucciones y directrices que da para realizar el trabajo.',
-    tipo: 'multiple',
-    opciones: opsSiAvecesNo('b4p13')
-  },
-  {
-    id: 'b4-p14-info-oportuna',
-    categoria: 'Bloque 4: Liderazgo, Instrucciones y Feedback del Jefe Inmediato',
-    texto: 'Pregunta 14 — Recibo de forma oportuna la información clara y necesaria para desempeñar mis funciones correctamente.',
-    tipo: 'multiple',
-    opciones: opsSiAvecesNo('b4p14')
-  },
-  {
-    id: 'b4-p15-accesibilidad-jefe',
-    categoria: 'Bloque 4: Liderazgo, Instrucciones y Feedback del Jefe Inmediato',
-    texto: 'Pregunta 15 — Es fácil hablar con mi jefe inmediato sobre temas relacionados al trabajo, resolver dudas o plantear dificultades.',
+    texto: 'Pregunta 13 — ¿Recibes instrucciones claras por parte de tu jefe inmediato para realizar tus tareas?',
     tipo: 'multiple',
     opciones: [
-      { id: 'b4p15-1', texto: 'Sí, es muy accesible y abierto/a', valor: 5, esAlerta: false },
-      { id: 'b4p15-2', texto: 'Más o menos / Depende del momento', valor: 3, esAlerta: false },
-      { id: 'b4p15-3', texto: 'No, resulta poco accesible o intimidante', valor: 1, esAlerta: true }
+      { id: 'b4p13-si', texto: 'Sí', valor: 5, esAlerta: false },
+      { id: 'b4p13-av', texto: 'Algunas veces', valor: 3, esAlerta: false },
+      { id: 'b4p13-no', texto: 'No', valor: 1, esAlerta: true, tipoAlertaId: 'tipo-jefes-gestion', nombreAlerta: 'Mala Gestión de los Jefes & Liderazgo Tóxico', severidadAlerta: 'Crítica' }
     ]
   },
   {
-    id: 'b4-p16-escucha-jefe',
+    id: 'b4-p14-instrucciones-estructuradas',
     categoria: 'Bloque 4: Liderazgo, Instrucciones y Feedback del Jefe Inmediato',
-    texto: 'Pregunta 16 — Siento que mi jefe inmediato escucha verdaderamente al personal y toma en cuenta mis opiniones y sugerencias.',
+    texto: 'Pregunta 14 — ¿Las directrices y asignaciones de tu jefe inmediato son estructuradas y organizadas?',
+    tipo: 'multiple',
+    opciones: opsSiAvecesNo('b4p14', true)
+  },
+  {
+    id: 'b4-p15-reconocimiento',
+    categoria: 'Bloque 4: Liderazgo, Instrucciones y Feedback del Jefe Inmediato',
+    texto: 'Pregunta 15 — ¿Sientes que tu líder reconoce formal o verbalmente tu buen desempeño?',
+    tipo: 'multiple',
+    opciones: opsSiAvecesNo('b4p15', true)
+  },
+  {
+    id: 'b4-p16-valoracion-esfuerzo',
+    categoria: 'Bloque 4: Liderazgo, Instrucciones y Feedback del Jefe Inmediato',
+    texto: 'Pregunta 16 — ¿Sientes que tu líder valora tu esfuerzo y dedicación diaria en el trabajo?',
+    tipo: 'multiple',
+    opciones: opsSiAvecesNo('b4p16', true)
+  },
+  {
+    id: 'b4-p17-accesibilidad-dudas',
+    categoria: 'Bloque 4: Liderazgo, Instrucciones y Feedback del Jefe Inmediato',
+    texto: 'Pregunta 17 — ¿Tu jefe inmediato es accesible para resolver dudas sobre tu labor?',
     tipo: 'multiple',
     opciones: [
-      { id: 'b4p16-si', texto: 'Sí', valor: 5, esAlerta: false },
-      { id: 'b4p16-av', texto: 'A veces', valor: 3, esAlerta: false },
-      { id: 'b4p16-no', texto: 'No', valor: 1, esAlerta: true }
+      { id: 'b4p17-1', texto: 'Sí, es muy accesible y abierto/a', valor: 5, esAlerta: false },
+      { id: 'b4p17-2', texto: 'Más o menos / Depende del momento', valor: 3, esAlerta: false },
+      { id: 'b4p17-3', texto: 'No, resulta poco accesible o intimidante', valor: 1, esAlerta: true, tipoAlertaId: 'tipo-jefes-gestion', nombreAlerta: 'Mala Gestión de los Jefes & Liderazgo Tóxico', severidadAlerta: 'Crítica' }
     ]
   },
   {
-    id: 'b4-p17-feedback',
+    id: 'b4-p18-escucha-inquietudes',
     categoria: 'Bloque 4: Liderazgo, Instrucciones y Feedback del Jefe Inmediato',
-    texto: 'Pregunta 17 — Recibo feedback (retroalimentación) constructivo y constante por parte de mi jefe inmediato para mejorar mi desempeño.',
+    texto: 'Pregunta 18 — ¿Tu jefe inmediato muestra disposición para escuchar tus inquietudes y dificultades?',
+    tipo: 'multiple',
+    opciones: opsSiAvecesNo('b4p18', true)
+  },
+  {
+    id: 'b4-p19-confianza',
+    categoria: 'Bloque 4: Liderazgo, Instrucciones y Feedback del Jefe Inmediato',
+    texto: 'Pregunta 19 — ¿Tu líder promueve un espacio de confianza donde puedas expresar tus opiniones sin temor?',
     tipo: 'multiple',
     opciones: [
-      { id: 'b4p17-1', texto: 'Sí, de manera constante', valor: 5, esAlerta: false },
-      { id: 'b4p17-2', texto: 'Solo cuando hay errores', valor: 2, esAlerta: false },
-      { id: 'b4p17-3', texto: 'No, nunca recibo feedback', valor: 1, esAlerta: true }
+      { id: 'b4p19-si', texto: 'Sí', valor: 5, esAlerta: false },
+      { id: 'b4p19-av', texto: 'A veces', valor: 3, esAlerta: false },
+      { id: 'b4p19-no', texto: 'No', valor: 1, esAlerta: true, tipoAlertaId: 'tipo-jefes-gestion', nombreAlerta: 'Mala Gestión de los Jefes & Liderazgo Tóxico', severidadAlerta: 'Crítica' }
+    ]
+  },
+  {
+    id: 'b4-p20-feedback',
+    categoria: 'Bloque 4: Liderazgo, Instrucciones y Feedback del Jefe Inmediato',
+    texto: 'Pregunta 20 — ¿Recibes retroalimentación (feedback) constructiva sobre tu trabajo de forma regular?',
+    tipo: 'multiple',
+    opciones: [
+      { id: 'b4p20-1', texto: 'Sí, de manera constante', valor: 5, esAlerta: false },
+      { id: 'b4p20-2', texto: 'Solo cuando hay errores', valor: 2, esAlerta: false },
+      { id: 'b4p20-3', texto: 'No, nunca recibo feedback', valor: 1, esAlerta: true }
     ]
   },
 
@@ -333,102 +370,123 @@ export const PLANTILLA_CLIMA_INTEGRAL_DETALLADA: PreguntaEncuesta[] = [
   // BLOQUE 5: CAPACITACIÓN, PLAN CARRERA, BENEFICIOS Y GESTIÓN HUMANA
   // ═══════════════════════════════════════════════════════════════════════════
   {
-    id: 'b5-p18-capacitacion',
+    id: 'b5-p21-capacitacion',
     categoria: 'Bloque 5: Capacitación, Plan Carrera, Beneficios y Gestión Humana',
-    texto: 'Pregunta 18 — He recibido las capacitaciones adecuadas y oportunas para desempeñar con éxito el trabajo que me corresponde.',
-    tipo: 'multiple',
-    opciones: opsSiAvecesNo('b5p18')
-  },
-  {
-    id: 'b5-p19-plan-carrera',
-    categoria: 'Bloque 5: Capacitación, Plan Carrera, Beneficios y Gestión Humana',
-    texto: 'Pregunta 19 — El plan carrera de la compañía permite un crecimiento personal y profesional real para los colaboradores.',
-    tipo: 'multiple',
-    opciones: opsSiAvecesNo('b5p19')
-  },
-  {
-    id: 'b5-p20-nomina',
-    categoria: 'Bloque 5: Capacitación, Plan Carrera, Beneficios y Gestión Humana',
-    texto: 'Pregunta 20 — El proceso de nómina y pago se realiza de forma justa, transparente y en los tiempos establecidos.',
-    tipo: 'multiple',
-    opciones: opsSiAvecesNo('b5p20')
-  },
-  {
-    id: 'b5-p21-padrino',
-    categoria: 'Bloque 5: Capacitación, Plan Carrera, Beneficios y Gestión Humana',
-    texto: 'Pregunta 21 — El plan padrino permite que las personas nuevas se adapten mejor al ambiente laboral.',
+    texto: 'Pregunta 21 — ¿Consideras que la empresa ofrece suficientes capacitaciones para mejorar tus habilidades?',
     tipo: 'multiple',
     opciones: opsSiAvecesNo('b5p21')
   },
   {
-    id: 'b5-p22-fechas-especiales',
+    id: 'b5-p22-plan-carrera',
     categoria: 'Bloque 5: Capacitación, Plan Carrera, Beneficios y Gestión Humana',
-    texto: 'Pregunta 22 — La empresa nos genera detalles y celebra de forma adecuada las fechas especiales (cumpleaños, etc.).',
+    texto: 'Pregunta 22 — ¿Cuentas con claridad sobre los planes de crecimiento o líneas de carrera dentro de la organización?',
     tipo: 'multiple',
     opciones: opsSiAvecesNo('b5p22')
   },
   {
-    id: 'b5-p23-beneficios-satisfaccion',
+    id: 'b5-p23-beneficios',
     categoria: 'Bloque 5: Capacitación, Plan Carrera, Beneficios y Gestión Humana',
-    texto: 'Pregunta 23 — Estoy satisfecho/a con los beneficios que ofrece la empresa (tiempos libres, fechas especiales, antigüedad, etc.).',
+    texto: 'Pregunta 23 — ¿Te sientes satisfecho/a con los beneficios adicionales ofrecidos por la empresa?',
     tipo: 'multiple',
     opciones: opsSiAvecesNo('b5p23')
   },
   {
-    id: 'b5-p24-beneficios-competitivos',
+    id: 'b5-p24-compensaciones',
     categoria: 'Bloque 5: Capacitación, Plan Carrera, Beneficios y Gestión Humana',
-    texto: 'Pregunta 24 — La empresa ofrece beneficios competitivos en comparación a otras empresas del sector.',
+    texto: 'Pregunta 24 — ¿Consideras satisfactorias las compensaciones económicas recibidas por tu trabajo?',
     tipo: 'multiple',
     opciones: opsSiAvecesNo('b5p24')
   },
   {
-    id: 'b5-p25-rrhh-atencion',
+    id: 'b5-p25-rrhh-respuesta',
     categoria: 'Bloque 5: Capacitación, Plan Carrera, Beneficios y Gestión Humana',
-    texto: 'Pregunta 25 — El área de Gestión Humana (RRHH) atiende de forma oportuna y cordial en temas laborales.',
+    texto: 'Pregunta 25 — ¿El área de Gestión Humana / RRHH brinda respuesta oportuna a tus solicitudes o inquietudes?',
     tipo: 'multiple',
     opciones: opsSiAvecesNo('b5p25')
   },
   {
-    id: 'b5-p26-rrhh-respaldo',
+    id: 'b5-p26-procesos-agiles',
     categoria: 'Bloque 5: Capacitación, Plan Carrera, Beneficios y Gestión Humana',
-    texto: 'Pregunta 26 — Me siento respaldado/a y apoyado/a por RRHH en temas laborales.',
+    texto: 'Pregunta 26 — ¿Consideras que los procesos y trámites internos de la empresa son ágiles?',
     tipo: 'multiple',
     opciones: opsSiAvecesNo('b5p26')
+  },
+  {
+    id: 'b5-p27-procesos-claros',
+    categoria: 'Bloque 5: Capacitación, Plan Carrera, Beneficios y Gestión Humana',
+    texto: 'Pregunta 27 — ¿Los procedimientos e instructivos de la empresa son claros y comprensibles?',
+    tipo: 'multiple',
+    opciones: opsSiAvecesNo('b5p27')
+  },
+  {
+    id: 'b5-p28-equidad-tareas',
+    categoria: 'Bloque 5: Capacitación, Plan Carrera, Beneficios y Gestión Humana',
+    texto: 'Pregunta 28 — ¿Existe equidad en la asignación y distribución de tareas en tu área?',
+    tipo: 'multiple',
+    opciones: opsSiAvecesNo('b5p28')
+  },
+  {
+    id: 'b5-p29-equidad-oportunidades',
+    categoria: 'Bloque 5: Capacitación, Plan Carrera, Beneficios y Gestión Humana',
+    texto: 'Pregunta 29 — ¿Existe igualdad de oportunidades de desarrollo y crecimiento para todos en la empresa?',
+    tipo: 'multiple',
+    opciones: opsSiAvecesNo('b5p29')
+  },
+  {
+    id: 'b5-p30-equilibrio-vida',
+    categoria: 'Bloque 5: Capacitación, Plan Carrera, Beneficios y Gestión Humana',
+    texto: 'Pregunta 30 — ¿Consideras que la empresa se preocupa por el equilibrio entre la vida laboral y personal de sus empleados?',
+    tipo: 'multiple',
+    opciones: opsSiAvecesNo('b5p30')
+  },
+  {
+    id: 'b5-p31-comunicacion-interna',
+    categoria: 'Bloque 5: Capacitación, Plan Carrera, Beneficios y Gestión Humana',
+    texto: 'Pregunta 31 — ¿Los canales de comunicación interna de la compañía son efectivos?',
+    tipo: 'multiple',
+    opciones: opsSiAvecesNo('b5p31')
+  },
+  {
+    id: 'b5-p32-respaldo-organizacion',
+    categoria: 'Bloque 5: Capacitación, Plan Carrera, Beneficios y Gestión Humana',
+    texto: 'Pregunta 32 — ¿Te sientes respaldado/a por la organización ante situaciones imprevistas o dificultades operativas?',
+    tipo: 'multiple',
+    opciones: opsSiAvecesNo('b5p32')
   },
 
   // ═══════════════════════════════════════════════════════════════════════════
   // BLOQUE 6: NIVEL ACADÉMICO, ESTUDIOS Y TALENTO HUMANO
   // ═══════════════════════════════════════════════════════════════════════════
   {
-    id: 'b6-p27-estudia',
+    id: 'b6-p33-estudia',
     categoria: 'Bloque 6: Nivel Académico, Estudios y Talento Humano',
-    texto: 'Pregunta 27 — ¿Actualmente se encuentra estudiando algún programa académico, curso técnico, tecnológico, universitario, diplomado o certificaciones?',
+    texto: 'Pregunta 33 — ¿Te encuentras actualmente cursando algún estudio técnico, tecnológico, profesional o posgrado?',
     tipo: 'multiple',
     tieneBifurcacion: true,
     opciones: [
-      { id: 'b6p27-si', texto: 'Sí', valor: 5, esAlerta: false },
-      { id: 'b6p27-no', texto: 'No (pase directamente al Bloque 7)', valor: 1, esAlerta: false }
+      { id: 'b6p33-si', texto: 'Sí', valor: 5, esAlerta: false },
+      { id: 'b6p33-no', texto: 'No (Pase directamente al Bloque 7)', valor: 1, esAlerta: false }
     ]
   },
   {
-    id: 'b6-p28-que-estudia',
+    id: 'b6-p33b-que-estudia',
     categoria: 'Bloque 6: Nivel Académico, Estudios y Talento Humano',
-    texto: 'Pregunta 28 — Si actualmente estudia, ¿qué está estudiando y en qué institución? (Ej. Tecnología en Análisis y Software Development ADSO, Idiomas, etc.)',
+    texto: 'Pregunta 33b — Especifique qué área o programa de estudios se encuentra cursando actualmente:',
     tipo: 'texto',
     esCondicional: true,
-    disparadorPor: 'b6-p27-estudia',
+    disparadorPor: 'b6-p33-estudia',
     valoresDisparo: ['Sí'],
     opciones: []
   },
   {
-    id: 'b6-p29-talento-aprovechado',
+    id: 'b6-p34-talento-aprovechado',
     categoria: 'Bloque 6: Nivel Académico, Estudios y Talento Humano',
-    texto: 'Pregunta 29 — ¿Considera que los conocimientos adquiridos en sus estudios actuales o su perfil académico son aprovechados y valorados adecuadamente dentro de la empresa?',
+    texto: 'Pregunta 34 — ¿Consideras que tu nivel académico actual es aprovechado por la empresa?',
     tipo: 'multiple',
     opciones: [
-      { id: 'b6p29-1', texto: 'Sí, totalmente aprovechados en mi rol o en proyecciones internas', valor: 5, esAlerta: false },
-      { id: 'b6p29-2', texto: 'Parcialmente (solo se usa una parte)', valor: 3, esAlerta: false },
-      { id: 'b6p29-3', texto: 'No, siento que mi perfil o nivel de estudios está subutilizado en mi puesto actual', valor: 1, esAlerta: true }
+      { id: 'b6p34-1', texto: 'Sí, totalmente aprovechados en mi rol o en proyecciones internas', valor: 5, esAlerta: false },
+      { id: 'b6p34-2', texto: 'Parcialmente (solo se usa una parte)', valor: 3, esAlerta: false },
+      { id: 'b6p34-3', texto: 'No, siento que mi perfil o nivel de estudios está subutilizado en mi puesto actual', valor: 1, esAlerta: true }
     ]
   },
 
@@ -436,21 +494,21 @@ export const PLANTILLA_CLIMA_INTEGRAL_DETALLADA: PreguntaEncuesta[] = [
   // BLOQUE 7: PROYECCIÓN A FUTURO Y VISIÓN EN LA EMPRESA
   // ═══════════════════════════════════════════════════════════════════════════
   {
-    id: 'b7-p30-vision-2anos',
+    id: 'b7-p35-vision-2anos',
     categoria: 'Bloque 7: Proyección a Futuro y Visión en la Empresa',
-    texto: 'Pregunta 30 — ¿Dónde se ve a sí mismo/a profesionalmente en un plazo de dos años? (Ej. Creciendo dentro de esta empresa en un rol superior / Liderando procesos / Consolidando mi carrera técnica o profesional)',
+    texto: 'Pregunta 35 — ¿Cómo te visualizas a ti mismo/a y a tu crecimiento profesional dentro de la compañía en los próximos dos años?',
     tipo: 'texto',
     opciones: []
   },
   {
-    id: 'b7-p31-permanencia',
+    id: 'b7-p36-permanencia',
     categoria: 'Bloque 7: Proyección a Futuro y Visión en la Empresa',
-    texto: 'Pregunta 31 — Visualizando su permanencia, ¿le gustaría consolidar su futuro laboral y plan de carrera dentro de esta organización?',
+    texto: 'Pregunta 36 — ¿Te motiva permanecer y consolidar tu carrera a largo plazo en Contigo Call Center?',
     tipo: 'multiple',
     opciones: [
-      { id: 'b7p31-1', texto: 'Sí, me motiva mucho crecer aquí si hay planes claros', valor: 5, esAlerta: false },
-      { id: 'b7p31-2', texto: 'Tengo dudas, depende de cómo evolucionen las condiciones, salarios y vacantes', valor: 3, esAlerta: false },
-      { id: 'b7p31-3', texto: 'No, no visualizo un crecimiento a largo plazo en la empresa', valor: 1, esAlerta: true }
+      { id: 'b7p36-1', texto: 'Sí, me motiva mucho crecer aquí si hay planes claros', valor: 5, esAlerta: false },
+      { id: 'b7p36-2', texto: 'Tengo dudas, depende de cómo evolucionen las condiciones, salarios y vacantes', valor: 3, esAlerta: false },
+      { id: 'b7p36-3', texto: 'No, no visualizo un crecimiento a largo plazo en la empresa', valor: 1, esAlerta: true }
     ]
   },
 
@@ -458,24 +516,39 @@ export const PLANTILLA_CLIMA_INTEGRAL_DETALLADA: PreguntaEncuesta[] = [
   // BLOQUE 8: PROPUESTAS DE MEJORA Y DIAGNÓSTICO ABIERTO
   // ═══════════════════════════════════════════════════════════════════════════
   {
-    id: 'b8-p32-mejoras-estructurales',
+    id: 'b8-p37-mejoras-infraestructura',
     categoria: 'Bloque 8: Propuestas de Mejora y Diagnóstico Abierto',
-    texto: 'Pregunta 32 — A largo plazo, ¿qué mejoras estructurales, de cultura, salariales o de procesos debería tener la empresa para asegurar su éxito y el bienestar del personal?',
+    texto: 'Pregunta 37 — ¿Qué cambiarías o mejorarías de manera prioritaria en la infraestructura física y puestos de trabajo del Call Center?',
     tipo: 'texto',
     opciones: []
   },
   {
-    id: 'b8-p33-mejoras-inmediatas',
+    id: 'b8-p38-mejoras-procesos',
     categoria: 'Bloque 8: Propuestas de Mejora y Diagnóstico Abierto',
-    texto: 'Pregunta 33 — ¿Qué mejoras prioritarias o cambios inmediatos considera que la organización debería implementar (en cuanto a herramientas, espacios de descanso, parqueadero gratuito/económico, bienestar o clima laboral)?',
+    texto: 'Pregunta 38 — ¿Qué propuestas o cambios prioritarios implementarías en los procesos operativos del Call Center?',
     tipo: 'texto',
     opciones: []
   },
   {
-    id: 'b8-p34-comentarios-libres',
+    id: 'b8-p39-sugerencias-direccion',
     categoria: 'Bloque 8: Propuestas de Mejora y Diagnóstico Abierto',
-    texto: 'Pregunta 34 — Comentarios adicionales o sugerencias que desee manifestar de forma totalmente libre:',
+    texto: 'Pregunta 39 — ¿Qué sugerencias le darías a la Alta Dirección para incrementar el bienestar y liderazgo organizacional?',
+    tipo: 'texto',
+    opciones: []
+  },
+  {
+    id: 'b8-p40-sugerencias-rrhh',
+    categoria: 'Bloque 8: Propuestas de Mejora y Diagnóstico Abierto',
+    texto: 'Pregunta 40 — ¿Qué recomendaciones le darías a Gestión Humana / RRHH para incrementar el bienestar y la motivación general?',
+    tipo: 'texto',
+    opciones: []
+  },
+  {
+    id: 'b8-p41-comentarios-libres',
+    categoria: 'Bloque 8: Propuestas de Mejora y Diagnóstico Abierto',
+    texto: 'Pregunta 41 — Escribe cualquier otro comentario, sugerencia o inquietud adicional que consideres relevante y no se haya mencionado en la encuesta:',
     tipo: 'texto',
     opciones: []
   }
 ]
+

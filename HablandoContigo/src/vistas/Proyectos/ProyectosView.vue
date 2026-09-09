@@ -215,10 +215,7 @@ const manejarVaciarEstadisticas = async (id: string) => {
           </div>
           <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
             <span>Encuestas y Diagnósticos</span>
-            <span class="text-xs font-semibold px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-950/80 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-sky-400 flex items-center gap-1.5">
-              <Sparkles class="w-3.5 h-3.5 text-sky-500" />
-              2 Modalidades Oficiales
-            </span>
+           
           </h1>
           <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">
             Gestiona la encuesta troncal de clima laboral con Asistente Asesor IA hablante o lanza encuestas rápidas para chequear el ánimo diario.

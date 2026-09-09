@@ -21,7 +21,7 @@
 -->
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, defineAsyncComponent } from 'vue'
 import { useRouter } from 'vue-router'
 import { useEncuestas } from '@/Almacenes/useEncuestas'
 
@@ -33,7 +33,17 @@ import {
   HeroFranjaTecnologia
 } from '@/componentes/Hero'
 
-import PlanetaHero3D from '@/componentes/Inicio/PlanetaHero3D.vue'
+// Skeleton que se muestra mientras three.js se descarga en segundo plano
+import PlanetaCargando from '@/componentes/Inicio/PlanetaCargando.vue'
+
+// PlanetaHero3D carga three.js (~600 KB). Se diferiere del bundle inicial
+// para que el hero (texto + botones + nav) sea visible de inmediato.
+const PlanetaHero3D = defineAsyncComponent({
+  loader: () => import('@/componentes/Inicio/PlanetaHero3D.vue'),
+  loadingComponent: PlanetaCargando,
+  delay: 0 // Mostrar el skeleton desde el primer frame sin parpadeo
+})
+
 import ModalEncuestaDemo from '@/componentes/Inicio/ModalEncuestaDemo.vue'
 
 // Componentes del Marco Legal

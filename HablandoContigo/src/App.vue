@@ -31,6 +31,8 @@ import AlertaConexionSupabase from './componentes/Comunes/AlertaConexionSupabase
 import ToastNotificaciones from './componentes/Comunes/ToastNotificaciones.vue'
 import ModalInactividad from './componentes/Comunes/ModalInactividad.vue'
 import ContenedorError from './componentes/Errores/ContenedorError.vue'
+import AsistenteBurbujaClima from './componentes/Asistente/AsistenteBurbujaClima.vue'
+import BannerSesionTemporal from './componentes/Comunes/BannerSesionTemporal.vue'
 
 
 const rutaActual = useRoute()
@@ -78,6 +80,9 @@ const ocultarMenuLateral = computed(() => {
     <!-- Banner flotante de notificación si falla la conexión (Solo si está autenticado) -->
     <AlertaConexionSupabase v-if="estaAutenticado" />
 
+    <!-- Banner de Sesión Temporal Restringida por Token / PIN -->
+    <BannerSesionTemporal v-if="estaAutenticado" />
+
     <!-- Sistema de Toasts globales -->
     <ToastNotificaciones />
 
@@ -95,6 +100,9 @@ const ocultarMenuLateral = computed(() => {
 
     <!-- Contenedor Global de Errores y Cumplimiento Legal (Modal o Vista) -->
     <ContenedorError />
+
+    <!-- Asistente de Voz y Chat Inteligente Global (3D Head & Voice/Chat) -->
+    <AsistenteBurbujaClima v-if="estaAutenticado && !ocultarMenuLateral" />
 
     <!-- Contenedor principal de vistas dinámicas -->
     <main class="w-full min-h-screen">

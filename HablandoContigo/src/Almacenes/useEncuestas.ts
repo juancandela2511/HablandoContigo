@@ -45,6 +45,9 @@ export interface RespuestaItem {
   respuesta: any
   valor?: number
   esAlerta?: boolean
+  tipoAlertaId?: string
+  nombreAlerta?: string
+  severidadAlerta?: string
   comentario?: string
 }
 
@@ -120,7 +123,7 @@ export function useEncuestas() {
       if (error) throw new Error(error.message)
 
       if (!data || data.length === 0) {
-        // Si Supabase está recién creado y no tiene encuestas, sembrar 'enc-001' con 34 preguntas
+        // Si Supabase está recién creado y no tiene encuestas, sembrar 'enc-001' con la plantilla oficial de 8 bloques
         const encuestaSemilla = {
           id: 'enc-001',
           titulo: TITULO_ENCUESTA_CLIMA_INTEGRAL,
@@ -498,11 +501,48 @@ export function useEncuestas() {
 
     if (!geminiYaDetecto) {
       items.forEach(item => {
-        // Rigor estricto: NUNCA evaluar el texto de la pregunta ni la categoría para evitar falsos positivos
+        // 1. Vinculación Directa: Si la opción seleccionada tiene una alerta específicamente asociada por el administrador
+        if (item.esAlerta && (item.tipoAlertaId || item.nombreAlerta)) {
+          const tipoAsociado = tiposActivos.value.find(t => t.id === item.tipoAlertaId)
+          const nombreFinal = tipoAsociado?.nombre || item.nombreAlerta || 'Alerta Asociada'
+          const severidadFinal = (tipoAsociado?.severidad || item.severidadAlerta || 'Crítica') as any
+          const tipoIdFinal = (tipoAsociado?.id || item.tipoAlertaId || 'acoso').replace('tipo-', '')
+
+          alertasIdentificadas.push(nombreFinal)
+          categoriasDetectadas.push(tipoIdFinal as any)
+
+          try {
+            const { agregarNotificacion } = useNotificaciones()
+            agregarNotificacion({
+              tipo: (tipoIdFinal as any) || 'acoso',
+              titulo: nombreFinal,
+              descripcion: `Alerta asociada en ${encuestaEncontrada?.departamento || 'General'}`,
+              mensaje: `Se seleccionó la opción de alerta vinculada "${nombreFinal}" en la pregunta "${item.textoPregunta || 'Evaluación'}". Respuesta: ${item.respuesta || 'Opción marcada'}`,
+              departamento: encuestaEncontrada?.departamento || 'General',
+              tipoAlerta: nombreFinal,
+              severidad: severidadFinal,
+              estado: 'Detectada',
+              detalleRespuesta: item.comentario ? `Respuesta: ${item.respuesta} (Comentario: ${item.comentario})` : String(item.respuesta || ''),
+              dispositivoUUID: uuidDispositivo,
+              nombreEquipoPC: identificacionVoluntaria ? 'Identificado Voluntariamente' : `PC-CORP-${Math.floor(Math.random() * 80 + 10)}`,
+              cuentaUsuarioPC: identificacionVoluntaria || `colaborador.${Math.random().toString(36).substring(2, 6)}`,
+              ubicacionSede: 'Sede Principal Calle 26',
+              fecha,
+              hora,
+              leida: false,
+              rutaDestino: '/dashboard?seccion=alertas',
+              idElemento: 'seccion-alertas-detalle'
+            })
+          } catch (errNotif) {
+            console.warn('Aviso guardando alerta asociada en Supabase:', errNotif)
+          }
+          return
+        }
+
+        // 2. Detección por texto y clasificación estricta (si no tenía alerta directa asociada)
         const textoRespuesta = `${item.respuesta || ''} ${item.comentario || ''}`.toLowerCase().trim()
         const esRespuestaCritica = item.valor === 1 || item.respuesta === 'Mal' || Boolean(item.esAlerta)
 
-        // Detección efectiva: Si la respuesta es crítica o contiene términos de alerta
         if (esRespuestaCritica && textoRespuesta.length > 0) {
           const alertaEncasillada = clasificarYEncasillarTexto(textoRespuesta, true, item.valor)
           if (alertaEncasillada) {

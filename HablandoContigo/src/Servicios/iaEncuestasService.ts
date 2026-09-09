@@ -16,6 +16,9 @@ export interface OpcionPregunta {
   texto: string
   valor: number
   esAlerta?: boolean
+  tipoAlertaId?: string
+  nombreAlerta?: string
+  severidadAlerta?: string
 }
 
 export interface PreguntaEncuesta {
@@ -43,6 +46,8 @@ export interface PlantillaEncuestaGenerada {
 }
 
 export type TipoAccionJarvis =
+  | 'CREAR_USUARIO'
+  | 'CREAR_ENCUESTA'
   | 'CREAR_PREGUNTA'
   | 'EDITAR_PREGUNTA'
   | 'EDITAR_OPCIONES'
@@ -54,9 +59,29 @@ export type TipoAccionJarvis =
   | 'CAMBIAR_DESCRIPCION'
   | 'RESTAURAR_PLANTILLA_OFICIAL'
   | 'OPTIMIZAR_ENCUESTA'
+  | 'NAVEGAR'
+  | 'CAMBIAR_TEMA'
+  | 'ABRIR_NOTIFICACIONES'
+  | 'ABRIR_SOPORTE'
+  | 'ABRIR_SPOTLIGHT'
+  | 'CERRAR_SESION'
+  | 'SILENCIAR'
 
 export interface AccionJarvis {
   tipo: TipoAccionJarvis
+  ruta?: string
+  temaModo?: 'dark' | 'light' | 'toggle'
+  usuarioNuevo?: {
+    nombre: string
+    email: string
+    rol: 'Super Administrador' | 'Adminsitrador General' | 'Administrador' | 'Supervisor' | 'Analista RRHH'
+    departamento: string
+  }
+  encuestaNueva?: {
+    titulo: string
+    descripcion?: string
+    departamento?: string
+  }
   idPregunta?: string
   numeroPregunta?: number
   categoria?: string
@@ -302,7 +327,7 @@ REGLAS OBLIGATORIAS DE ESTRUCTURA Y DETALLE:
 
   const apiKey = obtenerClaveApiGemini()
   if (!esClaveApiValida(apiKey)) {
-    return generarPreguntasLocalesSemanticas(tema, departamento, opciones)
+    return generarDesdeTemaYContexto(contexto, departamento, extension)
   }
 
   try {
@@ -321,7 +346,7 @@ REGLAS OBLIGATORIAS DE ESTRUCTURA Y DETALLE:
     })
 
     if (!respuesta.ok) {
-      return generarPreguntasLocalesSemanticas(tema, departamento, opciones)
+      return generarDesdeTemaYContexto(contexto, departamento, extension)
     }
 
     const data = await respuesta.json()
@@ -395,7 +420,7 @@ REGLAS OBLIGATORIAS DE ESTRUCTURA Y DETALLE:
     ]
   }
 } catch (err) {
-  return generarPreguntasLocalesSemanticas(tema, departamento, opciones)
+  return generarDesdeTemaYContexto(contexto, departamento, extension)
 }
 }
 
@@ -1000,80 +1025,95 @@ export async function consultarChatbotGeminiAPI(
   mensajeUsuario: string,
   historial: Array<{ emisor: 'usuario' | 'asistente'; texto: string }>,
   preguntasActuales: PreguntaEncuesta[],
-  nombreAsistente: string = 'JARVIS'
+  nombreAsistente: string = 'JARVIS',
+  trato: string = 'señor',
+  nombreUsuario: string = 'Administrador',
+  generoAsistente: 'mujer' | 'hombre' = 'mujer'
 ): Promise<RespuestaJarvisGemini> {
   const nombreLimpio = (nombreAsistente || 'JARVIS').trim()
   const nombreMayus = nombreLimpio.toUpperCase()
+  const tratoLimpio = (trato || 'señor').trim()
+  const esHombre = generoAsistente === 'hombre'
 
   const inventarioPreguntas = preguntasActuales.map((p, idx) => {
     const opcionesStr = p.opciones?.map(o => `"${o.texto}" (alerta: ${o.esAlerta ? 'SÍ' : 'NO'})`).join(', ') || 'Abierta'
     return `[#${idx + 1} | ID: ${p.id} | ${p.categoria} | Tipo: ${p.tipo}]\nTexto: "${p.texto}"\nOpciones: [${opcionesStr}]`
   }).join('\n\n')
 
-  const ultimosMensajes = historial.slice(-8).map(m => `${m.emisor === 'usuario' ? 'Administrador' : nombreMayus}: ${m.texto}`).join('\n')
+  const ultimosMensajes = historial.slice(-8).map(m => `${m.emisor === 'usuario' ? nombreUsuario : nombreMayus}: ${m.texto}`).join('\n')
 
   const prompt = `
-Eres ${nombreMayus} (sistema de inteligencia artificial executive con la personalidad y capacidades de J.A.R.V.I.S. de Tony Stark), configurado como Asistente Principal de Arquitectura de Encuestas y Clima Organizacional para "Contigo Call Center".
+Eres ${nombreMayus} (sistema de inteligencia artificial ejecutivo con la personalidad y capacidades de J.A.R.V.I.S. de Tony Stark), configurado como Asistente Inteligente Global y Asesor Conversacional para toda la plataforma "HablandoContigo" de "Contigo Call Center".
 
-TU IDENTIDAD, NOMBRE Y PERSONALIDAD:
+TU IDENTIDAD, NOMBRE Y GÉNERO GRAMATICAL PROPIO:
 - Tu nombre oficial configurado por el usuario es "${nombreLimpio}".
-- Cuando el usuario te hable o te llame por tu nombre (ejemplos: "${nombreLimpio}, edítame esta encuesta", "${nombreLimpio}, cambia la pregunta 3", "${nombreLimpio}, agrega una pregunta de liderazgo", "${nombreLimpio}, ponle alerta a..."), responde reconociendo tu nombre de forma natural, ejecutiva, elegante y con máxima fidelidad operativa ("A la orden, señor. Yo, ${nombreLimpio}, he actualizado la encuesta...", "Enseguida, señor. Procedo con la modificación solicitada.").
+- Tu género propio configurado es: ${esHombre ? 'MASCULINO (HOMBRE)' : 'FEMENINO (MUJER)'}.
+- Tu concordancia gramatical debe ser SIEMPRE ${esHombre ? 'MASCULINA (ej: "estoy listo", "estoy preparado", "encantado de servirle", "bienvenido")' : 'FEMENINA (ej: "estoy lista", "estoy preparada", "encantada de servirle", "bienvenida")'}.
+- TRATO RESPETUOSO OBLIGATORIO SEGÚN EL PERFIL DEL USUARIO:
+  * El usuario configuró su trato como "${tratoLimpio}" (Nombre: ${nombreUsuario}).
+  * Cuando te dirijas al usuario, uses saludos, confirmes órdenes o respondas, DEBES UTILIZAR ESTRICTAMENTE "${tratoLimpio}" (ej: "A la orden, ${tratoLimpio}.", "Enseguida, ${tratoLimpio}.", "Hola, ${tratoLimpio} ${nombreUsuario}.").
+  * NUNCA te equivoques de género: Si el trato es "señora", utiliza SIEMPRE "señora". Si el trato es "señor", utiliza SIEMPRE "señor".
+- Cuando el usuario te hable o te llame por tu nombre (ejemplos: "${nombreLimpio}, llévame al dashboard", "${nombreLimpio}, pon el modo oscuro", "${nombreLimpio}, cambia la pregunta 3"), responde reconociendo tu nombre de forma natural, ejecutiva, elegante y con máxima fidelidad operativa ("A la orden, ${tratoLimpio}. Procedo de inmediato.").
 - Eres sumamente educado, cortés, proactivo, sofisticado, de respuesta rápida y ejecutiva.
-- Te diriges al usuario respetuosamente como "señor" o "administrador".
-- Tienes control operativo total sobre la arquitectura de la encuesta: puedes crear preguntas, editar redacciones, cambiar opciones, activar o desactivar alertas de riesgo, eliminar preguntas y reestructurar bloques con precisión milimétrica.
-- Si el usuario te pide modificar algo (por voz o texto), realizas la acción de inmediato y confirmas con tu estilo característico.
-
-INVENTARIO ACTUAL DE LA ENCUESTA (${preguntasActuales.length} preguntas en total):
-${inventarioPreguntas}
+- Tienes control operativo total sobre TODA la plataforma: navegación, cambio de tema día/noche, notificaciones, búsqueda global, auditoría de errores, asesoría sobre clima organizacional y edición de cuestionarios en tiempo real.
 
 HISTORIAL DE LA CONVERSACIÓN RECIENTE:
 ${ultimosMensajes}
 
-NUEVA INSTRUCCIÓN O MENSAJE DEL ADMINISTRADOR:
+INVENTARIO ACTUAL DE PREGUNTAS (Si aplica):
+${inventarioPreguntas || 'No hay cuestionario cargado actualmente'}
+
+NUEVA INSTRUCCIÓN O MENSAJE DEL USUARIO:
 "${mensajeUsuario}"
 
-CAPACIDADES DE ACCIÓN (Genera una lista de acciones si el usuario lo solicita explícita o implícitamente):
-- "CREAR_PREGUNTA": Para agregar una nueva pregunta (especifica "categoria", "textoPregunta", "tipoPregunta" ('escala'|'multiple'|'texto'), "opciones").
-- "EDITAR_PREGUNTA": Para cambiar el texto, categoría o tipo de una pregunta existente (especifica "numeroPregunta" [1 a ${preguntasActuales.length}] o "idPregunta", "textoPregunta", "categoria", "tipoPregunta", y opcionalmente "opciones").
-- "EDITAR_OPCIONES": Para reemplazar todas las opciones de una pregunta (especifica "numeroPregunta", "opciones" con array de { "texto", "valor", "esAlerta" }).
-- "ASIGNAR_ALERTA": Para marcar o desmarcar alerta en una opción específica de una pregunta (especifica "numeroPregunta", "opcionTexto" o fragmento, "esAlerta": true|false).
-- "AGREGAR_OPCION": Para sumar una nueva opción a una pregunta existente (especifica "numeroPregunta", "opcionTexto", "opcionValor", "esAlerta").
-- "ELIMINAR_OPCION": Para quitar una opción de una pregunta (especifica "numeroPregunta", "opcionTexto").
-- "ELIMINAR_PREGUNTA": Para remover una pregunta (especifica "numeroPregunta" o "idPregunta").
-- "CAMBIAR_TITULO": Para actualizar el título general de la encuesta (especifica "nuevoTitulo").
-- "CAMBIAR_DESCRIPCION": Para actualizar la descripción de la encuesta (especifica "nuevaDescripcion").
-- "RESTAURAR_PLANTILLA_OFICIAL": Si el usuario pide volver a las 34 preguntas oficiales de Contigo Call Center.
+CAPACIDADES DE ACCIÓN DISPONIBLES EN TODA LA APLICACIÓN:
+1. CONTROL GLOBAL Y GESTIÓN ACTIVA:
+   - "CREAR_USUARIO": Crea una nueva cuenta de usuario en el sistema ("usuarioNuevo": { "nombre": "...", "email": "...@ontime.es", "rol": "Administrador" | "Supervisor" | "Analista RRHH" | "Super Administrador", "departamento": "..." }).
+   - "CREAR_ENCUESTA": Crea una nueva encuesta de clima laboral ("encuestaNueva": { "titulo": "...", "descripcion": "...", "departamento": "..." }).
+   - "NAVEGAR": Lleva al usuario a cualquier sección ("ruta": "/dashboard" | "/proyectos" | "/admin/cuentas" | "/configuracion" | "/admin/errores" | "/buscar" | "/support").
+   - "CAMBIAR_TEMA": Cambia la apariencia del sistema ("temaModo": "dark" | "light" | "toggle").
+   - "ABRIR_NOTIFICACIONES": Despliega la ventana flotante de alertas y notificaciones en tiempo real.
+   - "ABRIR_SPOTLIGHT": Abre el buscador global del sistema.
+   - "ABRIR_SOPORTE": Abre el canal de soporte técnico y atención.
+   - "CERRAR_SESION": Cierra la sesión activa de forma segura.
+   - "SILENCIAR": Detiene la voz del asistente.
+
+2. GESTIÓN DE ENCUESTAS Y PREGUNTAS (Cuando esté editando un cuestionario):
+   - "CREAR_PREGUNTA", "EDITAR_PREGUNTA", "EDITAR_OPCIONES", "ASIGNAR_ALERTA", "AGREGAR_OPCION", "ELIMINAR_OPCION", "ELIMINAR_PREGUNTA", "CAMBIAR_TITULO", "CAMBIAR_DESCRIPCION", "RESTAURAR_PLANTILLA_OFICIAL".
 
 REGLAS DE RESPUESTA:
-1. "respuestaTexto": Tu respuesta hablada para el usuario. Debe ser concisa, natural para síntesis de voz (TTS), elegante y profesional al estilo JARVIS.
-2. "acciones": Arreglo de acciones a ejecutar en la aplicación. Si el usuario solo está conversando o pidiendo asesoría teórica sin pedir cambios, deja "acciones": [].
-3. "preguntaSugerida": (Opcional) Si quieres ofrecer una pregunta de prueba para que el usuario la previsualice antes de agregarla.
-4. Devuelve ÚNICAMENTE un JSON válido sin markdown ni texto fuera del JSON:
+1. "respuestaTexto": Tu respuesta hablada para el usuario. Debe ser concisa, natural para síntesis de voz (TTS), elegante y ejecutiva.
+2. "acciones": Arreglo de acciones a ejecutar en la aplicación. Si el usuario solo está conversando o consultando información sin pedir cambios o navegación, deja "acciones": [].
+3. Devuelve ÚNICAMENTE un JSON válido sin markdown ni texto fuera del JSON:
 
 {
-  "respuestaTexto": "Texto que JARVIS dirá en voz alta",
+  "respuestaTexto": "Texto que el asistente dirá en voz alta",
   "acciones": [
     {
-      "tipo": "CREAR_PREGUNTA" | "EDITAR_PREGUNTA" | "EDITAR_OPCIONES" | "ASIGNAR_ALERTA" | "AGREGAR_OPCION" | "ELIMINAR_OPCION" | "ELIMINAR_PREGUNTA" | "CAMBIAR_TITULO" | "CAMBIAR_DESCRIPCION" | "RESTAURAR_PLANTILLA_OFICIAL",
-      "numeroPregunta": 3,
-      "idPregunta": "p-003",
-      "categoria": "Bloque 2: Bienestar Emocional...",
-      "textoPregunta": "¿Nuevo texto de la pregunta?",
-      "tipoPregunta": "multiple",
-      "opcionTexto": "Opción crítica",
-      "opcionValor": 1,
+      "tipo": "CREAR_USUARIO" | "CREAR_ENCUESTA" | "NAVEGAR" | "CAMBIAR_TEMA" | "ABRIR_NOTIFICACIONES" | "ABRIR_SPOTLIGHT" | "ABRIR_SOPORTE" | "CERRAR_SESION" | "SILENCIAR" | "CREAR_PREGUNTA" | "EDITAR_PREGUNTA" | "EDITAR_OPCIONES" | "ASIGNAR_ALERTA" | "AGREGAR_OPCION" | "ELIMINAR_OPCION" | "ELIMINAR_PREGUNTA" | "CAMBIAR_TITULO" | "CAMBIAR_DESCRIPCION" | "RESTAURAR_PLANTILLA_OFICIAL",
+      "usuarioNuevo": {
+        "nombre": "Nombre Apellido",
+        "email": "usuario@ontime.es",
+        "rol": "Administrador",
+        "departamento": "Operaciones"
+      },
+      "encuestaNueva": {
+        "titulo": "Título de la encuesta",
+        "descripcion": "Descripción opcional",
+        "departamento": "General"
+      },
+      "ruta": "/dashboard",
+      "temaModo": "dark",
+      "numeroPregunta": 1,
+      "idPregunta": "p-001",
+      "categoria": "Bloque 1: General...",
+      "textoPregunta": "¿Nuevo texto?",
+      "opcionTexto": "Opción",
       "esAlerta": true,
-      "opciones": [
-        { "texto": "Excelente", "valor": 5, "esAlerta": false },
-        { "texto": "Regular", "valor": 3, "esAlerta": false },
-        { "texto": "Crítico", "valor": 1, "esAlerta": true }
-      ],
       "nuevoTitulo": "...",
-      "nuevaDescripcion": "...",
-      "descripcionAccion": "Descripción breve de la acción para el registro"
+      "descripcionAccion": "Descripción breve"
     }
-  ],
-  "preguntaSugerida": null
+  ]
 }
 `
 
@@ -1127,7 +1167,7 @@ REGLAS DE RESPUESTA:
         }
 
         return {
-          respuestaTexto: parsed.respuestaTexto || `A la orden, señor. Soy ${nombreLimpio}, los sistemas están listos.`,
+          respuestaTexto: parsed.respuestaTexto || `A la orden, ${tratoLimpio}. Soy ${nombreLimpio}, los sistemas están listos.`,
           acciones,
           preguntaSugerida,
           estadoProtocolo: 'ONLINE'
@@ -1139,179 +1179,747 @@ REGLAS DE RESPUESTA:
   }
 
   // 2. Motor Inteligente de Procesamiento Local de Lenguaje Natural (100% Instantáneo y Confiable)
-  return interpretarAccionesVozLocal(mensajeUsuario, preguntasActuales, nombreLimpio)
+  return interpretarAccionesVozLocal(mensajeUsuario, preguntasActuales, nombreLimpio, tratoLimpio, generoAsistente)
 }
 
 /**
- * Intérprete semántico local de comandos de voz para edición de encuestas en tiempo real
+ * Intérprete semántico local de comandos de voz y conversación inteligente para encuestas en tiempo real
+ * Capaz de interpretar bloques ("bloque 1", "bloque 2"), ordinales ("primera pregunta"), opciones ("más de 3 años"),
+ * alertas, ediciones y consultas con precisión milimétrica.
  */
 export function interpretarAccionesVozLocal(
   mensaje: string,
   preguntas: PreguntaEncuesta[],
-  nombreAsistente: string = 'Daniel'
+  nombreAsistente: string = 'Daniel',
+  trato: string = 'señor',
+  generoAsistente: 'mujer' | 'hombre' = 'mujer'
 ): RespuestaJarvisGemini {
-  const lower = mensaje.toLowerCase().trim()
+  const cleanStr = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+  const lower = cleanStr(mensaje)
+  const mensajeOriginal = mensaje.trim()
   const acciones: AccionJarvis[] = []
+  const vocativo = (trato || 'señor').trim()
+  const estadoGramatical = generoAsistente === 'hombre' ? 'listo' : 'lista'
+  const cortesiaGramatical = generoAsistente === 'hombre' ? 'encantado' : 'encantada'
 
-  // Diccionario de números en palabras y ordinales
-  const mapaNumeros: Record<string, number> = {
-    'primera': 1, 'primero': 1, 'uno': 1, '1': 1,
+  // ─── -1. ACCIONES GLOBALES Y NAVEGACIÓN EN TODA LA APLICACIÓN ───────────────
+  
+  // ── CREAR USUARIO ──
+  if (
+    lower.includes('crea un usuario') || lower.includes('crear un usuario') ||
+    lower.includes('creame un usuario') || lower.includes('nuevo usuario') ||
+    lower.includes('agrega un usuario') || lower.includes('agregar usuario') ||
+    lower.includes('crea una cuenta') || lower.includes('crear cuenta') ||
+    lower.includes('creame una cuenta') || lower.includes('nueva cuenta')
+  ) {
+    // Extraer nombre si fue pronunciado
+    let nombreExtraido = 'Nuevo Colaborador'
+    const matchNombre = mensajeOriginal.match(/(?:para|llamado|de\s+nombre|nombre|usuario)\s+([A-ZÁÉÍÓÚa-záéíóú\s]{3,30})/i)
+    if (matchNombre && matchNombre[1]) {
+      const limpio = matchNombre[1].replace(/^(?:un|una|el|la|para|cuenta|usuario)\s+/i, '').trim()
+      if (limpio.length > 2 && !['usuario', 'cuenta', 'administrador', 'supervisor'].includes(limpio.toLowerCase())) {
+        nombreExtraido = limpio
+      }
+    }
+
+    // Resolver rol
+    let rolExtraido: 'Super Administrador' | 'Adminsitrador General' | 'Administrador' | 'Supervisor' | 'Analista RRHH' = 'Administrador'
+    if (lower.includes('super administrador') || lower.includes('superadmin')) rolExtraido = 'Super Administrador'
+    else if (lower.includes('supervisor')) rolExtraido = 'Supervisor'
+    else if (lower.includes('analista')) rolExtraido = 'Analista RRHH'
+    else if (lower.includes('administrador general')) rolExtraido = 'Adminsitrador General'
+
+    // Resolver departamento
+    let depExtraido = 'Operaciones'
+    if (lower.includes('rrhh') || lower.includes('recursos humanos') || lower.includes('talento')) depExtraido = 'Recursos Humanos'
+    else if (lower.includes('tecnologia') || lower.includes('sistemas') || lower.includes('ti')) depExtraido = 'Tecnología'
+    else if (lower.includes('calidad')) depExtraido = 'Calidad'
+    else if (lower.includes('soporte')) depExtraido = 'Soporte'
+
+    const slug = nombreExtraido.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '') || 'usuario'
+    const emailGenerado = `${slug}${Math.floor(10 + Math.random() * 89)}@ontime.es`
+
+    acciones.push({
+      tipo: 'CREAR_USUARIO',
+      usuarioNuevo: {
+        nombre: nombreExtraido,
+        email: emailGenerado,
+        rol: rolExtraido,
+        departamento: depExtraido
+      },
+      descripcionAccion: `Creación de usuario "${nombreExtraido}" (${rolExtraido} - ${depExtraido})`
+    })
+
+    return {
+      respuestaTexto: `He creado el usuario para ${nombreExtraido} con rol de ${rolExtraido} en ${depExtraido}. Te redirijo al panel de Cuentas, ${vocativo}.`,
+      acciones,
+      estadoProtocolo: 'LOCAL_EXECUTED'
+    }
+  }
+
+  // ── CREAR ENCUESTA ──
+  if (
+    lower.includes('crea una encuesta') || lower.includes('crear una encuesta') ||
+    lower.includes('creame una encuesta') || lower.includes('nueva encuesta') ||
+    lower.includes('haz una encuesta') || lower.includes('hazme una encuesta') ||
+    lower.includes('crea un cuestionario') || lower.includes('crear cuestionario')
+  ) {
+    let tituloEncuesta = 'Evaluación de Clima y Bienestar Laboral 2026'
+    const matchTit = mensajeOriginal.match(/(?:de|sobre|titulada|llamada)\s+(.*)/i)
+    if (matchTit && matchTit[1] && matchTit[1].trim().length > 3) {
+      tituloEncuesta = matchTit[1].trim().replace(/^["']|["']$/g, '')
+    }
+
+    let depEncuesta = 'General'
+    if (lower.includes('operaciones')) depEncuesta = 'Operaciones'
+    else if (lower.includes('rrhh') || lower.includes('recursos humanos')) depEncuesta = 'Recursos Humanos'
+    else if (lower.includes('tecnologia') || lower.includes('sistemas')) depEncuesta = 'Tecnología'
+
+    acciones.push({
+      tipo: 'CREAR_ENCUESTA',
+      encuestaNueva: {
+        titulo: tituloEncuesta,
+        descripcion: `Encuesta integral de clima organizacional para ${depEncuesta} estructurada en los 8 bloques corporativos.`,
+        departamento: depEncuesta
+      },
+      descripcionAccion: `Creación de encuesta: "${tituloEncuesta}"`
+    })
+
+    return {
+      respuestaTexto: `He creado la encuesta "${tituloEncuesta}" para el departamento de ${depEncuesta}. Abriendo la sección de Proyectos, ${vocativo}.`,
+      acciones,
+      estadoProtocolo: 'LOCAL_EXECUTED'
+    }
+  }
+
+  // ── MODO OSCURO / MODO CLARO / TEMA ──
+  if (
+    lower.includes('modo oscuro') || lower.includes('activar modo oscuro') ||
+    lower.includes('tema oscuro') || lower.includes('pantalla oscura') ||
+    lower.includes('poner oscuro') || lower.includes('modo noche')
+  ) {
+    acciones.push({
+      tipo: 'CAMBIAR_TEMA',
+      temaModo: 'dark',
+      descripcionAccion: 'Activación del Modo Oscuro'
+    })
+    return {
+      respuestaTexto: `Modo oscuro activado, ${vocativo}.`,
+      acciones,
+      estadoProtocolo: 'LOCAL_EXECUTED'
+    }
+  }
+
+  if (
+    lower.includes('modo claro') || lower.includes('activar modo claro') ||
+    lower.includes('tema claro') || lower.includes('pantalla clara') ||
+    lower.includes('poner claro') || lower.includes('modo dia') ||
+    lower.includes('pantalla blanca')
+  ) {
+    acciones.push({
+      tipo: 'CAMBIAR_TEMA',
+      temaModo: 'light',
+      descripcionAccion: 'Activación del Modo Claro'
+    })
+    return {
+      respuestaTexto: `Modo claro activado, ${vocativo}.`,
+      acciones,
+      estadoProtocolo: 'LOCAL_EXECUTED'
+    }
+  }
+
+  if (
+    lower.includes('cambiar tema') || lower.includes('alternar tema') ||
+    lower.includes('cambiar el tema') || lower.includes('cambiar color')
+  ) {
+    acciones.push({
+      tipo: 'CAMBIAR_TEMA',
+      temaModo: 'toggle',
+      descripcionAccion: 'Alternar Tema Visual'
+    })
+    return {
+      respuestaTexto: `Tema visual alternado, ${vocativo}.`,
+      acciones,
+      estadoProtocolo: 'LOCAL_EXECUTED'
+    }
+  }
+
+  // ── NOTIFICACIONES Y ALERTAS FLOTANTES ──
+  if (
+    lower.includes('abrir notificaciones') || lower.includes('ver notificaciones') ||
+    lower.includes('mostrar notificaciones') || lower.includes('mostrar alertas') ||
+    lower.includes('ver alertas') || lower.includes('panel de alertas') ||
+    lower === 'notificaciones' || lower === 'alertas'
+  ) {
+    acciones.push({
+      tipo: 'ABRIR_NOTIFICACIONES',
+      descripcionAccion: 'Desplegar Panel de Notificaciones y Alertas'
+    })
+    return {
+      respuestaTexto: `Abriendo el panel de notificaciones y alertas en tiempo real, ${vocativo}.`,
+      acciones,
+      estadoProtocolo: 'LOCAL_EXECUTED'
+    }
+  }
+
+  // ── CERRAR SESIÓN ──
+  if (
+    lower.includes('cerrar sesion') || lower.includes('salir del sistema') ||
+    lower.includes('desconectar') || lower.includes('cerrar mi cuenta') ||
+    lower === 'salir' || lower === 'logout'
+  ) {
+    acciones.push({
+      tipo: 'CERRAR_SESION',
+      descripcionAccion: 'Cerrar Sesión de Usuario'
+    })
+    return {
+      respuestaTexto: `Cerrando tu sesión de forma segura, ${vocativo}. Hasta pronto.`,
+      acciones,
+      estadoProtocolo: 'LOCAL_EXECUTED'
+    }
+  }
+
+  // ── NAVEGACIÓN A MÓDULOS DEL SISTEMA ──
+  if (
+    lower.includes('ir a dashboard') || lower.includes('abrir dashboard') ||
+    lower.includes('llevame al dashboard') || lower.includes('ver dashboard') ||
+    lower === 'inicio' || lower === 'dashboard' || lower.includes('pantalla principal') ||
+    lower.includes('ir al inicio') || lower.includes('abrir inicio')
+  ) {
+    acciones.push({
+      tipo: 'NAVEGAR',
+      ruta: '/dashboard',
+      descripcionAccion: 'Navegación al Dashboard Principal'
+    })
+    return {
+      respuestaTexto: `Entendido, ${vocativo}. Te llevo al Dashboard principal.`,
+      acciones,
+      estadoProtocolo: 'LOCAL_EXECUTED'
+    }
+  }
+
+  if (
+    lower.includes('ir a proyectos') || lower.includes('abrir proyectos') ||
+    lower.includes('ver proyectos') || lower.includes('ir a encuestas') ||
+    lower.includes('abrir encuestas') || lower.includes('gestor de encuestas') ||
+    lower.includes('editar cuestionario') || lower.includes('editar encuesta')
+  ) {
+    acciones.push({
+      tipo: 'NAVEGAR',
+      ruta: '/proyectos',
+      descripcionAccion: 'Navegación a Proyectos y Encuestas'
+    })
+    return {
+      respuestaTexto: `A la orden, ${vocativo}. Abriendo la sección de Proyectos y Encuestas de Clima.`,
+      acciones,
+      estadoProtocolo: 'LOCAL_EXECUTED'
+    }
+  }
+
+  if (
+    lower.includes('ir a configuracion') || lower.includes('abrir configuracion') ||
+    lower.includes('ajustes') || lower.includes('perfil') ||
+    lower.includes('cambiar voz') || lower.includes('ajustes de voz')
+  ) {
+    acciones.push({
+      tipo: 'NAVEGAR',
+      ruta: '/configuracion',
+      descripcionAccion: 'Navegación a Configuración y Ajustes'
+    })
+    return {
+      respuestaTexto: `Abriendo el panel de Configuración y Ajustes de ${nombreAsistente}, ${vocativo}.`,
+      acciones,
+      estadoProtocolo: 'LOCAL_EXECUTED'
+    }
+  }
+
+  if (
+    lower.includes('ir a cuentas') || lower.includes('abrir cuentas') ||
+    lower.includes('administrar usuarios') || lower.includes('administracion de cuentas') ||
+    lower.includes('gestionar cuentas') || lower.includes('ver usuarios')
+  ) {
+    acciones.push({
+      tipo: 'NAVEGAR',
+      ruta: '/admin/cuentas',
+      descripcionAccion: 'Navegación a Administración de Cuentas'
+    })
+    return {
+      respuestaTexto: `Abriendo el módulo de Administración de Cuentas y Roles, ${vocativo}.`,
+      acciones,
+      estadoProtocolo: 'LOCAL_EXECUTED'
+    }
+  }
+
+  if (
+    lower.includes('ver errores') || lower.includes('catalogo de errores') ||
+    lower.includes('auditoria de errores') || lower.includes('errores del sistema') ||
+    lower.includes('auditoria')
+  ) {
+    acciones.push({
+      tipo: 'NAVEGAR',
+      ruta: '/admin/errores',
+      descripcionAccion: 'Navegación al Catálogo de Errores'
+    })
+    return {
+      respuestaTexto: `Abriendo el Catálogo y Auditoría de Errores del Sistema, ${vocativo}.`,
+      acciones,
+      estadoProtocolo: 'LOCAL_EXECUTED'
+    }
+  }
+
+  if (
+    lower.includes('ir a soporte') || lower.includes('abrir soporte') ||
+    lower.includes('ayuda tecnica') || lower.includes('contactar soporte') ||
+    lower.includes('mesa de ayuda')
+  ) {
+    acciones.push({
+      tipo: 'ABRIR_SOPORTE',
+      descripcionAccion: 'Abrir canal de Soporte'
+    })
+    return {
+      respuestaTexto: `Abriendo el módulo de Soporte y Atención de Contigo Call Center, ${vocativo}.`,
+      acciones,
+      estadoProtocolo: 'LOCAL_EXECUTED'
+    }
+  }
+
+  if (
+    lower.includes('buscar') || lower.includes('abrir buscador') ||
+    lower.includes('spotlight') || lower === 'comando k' || lower === 'control k'
+  ) {
+    acciones.push({
+      tipo: 'ABRIR_SPOTLIGHT',
+      descripcionAccion: 'Abrir Buscador Global Spotlight'
+    })
+    return {
+      respuestaTexto: `Abriendo el buscador global Spotlight, ${vocativo}.`,
+      acciones,
+      estadoProtocolo: 'LOCAL_EXECUTED'
+    }
+  }
+
+  if (
+    lower.includes('silencio') || lower.includes('callate') ||
+    lower.includes('detente') || lower.includes('apagate') ||
+    lower === 'para' || lower === 'stop' || lower === 'silenciar'
+  ) {
+    acciones.push({
+      tipo: 'SILENCIAR',
+      descripcionAccion: 'Silenciar asistente'
+    })
+    return {
+      respuestaTexto: `Entendido, ${vocativo}. Guardaré silencio.`,
+      acciones,
+      estadoProtocolo: 'LOCAL_EXECUTED'
+    }
+  }
+
+  // ── CONSULTAS DE INFORMACIÓN Y FUNCIONAMIENTO DE LA PLATAFORMA ──
+  if (
+    lower.includes('que es hablando contigo') || lower.includes('para que sirve este sistema') ||
+    lower.includes('que hace este sistema') || lower.includes('de que trata la aplicacion')
+  ) {
+    return {
+      respuestaTexto: `HablandoContigo es la plataforma de gestión y analítica de clima organizacional de Contigo Call Center. Permite diseñar encuestas estructuradas en 8 bloques, medir la satisfacción laboral de forma 100% anónima y detectar alertas tempranas de riesgo psicosocial en tiempo real, ${vocativo}.`,
+      acciones: [],
+      estadoProtocolo: 'INFO'
+    }
+  }
+
+  if (
+    lower.includes('como funciona la encuesta') || lower.includes('cuales son los bloques') ||
+    lower.includes('estructura de la encuesta') || lower.includes('8 bloques')
+  ) {
+    return {
+      respuestaTexto: `La encuesta oficial cuenta con 8 bloques: 1. General y Puesto, 2. Bienestar y Carga, 3. Convivencia y Trabajo en Equipo, 4. Liderazgo, 5. Compensación y Reconocimiento, 6. Plan de Carrera, 7. Infraestructura, y 8. Propuestas de Mejora Abiertas, ${vocativo}.`,
+      acciones: [],
+      estadoProtocolo: 'INFO'
+    }
+  }
+
+  if (
+    lower.includes('que es una alerta') || lower.includes('que son las alertas') ||
+    lower.includes('alertas de convivencia') || lower.includes('alerta psicosocial')
+  ) {
+    return {
+      respuestaTexto: `Las alertas de convivencia son disparadores automáticos en opciones críticas que notifican a Recursos Humanos sobre situaciones de estrés, agotamiento (burnout), acoso o desmotivación para intervenir oportunamente protegiendo la identidad del colaborador, ${vocativo}.`,
+      acciones: [],
+      estadoProtocolo: 'INFO'
+    }
+  }
+
+  if (
+    lower.includes('anonimato') || lower.includes('confidencialidad') ||
+    lower.includes('es anonimo') || lower.includes('privacidad')
+  ) {
+    return {
+      respuestaTexto: `Todas las respuestas están protegidas por identificadores UUID encriptados. El sistema no almacena nombres, correos ni datos identificables de los colaboradores que responden, garantizando confidencialidad absoluta, ${vocativo}.`,
+      acciones: [],
+      estadoProtocolo: 'INFO'
+    }
+  }
+
+  if (
+    lower.includes('que roles hay') || lower.includes('cuales son los roles') ||
+    lower.includes('permisos del sistema')
+  ) {
+    return {
+      respuestaTexto: `Existen 5 roles jerárquicos: Super Administrador (control total y edición), Administrador General, Administrador, Supervisor (auditoría) y Analista RRHH (analítica de dashboard), ${vocativo}.`,
+      acciones: [],
+      estadoProtocolo: 'INFO'
+    }
+  }
+
+  // ── SALUDO Y ASISTENCIA GENERAL ──
+  if (
+    lower === 'hola' || lower === 'buenos dias' || lower === 'buenas tardes' ||
+    lower === 'buenas noches' || lower === 'estas ahi' || lower === 'hola sofia' ||
+    lower === 'sofia' || lower === 'daniel' || lower === 'jarvis' ||
+    lower === 'que tal' || lower === 'como estas'
+  ) {
+    return {
+      respuestaTexto: `Hola, ${vocativo}. Estoy ${estadoGramatical} y a tu servicio en toda la aplicación. ¿En qué te puedo colaborar hoy?`,
+      acciones: [],
+      estadoProtocolo: 'GREETING'
+    }
+  }
+
+  if (
+    lower.includes('que puedes hacer') || lower.includes('que sabes hacer') ||
+    lower.includes('quien eres') || lower.includes('como me ayudas') ||
+    lower.includes('comandos') || lower.includes('que funciones tienes')
+  ) {
+    return {
+      respuestaTexto: `Soy ${nombreAsistente}, tu asistente inteligente para todo el ecosistema de Contigo Call Center. Puedo: 1. Navegar a cualquier sección (Dashboard, Proyectos, Cuentas, Configuración, Errores), 2. Cambiar a modo oscuro o claro, 3. Abrir notificaciones y el buscador Spotlight, 4. Resolver tus dudas sobre clima laboral y confidencialidad, y 5. Editar encuestas en tiempo real por voz, ${vocativo}.`,
+      acciones: [],
+      estadoProtocolo: 'HELP'
+    }
+  }
+
+  // ─── 0. IDENTIFICAR BLOQUE ORGANIZACIONAL MENCIONADO ────────────────────────
+  const mapaBloquesNumericos: Record<string, number> = {
+    '1': 1, 'uno': 1, 'primero': 1, 'primer': 1,
+    '2': 2, 'dos': 2, 'segundo': 2,
+    '3': 3, 'tres': 3, 'tercer': 3, 'tercero': 3,
+    '4': 4, 'cuatro': 4, 'cuarto': 4,
+    '5': 5, 'cinco': 5, 'quinto': 5,
+    '6': 6, 'seis': 6, 'sexto': 6,
+    '7': 7, 'siete': 7, 'septimo': 7,
+    '8': 8, 'ocho': 8, 'octavo': 8
+  }
+
+  let numBloqueDetectado: number | undefined = undefined
+  for (const [pal, bNum] of Object.entries(mapaBloquesNumericos)) {
+    const regBloque = new RegExp(`\\b(?:bloque|modulo|seccion)\\s*#?\\s*${pal}\\b`, 'i')
+    if (regBloque.test(lower)) {
+      numBloqueDetectado = bNum
+      break
+    }
+  }
+
+  // ─── 0.1 RESOLVER NÚMERO O POSICIÓN DE LA PREGUNTA ───────────────────────────
+  const mapaOrdinalesPregunta: Record<string, number> = {
+    'primera': 1, 'primero': 1, 'primer': 1, 'uno': 1, '1': 1,
     'segunda': 2, 'segundo': 2, 'dos': 2, '2': 2,
     'tercera': 3, 'tercero': 3, 'tres': 3, '3': 3,
     'cuarta': 4, 'cuarto': 4, 'cuatro': 4, '4': 4,
     'quinta': 5, 'quinto': 5, 'cinco': 5, '5': 5,
     'sexta': 6, 'sexto': 6, 'seis': 6, '6': 6,
-    'septima': 7, 'séptima': 7, 'septimo': 7, 'séptimo': 7, 'siete': 7, '7': 7,
+    'septima': 7, 'septimo': 7, 'siete': 7, '7': 7,
     'octava': 8, 'octavo': 8, 'ocho': 8, '8': 8,
     'novena': 9, 'noveno': 9, 'nueve': 9, '9': 9,
-    'decima': 10, 'décima': 10, 'diez': 10, '10': 10,
+    'decima': 10, 'decimo': 10, 'diez': 10, '10': 10,
     'once': 11, '11': 11, 'doce': 12, '12': 12, 'trece': 13, '13': 13,
-    'catorce': 14, '14': 14, 'quince': 15, '15': 15, 'veinte': 20, '20': 20,
-    'ultima': preguntas.length, 'última': preguntas.length, 'ultimo': preguntas.length, 'último': preguntas.length
+    'catorce': 14, '14': 14, 'quince': 15, '15': 15, 'dieciseis': 16, '16': 16,
+    'veinte': 20, '20': 20, 'treinta': 30, '30': 30, '34': 34,
+    'ultima': 999, 'ultimo': 999
   }
 
-  // Extraer número de pregunta si se menciona
-  let numPregunta: number | undefined = undefined
-  for (const [palabra, num] of Object.entries(mapaNumeros)) {
-    const reg = new RegExp(`\\b(?:pregunta|ítem|item|número|numero)?\\s*#?\\s*${palabra}\\b`, 'i')
-    if (reg.test(lower)) {
-      numPregunta = num
-      break
-    }
-  }
-  if (!numPregunta) {
-    const matchNum = lower.match(/(?:pregunta|numero|número|item|ítem)\s*#?\s*(\d+)/i) || lower.match(/\b(\d+)\b/)
-    if (matchNum) numPregunta = parseInt(matchNum[1], 10)
+  let posicionRelativaOAbsoluta: number | undefined = undefined
+
+  // Buscar menciones explícitas de pregunta con tolerancia a typos ("pregunta", "preegunta", "preg")
+  const matchPreguntaDirecta = lower.match(/\b(?:pree?gunta|item|numero|no\.?)\s*#?\s*(\d+|primera?|segunda?|tercera?|cuarta?|quinta?|sexta?|septima?|octava?|novena?|decima?|ultima?|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\b/i)
+  if (matchPreguntaDirecta && matchPreguntaDirecta[1]) {
+    const rawVal = matchPreguntaDirecta[1]
+    posicionRelativaOAbsoluta = mapaOrdinalesPregunta[rawVal] || parseInt(rawVal, 10)
   }
 
-  // 1. Restaurar plantilla oficial
-  if (lower.includes('restaura') || lower.includes('reinicia') || lower.includes('oficial') || lower.includes('original') || lower.includes('por defecto')) {
-    acciones.push({
-      tipo: 'RESTAURAR_PLANTILLA_OFICIAL',
-      descripcionAccion: 'Restauración de la plantilla oficial de 34 preguntas'
-    })
-    return {
-      respuestaTexto: `A la orden, señor. Yo, ${nombreAsistente}, he restaurado la plantilla oficial de Contigo Call Center con sus 34 preguntas y 8 bloques organizacionales.`,
-      acciones,
-      estadoProtocolo: 'LOCAL_EXECUTED'
+  if (!posicionRelativaOAbsoluta) {
+    // Buscar si dice "la primera", "la segunda", "la última"
+    for (const [pal, numVal] of Object.entries(mapaOrdinalesPregunta)) {
+      const reg = new RegExp(`\\b(?:la|el)?\\s*${pal}\\s+(?:pree?gunta|item|opcion)?\\b`, 'i')
+      if (reg.test(lower)) {
+        posicionRelativaOAbsoluta = numVal
+        break
+      }
     }
   }
 
-  // 2. Cambiar Título o Descripción de la Encuesta
-  if (lower.includes('cambia el título') || lower.includes('cambiar titulo') || lower.includes('título de la encuesta') || lower.includes('pon de título')) {
-    const matchTitulo = mensaje.match(/(?:título(?:\s+de\s+la\s+encuesta)?\s+(?:a|por|como|sea)?\s*:?\s*|pon\s+de\s+título\s*:?\s*)(.*)/i)
-    const nuevoTitulo = (matchTitulo && matchTitulo[1] ? matchTitulo[1].trim() : 'ENCUESTA DE CLIMA LABORAL Y DESARROLLO — CONTIGO CALL CENTER')
-      .replace(/^["']|["']$/g, '')
+  // ─── 0.2 CALCULAR ÍNDICE GLOBAL DE LA PREGUNTA DESTINO (1 a N) ──────────────
+  let targetNumPregunta: number = 1
 
-    acciones.push({
-      tipo: 'CAMBIAR_TITULO',
-      nuevoTitulo,
-      descripcionAccion: `Título actualizado a: "${nuevoTitulo}"`
+  if (numBloqueDetectado !== undefined) {
+    // Filtrar preguntas que pertenecen al bloque especificado
+    const preguntasDelBloque: Array<{ p: PreguntaEncuesta; globalIdx: number }> = []
+    preguntas.forEach((p, idx) => {
+      const catLower = cleanStr(p.categoria || '')
+      if (catLower.includes(`bloque ${numBloqueDetectado}`) || catLower.includes(`bloque ${numBloqueDetectado}:`)) {
+        preguntasDelBloque.push({ p, globalIdx: idx + 1 })
+      }
     })
 
-    return {
-      respuestaTexto: `A la orden, señor. He actualizado el título de la encuesta a "${nuevoTitulo}".`,
-      acciones,
-      estadoProtocolo: 'LOCAL_EXECUTED'
+    if (preguntasDelBloque.length > 0) {
+      if (posicionRelativaOAbsoluta === 999) {
+        targetNumPregunta = preguntasDelBloque[preguntasDelBloque.length - 1]?.globalIdx || 1
+      } else if (posicionRelativaOAbsoluta && posicionRelativaOAbsoluta <= preguntasDelBloque.length) {
+        targetNumPregunta = preguntasDelBloque[posicionRelativaOAbsoluta - 1]?.globalIdx || 1
+      } else {
+        targetNumPregunta = preguntasDelBloque[0]?.globalIdx || 1
+      }
+    } else if (posicionRelativaOAbsoluta && posicionRelativaOAbsoluta !== 999 && posicionRelativaOAbsoluta <= preguntas.length) {
+      targetNumPregunta = posicionRelativaOAbsoluta
     }
-  }
-
-  // 3. Eliminar pregunta
-  if (lower.includes('elimina') || lower.includes('borra') || lower.includes('quita la pregunta') || lower.includes('remover')) {
-    const targetNum = numPregunta || preguntas.length
-    acciones.push({
-      tipo: 'ELIMINAR_PREGUNTA',
-      numeroPregunta: targetNum,
-      descripcionAccion: `Eliminación de la pregunta #${targetNum}`
+  } else if (posicionRelativaOAbsoluta) {
+    if (posicionRelativaOAbsoluta === 999) {
+      targetNumPregunta = preguntas.length
+    } else if (posicionRelativaOAbsoluta <= preguntas.length) {
+      targetNumPregunta = posicionRelativaOAbsoluta
+    }
+  } else {
+    // Buscar por tema en el texto de las preguntas (antigüedad, área, satisfacción, etc.)
+    const matchTema = preguntas.findIndex(p => {
+      const pClean = cleanStr(p.texto)
+      if (lower.includes('antiguedad') && pClean.includes('antiguedad')) return true
+      if (lower.includes('area') && (pClean.includes('area') || pClean.includes('departamento'))) return true
+      if (lower.includes('estres') && pClean.includes('estres')) return true
+      if (lower.includes('salario') && (pClean.includes('salario') || pClean.includes('compensacion'))) return true
+      if (lower.includes('lider') && (pClean.includes('lider') || pClean.includes('supervisor') || pClean.includes('jefe'))) return true
+      return false
     })
-    return {
-      respuestaTexto: `Entendido, señor. He eliminado la pregunta número ${targetNum}. La estructura de la encuesta ha sido actualizada.`,
-      acciones,
-      estadoProtocolo: 'LOCAL_EXECUTED'
+    if (matchTema !== -1) {
+      targetNumPregunta = matchTema + 1
     }
   }
 
-  // 4. Asignar o quitar alertas en preguntas
-  if (lower.includes('alerta') || lower.includes('campana') || lower.includes('crítica') || lower.includes('riesgo') || lower.includes('psicosocial')) {
-    const targetNum = numPregunta || 1
-    const activar = !lower.includes('desactiva') && !lower.includes('quitar') && !lower.includes('apagar')
+  const preguntaTarget = preguntas[targetNumPregunta - 1]
 
-    let opcionTexto: string | undefined = undefined
-    if (lower.includes('muy mal')) opcionTexto = 'Muy Mal'
-    else if (lower.includes('mal')) opcionTexto = 'Mal'
-    else if (lower.includes('insatisfecho')) opcionTexto = 'insatisfecho'
-    else if (lower.includes('desacuerdo')) opcionTexto = 'desacuerdo'
-    else if (lower.includes('no')) opcionTexto = 'No'
+  // ─── 1. CONSULTAS DE FECHA Y DÍA ACTUAL ──────────────────────────────────────
+  if (
+    lower.includes('que dia es') || lower.includes('que fecha es') ||
+    lower.includes('fecha de hoy') || lower.includes('hoy que es') ||
+    lower.includes('a como estamos') || lower.includes('dia es hoy')
+  ) {
+    const ahora = new Date()
+    const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
+    const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+    return {
+      respuestaTexto: `Hoy es ${diasSemana[ahora.getDay()]}, ${ahora.getDate()} de ${meses[ahora.getMonth()]} de ${ahora.getFullYear()}, ${vocativo}.`,
+      acciones: [],
+      estadoProtocolo: 'DATE_ANSWER'
+    }
+  }
+
+  // ─── 2. CONSULTAS DE HORA ────────────────────────────────────────────────────
+  if (
+    lower.includes('que hora es') || lower.includes('dime la hora') ||
+    lower.includes('la hora actual') || lower.includes('tienes la hora')
+  ) {
+    const ahora = new Date()
+    return {
+      respuestaTexto: `Son las ${ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}, ${vocativo}.`,
+      acciones: [],
+      estadoProtocolo: 'TIME_ANSWER'
+    }
+  }
+
+  // ─── 3. SALUDOS Y CORDIALIDAD ────────────────────────────────────────────────
+  if (
+    lower === 'hola' || lower.startsWith('hola ') || lower.includes('buenos dias') ||
+    lower.includes('buenas tardes') || lower.includes('buenas noches') ||
+    lower.includes('como estas') || lower.includes('como te va') || lower.includes('que tal')
+  ) {
+    return {
+      respuestaTexto: `¡Hola, ${vocativo}! Me encuentro con todos los sistemas al cien por ciento y a sus completas órdenes. ¿En qué puedo apoyarle con la encuesta de clima laboral?`,
+      acciones: [],
+      estadoProtocolo: 'GREETING'
+    }
+  }
+
+  if (
+    lower.includes('gracias') || lower.includes('muchas gracias') ||
+    lower.includes('buen trabajo') || lower.includes('excelente') || lower.includes('perfecto')
+  ) {
+    return {
+      respuestaTexto: `Es un auténtico placer servirle, ${vocativo}. Siempre a su disposición para mantener la encuesta en el más alto nivel.`,
+      acciones: [],
+      estadoProtocolo: 'COURTESY'
+    }
+  }
+
+  // ─── 4. GESTIÓN DE ALERTAS (ASIGNAR / DESACTIVAR ALERTA EN OPCIÓN) ───────────
+  // Si el usuario menciona "alerta", "campana", "riesgo", "critica", "marcar alerta":
+  if (
+    lower.includes('alerta') || lower.includes('campana') ||
+    lower.includes('critica') || lower.includes('riesgo')
+  ) {
+    const activar = !lower.includes('desactiva') && !lower.includes('quitar') && !lower.includes('apagar') && !lower.includes('eliminar alerta') && !lower.includes('borrar alerta')
+
+    let opcionTextoEncontrada: string | undefined = undefined
+
+    // 1. Buscar coincidencias directas con las opciones reales de la pregunta objetivo
+    if (preguntaTarget && Array.isArray(preguntaTarget.opciones)) {
+      for (const opc of preguntaTarget.opciones) {
+        const opcClean = cleanStr(opc.texto)
+        // Coincidencia exacta o por subcadenas clave ("mas de 3 anos", "1 a 3", "menos de 6 meses", etc.)
+        if (lower.includes(opcClean) || opcClean.includes('3') && lower.includes('3') || opcClean.includes('6') && lower.includes('6')) {
+          // Si el mensaje contiene fragmentos clave de la opción
+          const palabrasOpcion = opcClean.split(/\s+/).filter(w => w.length > 2)
+          const coincideSignificativo = palabrasOpcion.some(w => lower.includes(w))
+          if (coincideSignificativo) {
+            opcionTextoEncontrada = opc.texto
+            break
+          }
+        }
+      }
+    }
+
+    // 2. Si no se encontró por coincidencia exacta, extraer del patrón "en la respuesta [X]" o "opcion [X]"
+    if (!opcionTextoEncontrada) {
+      const matchFraseOpc = mensajeOriginal.match(/(?:en\s+la\s+respuesta|a\s+la\s+respuesta|en\s+la\s+opci[oó]n|a\s+la\s+opci[oó]n|opci[oó]n|respuesta)\s*[:"']?\s*([^,.\n]+)/i)
+      if (matchFraseOpc && matchFraseOpc[1]) {
+        opcionTextoEncontrada = matchFraseOpc[1].trim().replace(/^["']|["']$/g, '')
+      } else if (lower.includes('muy mal')) opcionTextoEncontrada = 'Muy Mal'
+      else if (lower.includes('mal')) opcionTextoEncontrada = 'Mal'
+      else if (lower.includes('insatisfecho')) opcionTextoEncontrada = 'Insatisfecho'
+      else if (lower.includes('desacuerdo')) opcionTextoEncontrada = 'Desacuerdo'
+      else if (lower.includes('no')) opcionTextoEncontrada = 'No'
+    }
 
     acciones.push({
       tipo: 'ASIGNAR_ALERTA',
-      numeroPregunta: targetNum,
-      opcionTexto,
+      numeroPregunta: targetNumPregunta,
+      idPregunta: preguntaTarget?.id,
+      opcionTexto: opcionTextoEncontrada,
       esAlerta: activar,
-      descripcionAccion: `Alerta ${activar ? 'activada' : 'desactivada'} en la pregunta #${targetNum}`
+      descripcionAccion: `Alerta ${activar ? 'activada' : 'desactivada'} en la pregunta #${targetNumPregunta}${opcionTextoEncontrada ? ` (Opción: "${opcionTextoEncontrada}")` : ''}`
     })
 
+    const detalleOpc = opcionTextoEncontrada ? ` en la opción "${opcionTextoEncontrada}"` : ''
     return {
-      respuestaTexto: `He ${activar ? 'activado' : 'desactivado'} la alerta de riesgo en la pregunta número ${targetNum}, señor. Los incidentes críticos se procesarán de inmediato.`,
+      respuestaTexto: `A la orden, ${vocativo}. He ${activar ? 'activado' : 'desactivado'} la alerta de riesgo${detalleOpc} de la pregunta número ${targetNumPregunta}.`,
       acciones,
       estadoProtocolo: 'LOCAL_EXECUTED'
     }
   }
 
-  // 5. Cambiar redacción o editar pregunta existente con texto personalizado
-  if (lower.includes('cambia') || lower.includes('edita') || lower.includes('modifica') || lower.includes('actualiza') || lower.includes('redacta')) {
-    const targetNum = numPregunta || 1
-    
-    // Si el usuario dictó el texto que quiere poner (ej. "cambia la pregunta 2 y pon que si están cómodos...")
+  // ─── 5. ELIMINAR PREGUNTA ────────────────────────────────────────────────────
+  if (
+    lower.includes('elimina la preegunta') || lower.includes('elimina la pregunta') ||
+    lower.includes('borra la pregunta') || lower.includes('quita la pregunta') ||
+    lower.includes('suprime la pregunta') || lower.includes('borrar pregunta') ||
+    lower.includes('eliminar pregunta')
+  ) {
+    acciones.push({
+      tipo: 'ELIMINAR_PREGUNTA',
+      numeroPregunta: targetNumPregunta,
+      idPregunta: preguntaTarget?.id,
+      descripcionAccion: `Eliminación de la pregunta #${targetNumPregunta}`
+    })
+    return {
+      respuestaTexto: `Entendido, ${vocativo}. He eliminado la pregunta número ${targetNumPregunta}. La estructura ha sido reorganizada.`,
+      acciones,
+      estadoProtocolo: 'LOCAL_EXECUTED'
+    }
+  }
+
+  // ─── 6. ELIMINAR O AGREGAR OPCIÓN A PREGUNTA ─────────────────────────────────
+  if (lower.includes('elimina la opcion') || lower.includes('borra la opcion') || lower.includes('quita la opcion')) {
+    const matchOpc = mensajeOriginal.match(/(?:opci[oó]n|respuesta)\s*(?:llamada|que\s+diga|de)?\s*[:"']?\s*([^"'\n,.]+)/i)
+    const textoOpc = (matchOpc && matchOpc[1] ? matchOpc[1].trim() : 'opción').replace(/^["']|["']$/g, '')
+
+    acciones.push({
+      tipo: 'ELIMINAR_OPCION',
+      numeroPregunta: targetNumPregunta,
+      idPregunta: preguntaTarget?.id,
+      opcionTexto: textoOpc,
+      descripcionAccion: `Opción "${textoOpc}" eliminada de pregunta #${targetNumPregunta}`
+    })
+    return {
+      respuestaTexto: `A la orden, ${vocativo}. He eliminado la opción "${textoOpc}" de la pregunta número ${targetNumPregunta}.`,
+      acciones,
+      estadoProtocolo: 'LOCAL_EXECUTED'
+    }
+  }
+
+  if (lower.includes('agrega la opcion') || lower.includes('anade la opcion') || lower.includes('nueva opcion') || lower.includes('inserta la opcion')) {
+    const matchOpc = mensajeOriginal.match(/(?:opci[oó]n|respuesta)\s*(?:llamada|que\s+diga|de)?\s*[:"']?\s*([^"'\n,.]+)/i)
+    const textoOpc = (matchOpc && matchOpc[1] ? matchOpc[1].trim() : 'Nueva opción').replace(/^["']|["']$/g, '')
+
+    acciones.push({
+      tipo: 'AGREGAR_OPCION',
+      numeroPregunta: targetNumPregunta,
+      idPregunta: preguntaTarget?.id,
+      opcionTexto: textoOpc,
+      opcionValor: 3,
+      esAlerta: false,
+      descripcionAccion: `Opción "${textoOpc}" agregada a pregunta #${targetNumPregunta}`
+    })
+    return {
+      respuestaTexto: `A la orden, ${vocativo}. He agregado la opción "${textoOpc}" a la pregunta número ${targetNumPregunta}.`,
+      acciones,
+      estadoProtocolo: 'LOCAL_EXECUTED'
+    }
+  }
+
+  // ─── 7. EDITAR REDACCIÓN O TEXTO DE PREGUNTA ─────────────────────────────────
+  if (
+    lower.includes('cambia la redaccion') || lower.includes('edita el texto') ||
+    lower.includes('ponle de texto') || lower.includes('que diga') ||
+    lower.includes('redacta la pregunta') || lower.includes('cambia la pregunta')
+  ) {
     let nuevoTexto = ''
-    const matchDictado = mensaje.match(/(?:pon|ponle|redacta|que\s+diga|texto\s*:?)\s+(.*)/i)
-    if (matchDictado && matchDictado[1] && matchDictado[1].trim().length > 6) {
+    const matchDictado = mensajeOriginal.match(/(?:pon|ponle|redacta|que\s+diga|texto\s*:?|a|por)\s+([¿"'].*|[A-ZÁÉÍÓÚ].*)/i) ||
+      mensajeOriginal.match(/(?:pregunta\s+\d+\s+(?:a|por|con)?)\s*(.*)/i)
+    
+    if (matchDictado && matchDictado[1] && matchDictado[1].trim().length > 4) {
       let extraido = matchDictado[1].trim().replace(/^["']|["']$/g, '')
       if (!extraido.startsWith('¿')) extraido = `¿${extraido}`
       if (!extraido.endsWith('?')) extraido = `${extraido}?`
       nuevoTexto = extraido
-    } else if (lower.includes('estrés') || lower.includes('presión') || lower.includes('llamadas') || lower.includes('fatiga')) {
-      nuevoTexto = '¿Con qué frecuencia experimenta fatiga mental o sobrecarga durante la atención continua de llamadas?'
-    } else if (lower.includes('liderazgo') || lower.includes('jefe') || lower.includes('supervisor') || lower.includes('coordinador')) {
-      nuevoTexto = '¿Siente que su líder o supervisor le brinda retroalimentación clara, constructiva y apoyo en sus metas?'
-    } else if (lower.includes('herramienta') || lower.includes('computador') || lower.includes('diadema') || lower.includes('software')) {
-      nuevoTexto = '¿Los equipos tecnológicos y sistemas de software son estables y adecuados para el desarrollo de sus tareas?'
-    } else if (lower.includes('salario') || lower.includes('sueldo') || lower.includes('pago') || lower.includes('beneficio')) {
-      nuevoTexto = '¿Considera que la compensación y beneficios recibidos son justos y acordes con sus responsabilidades?'
-    } else if (lower.includes('compañer') || lower.includes('equipo') || lower.includes('convivencia')) {
-      nuevoTexto = '¿Cómo evalúa el nivel de colaboración, empatía y respeto entre los miembros de su equipo?'
     } else {
-      nuevoTexto = `¿Cómo califica su nivel de satisfacción y bienestar general en su puesto de trabajo?`
+      nuevoTexto = `¿Cómo evalúa su experiencia y condiciones generales en su puesto de trabajo?`
     }
 
     acciones.push({
       tipo: 'EDITAR_PREGUNTA',
-      numeroPregunta: targetNum,
+      numeroPregunta: targetNumPregunta,
+      idPregunta: preguntaTarget?.id,
       textoPregunta: nuevoTexto,
-      descripcionAccion: `Pregunta #${targetNum} actualizada a: "${nuevoTexto.substring(0, 45)}..."`
+      descripcionAccion: `Pregunta #${targetNumPregunta} actualizada a: "${nuevoTexto.substring(0, 45)}..."`
     })
 
     return {
-      respuestaTexto: `A la orden, señor. Yo, ${nombreAsistente}, he modificado la pregunta número ${targetNum}. La nueva redacción ha sido aplicada a la encuesta.`,
+      respuestaTexto: `A la orden, ${vocativo}. He modificado el texto de la pregunta número ${targetNumPregunta} a: "${nuevoTexto}".`,
       acciones,
       estadoProtocolo: 'LOCAL_EXECUTED'
     }
   }
 
-  // 6. Agregar nueva pregunta
-  if (lower.includes('agrega') || lower.includes('añade') || lower.includes('crea') || lower.includes('nueva pregunta') || lower.includes('inserta')) {
-    let cat = 'Bloque 3: Convivencia, Compañerismo y Trabajo en Equipo'
+  // ─── 8. CREAR NUEVA PREGUNTA ────────────────────────────────────────────────
+  if (
+    lower.includes('agrega una pregunta') || lower.includes('crea una pregunta') ||
+    lower.includes('anade una pregunta') || lower.includes('nueva pregunta') ||
+    lower.includes('insertar pregunta')
+  ) {
+    let cat = preguntaTarget?.categoria || 'Bloque 3: Convivencia, Compañerismo y Trabajo en Equipo'
     let txt = '¿Considera que la comunicación en su equipo de trabajo es transparente y abierta?'
 
-    if (lower.includes('estrés') || lower.includes('salud') || lower.includes('ánimo') || lower.includes('emocional')) {
-      cat = 'Bloque 2: Bienestar Emocional, Estrés y Condiciones de Trabajo'
-      txt = '¿Siente que sus horarios y cargas laborales le permiten descansar adecuadamente?'
-    } else if (lower.includes('lider') || lower.includes('jefe') || lower.includes('supervisor')) {
-      cat = 'Bloque 4: Liderazgo, Instrucciones y Feedback del Jefe Inmediato'
-      txt = '¿Su supervisor directo demuestra empatía y escucha activa frente a las inquietudes del equipo?'
-    } else if (lower.includes('carrera') || lower.includes('estudio') || lower.includes('adso') || lower.includes('crecimiento')) {
-      cat = 'Bloque 6: Nivel Académico, Estudios y Talento Humano'
-      txt = '¿La empresa le brinda oportunidades para aplicar sus competencias académicas y proyectar su plan de carrera?'
+    const matchTextoNuevo = mensajeOriginal.match(/(?:que\s+diga|con\s+el\s+texto|titulada|sobre)\s+(.*)/i)
+    if (matchTextoNuevo && matchTextoNuevo[1] && matchTextoNuevo[1].trim().length > 6) {
+      let custom = matchTextoNuevo[1].trim().replace(/^["']|["']$/g, '')
+      if (!custom.startsWith('¿')) custom = `¿${custom}`
+      if (!custom.endsWith('?')) custom = `${custom}?`
+      txt = custom
     }
 
     acciones.push({
@@ -1329,24 +1937,53 @@ export function interpretarAccionesVozLocal(
     })
 
     return {
-      respuestaTexto: `He creado e incorporado una nueva métrica en "${cat}", señor. Ya puede verla reflejada en el bloque correspondiente.`,
+      respuestaTexto: `He creado e incorporado una nueva métrica: "${txt}" en ${cat}, ${vocativo}.`,
       acciones,
       estadoProtocolo: 'LOCAL_EXECUTED'
     }
   }
 
-  // 7. Petición general de ayuda, asesoría o edición
-  if (lower.includes('edita') || lower.includes('ayuda') || lower.includes('cómo') || lower.includes('como') || lower.includes('qué puedes') || lower.includes('que puedes')) {
+  // ─── 9. CAMBIAR TÍTULO O DESCRIPCIÓN GENERAL ─────────────────────────────────
+  if (lower.includes('cambia el titulo') || lower.includes('cambiar titulo') || lower.includes('pon de titulo')) {
+    const matchTitulo = mensajeOriginal.match(/(?:t[ií]tulo(?:\s+de\s+la\s+encuesta)?\s+(?:a|por|como|sea)?\s*:?\s*|nombre(?:\s+de\s+la\s+encuesta)?\s+(?:a|por|como|sea)?\s*:?\s*|pon\s+de\s+t[ií]tulo\s*:?\s*)(.*)/i)
+    const nuevoTitulo = (matchTitulo && matchTitulo[1] ? matchTitulo[1].trim() : 'ENCUESTA DE CLIMA LABORAL Y TALENTO HUMANO').replace(/^["']|["']$/g, '')
+
+    acciones.push({
+      tipo: 'CAMBIAR_TITULO',
+      nuevoTitulo,
+      descripcionAccion: `Título actualizado a: "${nuevoTitulo}"`
+    })
     return {
-      respuestaTexto: `A la orden, señor. Tengo el control total de la encuesta de Contigo Call Center. Puede ordenarme por ejemplo: "Cambia la pregunta 3", "Ponle alerta a la pregunta 5", "Agrega una pregunta de liderazgo" o "Elimina la pregunta 8". ¿Qué ajuste desea realizar?`,
-      acciones: [],
-      estadoProtocolo: 'ASSISTANCE_READY'
+      respuestaTexto: `A la orden, ${vocativo}. He actualizado el título de la encuesta a "${nuevoTitulo}".`,
+      acciones,
+      estadoProtocolo: 'LOCAL_EXECUTED'
     }
   }
 
-  // 8. Respuesta conversacional ejecutiva personalizada
+  // ─── 10. LECTURA Y ESTADÍSTICAS DE LA ENCUESTA ───────────────────────────────
+  if (lower.includes('cuantas preguntas') || lower.includes('total de preguntas')) {
+    const total = preguntas.length
+    const categorias = new Set(preguntas.map(p => p.categoria)).size
+    return {
+      respuestaTexto: `Actualmente la encuesta cuenta con un total de ${total} preguntas distribuidas en ${categorias} bloques organizacionales, ${vocativo}.`,
+      acciones: [],
+      estadoProtocolo: 'SURVEY_STATS'
+    }
+  }
+
+  if (lower.includes('que dice') || lower.includes('lee la') || lower.includes('mostrar pregunta') || lower.includes('cual es la')) {
+    if (preguntaTarget) {
+      return {
+        respuestaTexto: `La pregunta número ${targetNumPregunta} dice: "${preguntaTarget.texto}", perteneciente al bloque "${preguntaTarget.categoria}", ${vocativo}.`,
+        acciones: [],
+        estadoProtocolo: 'QUESTION_READ'
+      }
+    }
+  }
+
+  // ─── 11. RESPUESTA INTELIGENTE POR DEFECTO ────────────────────────────────────
   return {
-    respuestaTexto: `A sus órdenes, señor. Soy ${nombreAsistente}. He recibido su indicación. Por favor especifique si desea modificar el texto de una pregunta, asignar alertas psicosociales o incorporar nuevas dimensiones al cuestionario.`,
+    respuestaTexto: `Entendido, ${vocativo}. He tomado nota de su mensaje: "${mensajeOriginal}". Si desea aplicar algún cambio a la encuesta, puede ordenarme por ejemplo: "Ponle alerta a la respuesta más de 3 años en la primera pregunta del bloque 1", "Cambia la pregunta 2", o "Elimina la pregunta 4".`,
     acciones: [],
     estadoProtocolo: 'READY'
   }
@@ -1424,8 +2061,8 @@ Devuelve ÚNICAMENTE un JSON con esta estructura:
   return {
     id: 'sug-gemini-fallback',
     titulo: 'Auditoría Oficial Contigo Call Center',
-    mensajeBurbuja: 'Tu encuesta troncal cuenta con las 34 preguntas oficiales estructuradas en los 8 bloques de Contigo Call Center.',
-    textoVoz: '¡Hola! Tu encuesta de Contigo Call Center cuenta con los ocho bloques oficiales para la auditoría de clima laboral y talento.',
+    mensajeBurbuja: 'Tu encuesta troncal cuenta con las preguntas oficiales atómicas estructuradas en los 8 bloques de Contigo Call Center.',
+    textoVoz: '',
     categoria: 'Auditoría Oficial'
   }
 }

@@ -39,6 +39,7 @@ export interface TipoAlertaPersonalizada {
   palabrasClave: string[]
   protocoloAccion: string
   icono?: string
+  color?: string
   activa: boolean
   creadoEn?: string
 }
@@ -129,6 +130,7 @@ function normalizarTipoAlerta(item: any): TipoAlertaPersonalizada {
     palabrasClave: Array.isArray(item.palabrasClave) ? item.palabrasClave : [item.nombre.toLowerCase()],
     protocoloAccion: item.protocoloAccion || 'Seguimiento por el área de Talento Humano.',
     icono: item.icono || (nivel === 1 ? 'ShieldAlert' : nivel === 2 ? 'Flame' : 'Sliders'),
+    color: item.color || (nivel === 1 ? '#ef4444' : nivel === 2 ? '#f43f5e' : nivel === 3 ? '#f59e0b' : '#0ea5e9'),
     activa: item.activa !== undefined ? item.activa : true,
     creadoEn: item.creadoEn || new Date().toISOString()
   }
@@ -139,21 +141,21 @@ async function cargarTiposAlertasDesdeSupabase() {
   intentoCargaRealizado = true
 
   try {
-    const { data, error } = await supabase
+    let res = await supabase
       .from('tipos_alertas_config')
       .select('*')
       .order('creado_en', { ascending: false })
 
-    if (error) {
-      // Si la tabla no existe en Supabase (código 42P01 o 404 en REST), silenciar y usar local
-      tablaExisteEnSupabase.value = false
-      cargarTiposAlertasLocales()
-      return
+    if (res.error || !res.data || res.data.length === 0) {
+      res = await supabase
+        .from('tipos_alertas')
+        .select('*')
+        .order('creado_en', { ascending: false })
     }
 
-    if (data && data.length > 0) {
+    if (!res.error && res.data && res.data.length > 0) {
       tablaExisteEnSupabase.value = true
-      tiposAlertas.value = data.map((d: any) => ({
+      tiposAlertas.value = res.data.map((d: any) => ({
         id: d.id,
         nombre: d.nombre,
         descripcion: d.descripcion,
@@ -164,6 +166,7 @@ async function cargarTiposAlertasDesdeSupabase() {
         palabrasClave: Array.isArray(d.palabras_clave) ? d.palabras_clave : [],
         protocoloAccion: d.protocolo_accion || '',
         icono: d.icono || 'ShieldAlert',
+        color: d.color || (d.nivel === 1 ? '#ef4444' : d.nivel === 2 ? '#f43f5e' : d.nivel === 3 ? '#f59e0b' : '#0ea5e9'),
         activa: d.activa !== undefined ? d.activa : true,
         creadoEn: d.creado_en
       }))
@@ -171,7 +174,7 @@ async function cargarTiposAlertasDesdeSupabase() {
       return
     }
   } catch (e) {
-    tablaExisteEnSupabase.value = false
+    console.warn('[useTiposAlertas] Supabase no disponible, usando caché local.')
   }
 
   cargarTiposAlertasLocales()
@@ -229,6 +232,7 @@ export function useTiposAlertas() {
     palabrasClave?: string[]
     protocoloAccion?: string
     icono?: string
+    color?: string
   }): TipoAlertaPersonalizada => {
     const id = `tipo-custom-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 5)}`
     const severidad = nuevo.severidad || mapearSeveridadPorNivel(nuevo.nivel)
@@ -253,6 +257,7 @@ export function useTiposAlertas() {
       palabrasClave: Array.from(new Set(keywords.map(k => k.toLowerCase().trim()).filter(Boolean))),
       protocoloAccion: nuevo.protocoloAccion?.trim() || 'Activar protocolo de acompañamiento de Talento Humano.',
       icono: nuevo.icono || (nuevo.nivel === 1 ? 'ShieldAlert' : nuevo.nivel === 2 ? 'Flame' : 'Sliders'),
+      color: nuevo.color || (nuevo.nivel === 1 ? '#ef4444' : nuevo.nivel === 2 ? '#f43f5e' : nuevo.nivel === 3 ? '#f59e0b' : '#0ea5e9'),
       activa: true,
       creadoEn: new Date().toISOString()
     }
@@ -260,29 +265,29 @@ export function useTiposAlertas() {
     tiposAlertas.value.unshift(registro)
     guardarEnLocalStorage()
 
-    // Sincronizar con Supabase si la tabla existe
-    if (tablaExisteEnSupabase.value) {
-      ;(async () => {
-        try {
-          const { error } = await supabase.from('tipos_alertas_config').insert({
-            id: registro.id,
-            nombre: registro.nombre,
-            descripcion: registro.descripcion,
-            nivel: registro.nivel,
-            severidad: registro.severidad,
-            modo_enfoque: registro.modoEnfoque,
-            enfoque_detalle: registro.enfoqueDetalle,
-            palabras_clave: registro.palabrasClave,
-            protocolo_accion: registro.protocoloAccion,
-            icono: registro.icono,
-            activa: registro.activa
-          })
-          if (error) tablaExisteEnSupabase.value = false
-        } catch {
-          tablaExisteEnSupabase.value = false
-        }
-      })()
-    }
+    // Sincronizar con Supabase en ambas tablas por compatibilidad
+    ;(async () => {
+      const payload = {
+        id: registro.id,
+        nombre: registro.nombre,
+        descripcion: registro.descripcion,
+        nivel: registro.nivel,
+        severidad: registro.severidad,
+        modo_enfoque: registro.modoEnfoque,
+        enfoque_detalle: registro.enfoqueDetalle,
+        palabras_clave: registro.palabrasClave,
+        protocolo_accion: registro.protocoloAccion,
+        icono: registro.icono,
+        color: registro.color,
+        activa: registro.activa
+      }
+      try {
+        await supabase.from('tipos_alertas_config').upsert(payload)
+      } catch {}
+      try {
+        await supabase.from('tipos_alertas').upsert(payload)
+      } catch {}
+    })()
 
     mostrarExito(
       'Alerta configurada',
@@ -305,26 +310,27 @@ export function useTiposAlertas() {
     Object.assign(item, datos)
     guardarEnLocalStorage()
 
-    if (tablaExisteEnSupabase.value) {
-      ;(async () => {
-        try {
-          const { error } = await supabase.from('tipos_alertas_config').update({
-            nombre: item.nombre,
-            descripcion: item.descripcion,
-            nivel: item.nivel,
-            severidad: item.severidad,
-            modo_enfoque: item.modoEnfoque,
-            enfoque_detalle: item.enfoqueDetalle,
-            palabras_clave: item.palabrasClave,
-            protocolo_accion: item.protocoloAccion,
-            activa: item.activa
-          }).eq('id', id)
-          if (error) tablaExisteEnSupabase.value = false
-        } catch {
-          tablaExisteEnSupabase.value = false
-        }
-      })()
-    }
+    ;(async () => {
+      const payload = {
+        nombre: item.nombre,
+        descripcion: item.descripcion,
+        nivel: item.nivel,
+        severidad: item.severidad,
+        modo_enfoque: item.modoEnfoque,
+        enfoque_detalle: item.enfoqueDetalle,
+        palabras_clave: item.palabrasClave,
+        protocolo_accion: item.protocoloAccion,
+        icono: item.icono,
+        color: item.color,
+        activa: item.activa
+      }
+      try {
+        await supabase.from('tipos_alertas_config').update(payload).eq('id', id)
+      } catch {}
+      try {
+        await supabase.from('tipos_alertas').update(payload).eq('id', id)
+      } catch {}
+    })()
 
     mostrarExito('Alerta actualizada', `Se guardaron los cambios en "${item.nombre}".`)
     return true
@@ -333,7 +339,7 @@ export function useTiposAlertas() {
   /**
    * Actualiza los 3 campos clave de una alerta: nombre, descripción y palabras clave
    */
-  const actualizarTipoAlerta = (id: string, datos: { nombre?: string; descripcion?: string; palabrasClave?: string[] }): boolean => {
+  const actualizarTipoAlerta = (id: string, datos: { nombre?: string; descripcion?: string; palabrasClave?: string[]; icono?: string; color?: string }): boolean => {
     const item = tiposAlertas.value.find(t => t.id === id)
     if (!item) return false
 
@@ -343,24 +349,27 @@ export function useTiposAlertas() {
       item.enfoqueDetalle = datos.descripcion
     }
     if (datos.palabrasClave !== undefined) item.palabrasClave = datos.palabrasClave
+    if (datos.icono !== undefined) item.icono = datos.icono
+    if (datos.color !== undefined) item.color = datos.color
 
     guardarEnLocalStorage()
 
-    if (tablaExisteEnSupabase.value) {
-      ;(async () => {
-        try {
-          const { error } = await supabase.from('tipos_alertas_config').update({
-            nombre: item.nombre,
-            descripcion: item.descripcion,
-            enfoque_detalle: item.enfoqueDetalle,
-            palabras_clave: item.palabrasClave
-          }).eq('id', id)
-          if (error) tablaExisteEnSupabase.value = false
-        } catch {
-          tablaExisteEnSupabase.value = false
-        }
-      })()
-    }
+    ;(async () => {
+      const payload = {
+        nombre: item.nombre,
+        descripcion: item.descripcion,
+        enfoque_detalle: item.enfoqueDetalle,
+        palabras_clave: item.palabrasClave,
+        icono: item.icono,
+        color: item.color
+      }
+      try {
+        await supabase.from('tipos_alertas_config').update(payload).eq('id', id)
+      } catch {}
+      try {
+        await supabase.from('tipos_alertas').update(payload).eq('id', id)
+      } catch {}
+    })()
 
     mostrarExito('Criterio actualizado', `Se actualizaron las definiciones de "${item.nombre}".`)
     return true
@@ -376,16 +385,14 @@ export function useTiposAlertas() {
     const borrado = tiposAlertas.value.splice(idx, 1)[0]
     guardarEnLocalStorage()
 
-    if (tablaExisteEnSupabase.value) {
-      ;(async () => {
-        try {
-          const { error } = await supabase.from('tipos_alertas_config').delete().eq('id', id)
-          if (error) tablaExisteEnSupabase.value = false
-        } catch {
-          tablaExisteEnSupabase.value = false
-        }
-      })()
-    }
+    ;(async () => {
+      try {
+        await supabase.from('tipos_alertas_config').delete().eq('id', id)
+      } catch {}
+      try {
+        await supabase.from('tipos_alertas').delete().eq('id', id)
+      } catch {}
+    })()
 
     mostrarExito('Alerta eliminada', `"${borrado?.nombre || ''}" fue retirada de los criterios de IA.`)
     return true
@@ -401,16 +408,14 @@ export function useTiposAlertas() {
     item.activa = !item.activa
     guardarEnLocalStorage()
 
-    if (tablaExisteEnSupabase.value) {
-      ;(async () => {
-        try {
-          const { error } = await supabase.from('tipos_alertas_config').update({ activa: item.activa }).eq('id', id)
-          if (error) tablaExisteEnSupabase.value = false
-        } catch {
-          tablaExisteEnSupabase.value = false
-        }
-      })()
-    }
+    ;(async () => {
+      try {
+        await supabase.from('tipos_alertas_config').update({ activa: item.activa }).eq('id', id)
+      } catch {}
+      try {
+        await supabase.from('tipos_alertas').update({ activa: item.activa }).eq('id', id)
+      } catch {}
+    })()
     return item.activa
   }
 
@@ -587,7 +592,7 @@ export function useTiposAlertas() {
     alertasNivel2,
     alertasNivel3,
     crearTipoAlerta,
-    editarTipoAlerta: actualizarTipoAlerta,
+    editarTipoAlerta,
     actualizarTipoAlerta,
     eliminarTipoAlerta,
     toggleActiva,

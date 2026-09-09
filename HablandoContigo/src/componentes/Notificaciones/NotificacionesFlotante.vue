@@ -39,9 +39,12 @@ const estaArrastrando = ref(false)
 const estaMinimizado = ref(false)
 
 const inicioArrastre = { x: 0, y: 0, inicialX: 0, inicialY: 0 }
-const filtroNotificaciones = ref<'todas' | 'encuestas' | 'informes' | 'seguridad' | 'modulos'>('todas')
+const filtroNotificaciones = ref<'todas' | 'actualizaciones' | 'encuestas' | 'informes' | 'seguridad' | 'modulos'>('todas')
 
 const notificacionesFiltradas = computed(() => {
+  if (filtroNotificaciones.value === 'actualizaciones') {
+    return notificacionesActividad.value.filter(n => n.tipo === 'actualizacion' || n.tipo === 'anuncio' || n.tipo === 'manual')
+  }
   if (filtroNotificaciones.value === 'encuestas') {
     return notificacionesActividad.value.filter(n => n.tipo === 'encuesta')
   }
