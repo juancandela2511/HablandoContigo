@@ -62,6 +62,7 @@ const consentimientoOtorgado = ref(false)
 // Estado del cuestionario adaptativo
 const indicePreguntaActual = ref(0)
 const respuestasUsuario = ref<Record<string, any>>({})
+const respuestasAncladas = ref<Record<string, string>>({})
 const alertaDetectadaEnSesion = ref(false)
 const listaAlertas = ref<string[]>([])
 const completada = ref(false)
@@ -269,6 +270,61 @@ const respuestaSeleccionadaActual = computed(() => {
   return respuestasUsuario.value[preguntaActual.value.id]
 })
 
+// ─── Motor de Preguntas Condicionales y Bifurcaciones ─────────────────────────
+const normalizarCadena = (txt: string) => {
+  return (txt || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+}
+
+const removerPreguntaYDescendientes = (idPregunta: string) => {
+  colaPreguntas.value = colaPreguntas.value.filter(p => p.id !== idPregunta)
+  delete respuestasUsuario.value[idPregunta]
+  delete respuestasAncladas.value[idPregunta]
+
+  // Limpieza recursiva de subpreguntas hijas que dependieran de esta
+  const todasLasPreguntas = encuesta.value?.preguntas || []
+  todasLasPreguntas.forEach(hija => {
+    if (hija.esCondicional && hija.disparadorPor === idPregunta) {
+      removerPreguntaYDescendientes(hija.id)
+    }
+  })
+}
+
+const evaluarPreguntasCondicionales = (idPreguntaActual: string, textoRespuesta: string) => {
+  const todasLasPreguntas = encuesta.value?.preguntas || []
+  const respNorm = normalizarCadena(textoRespuesta)
+
+  todasLasPreguntas.forEach(subPreg => {
+    if (subPreg.esCondicional && subPreg.disparadorPor === idPreguntaActual) {
+      const valores = subPreg.valoresDisparo && subPreg.valoresDisparo.length > 0
+        ? subPreg.valoresDisparo
+        : ['Sí', 'si']
+
+      const coincide = valores.some(v => {
+        const vNorm = normalizarCadena(v)
+        return respNorm === vNorm || respNorm.startsWith(vNorm) || vNorm.startsWith(respNorm)
+      })
+
+      const accion = subPreg.accionCondicion || 'mostrar_si'
+      // Si la acción es omitir_si, se muestra si NO coincide. Si es mostrar_si, se muestra si coincide.
+      const debeMostrarse = accion === 'omitir_si' ? !coincide : coincide
+
+      if (debeMostrarse) {
+        if (!colaPreguntas.value.some(p => p.id === subPreg.id)) {
+          const idxPadre = colaPreguntas.value.findIndex(p => p.id === idPreguntaActual)
+          const insertIdx = idxPadre !== -1 ? idxPadre + 1 : indicePreguntaActual.value + 1
+          colaPreguntas.value.splice(insertIdx, 0, subPreg)
+        }
+      } else {
+        removerPreguntaYDescendientes(subPreg.id)
+      }
+    }
+  })
+}
+
 const seleccionarOpcion = (opcion: OpcionPregunta) => {
   if (!preguntaActual.value) return
   respuestasUsuario.value[preguntaActual.value.id] = {
@@ -285,86 +341,53 @@ const seleccionarOpcion = (opcion: OpcionPregunta) => {
   const idPreguntaActual = preguntaActual.value.id
   const textoOpcion = (opcion.texto || '').trim().toLowerCase()
 
-  // ─── Motor Dinámico de Preguntas Condicionales / Bifurcaciones ───
-  todasLasPreguntas.forEach(subPreg => {
-    if (subPreg.esCondicional && subPreg.disparadorPor === idPreguntaActual) {
-      const valores = subPreg.valoresDisparo || ['Sí', 'si', 'Otro', 'otro']
-      const debeDispararse = valores.some(v => 
-        textoOpcion === v.toLowerCase() || 
-        textoOpcion.startsWith(v.toLowerCase()) || 
-        (opcion.texto || '').trim().toLowerCase() === v.toLowerCase()
-      )
+  // ─── Motor Dinámico de Preguntas Condicionales / Bifurcaciones y Salto ───
+  evaluarPreguntasCondicionales(idPreguntaActual, opcion.texto || '')
 
-      if (debeDispararse) {
-        if (!colaPreguntas.value.some(p => p.id === subPreg.id)) {
-          colaPreguntas.value.splice(indicePreguntaActual.value + 1, 0, subPreg)
-        }
-      } else {
-        colaPreguntas.value = colaPreguntas.value.filter(p => p.id !== subPreg.id)
-        delete respuestasUsuario.value[subPreg.id]
-      }
-    }
-  })
-
-  // Casos específicos directos
-  if (idPreguntaActual === 'b1-p2-area') {
+  // Fallbacks de seguridad específicos para preguntas del cuestionario integral
+  if (idPreguntaActual === 'b1-p2-area' && textoOpcion === 'otro') {
     const idSub = 'b1-p2b-otro-area'
-    if (textoOpcion === 'otro') {
-      if (!colaPreguntas.value.some(p => p.id === idSub)) {
-        const subPreg = todasLasPreguntas.find(p => p.id === idSub) || {
-          id: idSub,
-          categoria: 'Bloque 1: Datos de Contexto y Segmentación',
-          texto: 'Pregunta 2b — ¿A qué área o departamento perteneces? (Especifique)',
-          tipo: 'texto' as const,
-          esCondicional: true,
-          opciones: []
-        }
-        colaPreguntas.value.splice(indicePreguntaActual.value + 1, 0, subPreg)
+    if (!colaPreguntas.value.some(p => p.id === idSub)) {
+      const subPreg = todasLasPreguntas.find(p => p.id === idSub) || {
+        id: idSub,
+        categoria: 'Bloque 1: Datos de Contexto y Segmentación',
+        texto: 'Pregunta 2b — ¿A qué área o departamento perteneces? (Especifique)',
+        tipo: 'texto' as const,
+        esCondicional: true,
+        opciones: []
       }
-    } else {
-      colaPreguntas.value = colaPreguntas.value.filter(p => p.id !== idSub)
-      delete respuestasUsuario.value[idSub]
+      colaPreguntas.value.splice(indicePreguntaActual.value + 1, 0, subPreg)
     }
   }
 
-  if (idPreguntaActual === 'b3-p12-conflictos') {
+  if (idPreguntaActual === 'b3-p12-conflictos' && (textoOpcion.startsWith('sí') || textoOpcion.startsWith('si'))) {
     const idSub = 'b3-p12b-conflictos-detalle'
-    if (textoOpcion.startsWith('sí') || textoOpcion.startsWith('si')) {
-      if (!colaPreguntas.value.some(p => p.id === idSub)) {
-        const subPreg = todasLasPreguntas.find(p => p.id === idSub) || {
-          id: idSub,
-          categoria: 'Bloque 3: Convivencia, Compañerismo y Trabajo en Equipo',
-          texto: 'Pregunta 12b — Describa brevemente el contexto del conflicto o situación presentada:',
-          tipo: 'texto' as const,
-          esCondicional: true,
-          esSensibleAcoso: true,
-          opciones: []
-        }
-        colaPreguntas.value.splice(indicePreguntaActual.value + 1, 0, subPreg)
+    if (!colaPreguntas.value.some(p => p.id === idSub)) {
+      const subPreg = todasLasPreguntas.find(p => p.id === idSub) || {
+        id: idSub,
+        categoria: 'Bloque 3: Convivencia, Compañerismo y Trabajo en Equipo',
+        texto: 'Pregunta 12b — Describa brevemente el contexto del conflicto o situación presentada:',
+        tipo: 'texto' as const,
+        esCondicional: true,
+        esSensibleAcoso: true,
+        opciones: []
       }
-    } else {
-      colaPreguntas.value = colaPreguntas.value.filter(p => p.id !== idSub)
-      delete respuestasUsuario.value[idSub]
+      colaPreguntas.value.splice(indicePreguntaActual.value + 1, 0, subPreg)
     }
   }
 
-  if (idPreguntaActual === 'b6-p33-estudia' || idPreguntaActual === 'b6-p27-estudia') {
+  if ((idPreguntaActual === 'b6-p33-estudia' || idPreguntaActual === 'b6-p27-estudia') && (textoOpcion === 'sí' || textoOpcion === 'si')) {
     const idSub = idPreguntaActual === 'b6-p33-estudia' ? 'b6-p33b-que-estudia' : 'b6-p28-que-estudia'
-    if (textoOpcion === 'sí' || textoOpcion === 'si') {
-      if (!colaPreguntas.value.some(p => p.id === idSub)) {
-        const subPreg = todasLasPreguntas.find(p => p.id === idSub) || {
-          id: idSub,
-          categoria: 'Bloque 6: Nivel Académico, Estudios y Talento Humano',
-          texto: 'Pregunta 33b — Especifique qué área o programa de estudios se encuentra cursando actualmente:',
-          tipo: 'texto' as const,
-          esCondicional: true,
-          opciones: []
-        }
-        colaPreguntas.value.splice(indicePreguntaActual.value + 1, 0, subPreg)
+    if (!colaPreguntas.value.some(p => p.id === idSub)) {
+      const subPreg = todasLasPreguntas.find(p => p.id === idSub) || {
+        id: idSub,
+        categoria: 'Bloque 6: Nivel Académico, Estudios y Talento Humano',
+        texto: 'Pregunta 33b — Especifique qué área o programa de estudios se encuentra cursando actualmente:',
+        tipo: 'texto' as const,
+        esCondicional: true,
+        opciones: []
       }
-    } else {
-      colaPreguntas.value = colaPreguntas.value.filter(p => p.id !== idSub)
-      delete respuestasUsuario.value[idSub]
+      colaPreguntas.value.splice(indicePreguntaActual.value + 1, 0, subPreg)
     }
   }
 
@@ -388,6 +411,13 @@ const seleccionarOpcion = (opcion: OpcionPregunta) => {
 const actualizarTextoRespuesta = (texto: string) => {
   if (preguntaActual.value) {
     respuestasUsuario.value[preguntaActual.value.id] = texto
+    evaluarPreguntasCondicionales(preguntaActual.value.id, texto)
+  }
+}
+
+const actualizarRespuestaAnclada = (texto: string) => {
+  if (preguntaActual.value) {
+    respuestasAncladas.value[preguntaActual.value.id] = texto
   }
 }
 
@@ -476,7 +506,8 @@ const finalizarYEnviar = async () => {
         esAlerta: typeof respVal === 'object' ? respVal.esAlerta : false,
         tipoAlertaId: typeof respVal === 'object' ? respVal.tipoAlertaId : undefined,
         nombreAlerta: typeof respVal === 'object' ? respVal.nombreAlerta : undefined,
-        severidadAlerta: typeof respVal === 'object' ? respVal.severidadAlerta : undefined
+        severidadAlerta: typeof respVal === 'object' ? respVal.severidadAlerta : undefined,
+        comentario: respuestasAncladas.value[pregId] || undefined
       }
     })
 
@@ -556,6 +587,7 @@ const finalizarYEnviar = async () => {
         :totalPreguntasCola="totalPreguntasCola"
         :porcentajeProgreso="porcentajeProgreso"
         :respuestaSeleccionada="respuestaSeleccionadaActual"
+        :textoRespuestaAnclada="respuestasAncladas[preguntaActual.id] || ''"
         :enviando="enviando"
         :segundosRestantes="segundosRestantes"
         :tiempoMinimoCumplido="tiempoMinimoCumplido"
@@ -564,6 +596,7 @@ const finalizarYEnviar = async () => {
         v-model:nombreVoluntario="nombreVoluntario"
         @seleccionarOpcion="seleccionarOpcion"
         @actualizarTextoRespuesta="actualizarTextoRespuesta"
+        @actualizarRespuestaAnclada="actualizarRespuestaAnclada"
         @avanzarPregunta="avanzarPregunta"
         @retrocederPregunta="retrocederPregunta"
       />

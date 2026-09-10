@@ -74,6 +74,33 @@ const categoriasDetectadas = computed(() => {
   return Array.from(cats)
 })
 
+// Conteo estadístico de preguntas y respuestas asociadas a cada bloque/categoría
+const estadisticasPorCategoria = computed(() => {
+  const mapa: Record<string, { preguntas: number; respuestas: number }> = {}
+  
+  encuestas.value.forEach(enc => {
+    enc.preguntas?.forEach(p => {
+      const cat = p.categoria?.trim()
+      if (cat) {
+        if (!mapa[cat]) mapa[cat] = { preguntas: 0, respuestas: 0 }
+        mapa[cat].preguntas++
+      }
+    })
+  })
+
+  respuestasAnonimas.value.forEach(r => {
+    r.respuestas?.forEach(item => {
+      const cat = item.categoria?.trim()
+      if (cat) {
+        if (!mapa[cat]) mapa[cat] = { preguntas: 0, respuestas: 0 }
+        mapa[cat].respuestas++
+      }
+    })
+  })
+
+  return mapa
+})
+
 // Calcula los valores proporcionales en tiempo real sobre las dimensiones editables
 const dimensionesConValoresReales = computed(() => {
   return calcularDimensionesProporcionales(
@@ -82,6 +109,52 @@ const dimensionesConValoresReales = computed(() => {
     metaGlobalLocal.value
   )
 })
+
+/**
+ * Distribución 1: Equitativa (360° / N bloques)
+ * Distribuye todas las áreas de manera simétrica y proporcional en el círculo
+ */
+const distribuirInclinacionesEquitativas = (silencioso = false) => {
+  const total = dimensionesEditables.value.length
+  if (total === 0) return
+
+  const paso = 360 / total
+  dimensionesEditables.value.forEach((dim, idx) => {
+    dim.inclinacion = Math.round(paso * idx)
+  })
+  if (!silencioso) {
+    mensajeExito.value = `¡Inclinaciones distribuidas proporcionalmente (360° / ${total} áreas = ${Math.round(paso)}° por eje)!`
+    setTimeout(() => { mensajeExito.value = null }, 3500)
+  }
+}
+
+/**
+ * Distribución 2: Ponderada por Bloques y Áreas
+ * Asigna una apertura angular proporcional al número de preguntas o volumen del bloque
+ */
+const distribuirInclinacionesPonderadas = () => {
+  const total = dimensionesEditables.value.length
+  if (total === 0) return
+
+  const pesos = dimensionesEditables.value.map(dim => {
+    const cat = dim.categoriaMapeada || dim.eje
+    const stats = estadisticasPorCategoria.value[cat]
+    return Math.max(stats?.preguntas || stats?.respuestas || 1, 1)
+  })
+
+  const sumaPesos = pesos.reduce((a, b) => a + b, 0)
+  let acumulado = 0
+
+  dimensionesEditables.value.forEach((dim, idx) => {
+    dim.inclinacion = Math.round(acumulado)
+    const peso = pesos[idx] ?? 1
+    const porcion = (peso / sumaPesos) * 360
+    acumulado += porcion
+  })
+
+  mensajeExito.value = `¡Inclinaciones ponderadas proporcionalmente según el volumen de preguntas de cada bloque!`
+  setTimeout(() => { mensajeExito.value = null }, 3500)
+}
 
 watch(() => props.abierto, (estaAbierto) => {
   if (estaAbierto) {
@@ -100,6 +173,12 @@ watch(() => props.abierto, (estaAbierto) => {
     // Si aún no hay dimensiones cargadas, usar base
     if (dimensionesEditables.value.length < 3) {
       dimensionesEditables.value = JSON.parse(JSON.stringify(DIMENSIONES_RADIALES_BASE))
+    }
+
+    // Si todas las inclinaciones están en 0, auto-distribuir proporcionalmente de inmediato
+    const todasEnCero = dimensionesEditables.value.every(d => !d.inclinacion || d.inclinacion === 0)
+    if (todasEnCero && dimensionesEditables.value.length >= 3) {
+      distribuirInclinacionesEquitativas(true)
     }
 
     // Actualizar valores proporcionales
@@ -125,6 +204,8 @@ const recalcularValores = () => {
 // Preset: Todas las categorías de las encuestas activas
 const aplicarPresetCategoriasDeEncuestas = () => {
   if (categoriasDetectadas.value.length === 0) return
+  const total = categoriasDetectadas.value.length
+  const paso = 360 / total
 
   dimensionesEditables.value = categoriasDetectadas.value.map((cat, idx) => ({
     eje: cat,
@@ -133,7 +214,7 @@ const aplicarPresetCategoriasDeEncuestas = () => {
     meta: metaGlobalLocal.value,
     estado: 'Óptimo',
     color: coloresSolidos[idx % coloresSolidos.length]?.hex || '#2563eb',
-    inclinacion: 0,
+    inclinacion: Math.round(paso * idx),
     descripcion: `Dimensión extraída de encuestas: ${cat}`
   }))
 
@@ -160,7 +241,7 @@ const aplicarPresetEmpatiaAfectoSocializacion = () => {
       meta: 80,
       estado: 'Óptimo',
       color: '#059669',
-      inclinacion: 0,
+      inclinacion: 120,
       descripcion: 'Clima de confianza, contención emocional y aprecio sincero.'
     },
     {
@@ -170,7 +251,7 @@ const aplicarPresetEmpatiaAfectoSocializacion = () => {
       meta: 80,
       estado: 'Óptimo',
       color: '#d97706',
-      inclinacion: 0,
+      inclinacion: 240,
       descripcion: 'Integración interdepartamental, trabajo colaborativo y respeto.'
     }
   ]
@@ -179,7 +260,12 @@ const aplicarPresetEmpatiaAfectoSocializacion = () => {
 
 // Preset: Estándar 6 Ejes Organizacionales
 const aplicarPresetEstandar = () => {
-  dimensionesEditables.value = JSON.parse(JSON.stringify(DIMENSIONES_RADIALES_BASE))
+  const base = JSON.parse(JSON.stringify(DIMENSIONES_RADIALES_BASE))
+  const paso = 360 / base.length
+  base.forEach((d: DimensionRadial, idx: number) => {
+    d.inclinacion = Math.round(paso * idx)
+  })
+  dimensionesEditables.value = base
   metaGlobalLocal.value = 85
   anguloRotacionLocal.value = 0
   recalcularValores()
@@ -201,6 +287,8 @@ const agregarNuevaDimension = (categoriaSugerida?: string) => {
     descripcion: 'Inclinación personalizada vinculada a respuestas de encuestas.'
   })
 
+  // Distribuir proporcionalmente de inmediato a todos los bloques activos
+  distribuirInclinacionesEquitativas(true)
   recalcularValores()
 }
 
@@ -210,6 +298,7 @@ const eliminarDimension = (indice: number) => {
     return
   }
   dimensionesEditables.value.splice(indice, 1)
+  distribuirInclinacionesEquitativas(true)
 }
 
 const guardarConfiguracion = async () => {
@@ -340,8 +429,11 @@ const guardarConfiguracion = async () => {
         :dimensiones="dimensionesEditables"
         :coloresSolidos="coloresSolidos"
         :categoriasSugeridas="categoriasDetectadas"
+        :estadisticasPorCategoria="estadisticasPorCategoria"
         @agregar="agregarNuevaDimension"
         @eliminar="eliminarDimension"
+        @distribuirEquitativo="distribuirInclinacionesEquitativas()"
+        @distribuirPonderado="distribuirInclinacionesPonderadas()"
       />
     </div>
 

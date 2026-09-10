@@ -3,7 +3,7 @@
     <div class="max-w-7xl mx-auto space-y-6">
 
       <!-- ── ENCABEZADO PRINCIPAL ── -->
-      <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
+      <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden text-left">
         <div class="absolute -right-16 -top-16 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
         <div class="absolute -left-16 -bottom-16 w-64 h-64 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
@@ -20,7 +20,7 @@
               </span>
             </div>
             <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-2xl">
-              Calibra y entrena a la Inteligencia Artificial para clasificar respuestas abiertas (Buenas, Regulares o Malas) y encasillar alertas con íconos, colores y niveles personalizados.
+              Calibra y entrena a la Inteligencia Artificial para clasificar respuestas abiertas (Buenas, Regulares o Malas), detectar patrones/menciones recurrentes y aplicar estudios psicosociales normativos.
             </p>
           </div>
         </div>
@@ -99,374 +99,412 @@
           <FolderOpen class="w-4 h-4" />
           <span>Vinculación con Encuestas</span>
         </button>
+
+        <button
+          type="button"
+          @click="pestanaActiva = 'estudios'"
+          :class="[
+            'flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap',
+            pestanaActiva === 'estudios'
+              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
+          ]"
+        >
+          <GraduationCap class="w-4 h-4" />
+          <span>Estudios &amp; Marcos Psicosociales (5)</span>
+        </button>
       </nav>
 
       <!-- ═══════════════════════════════════════════════════════════════════════ -->
       <!-- PESTAÑA 1: SIMULADOR Y LABORATORIO EN VIVO -->
       <!-- ═══════════════════════════════════════════════════════════════════════ -->
-      <section v-if="pestanaActiva === 'simulador'" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <!-- Panel Izquierdo: Entrada de Prueba -->
-        <div class="lg:col-span-7 space-y-4">
-          <div class="p-5 sm:p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-            <div class="flex items-center justify-between">
-              <h2 class="text-sm font-black flex items-center gap-2">
-                <Zap class="w-4 h-4 text-indigo-500" />
-                Probar Respuesta Abierta en Tiempo Real
-              </h2>
-              <span class="text-[11px] text-slate-400">Simulador con motor activo</span>
-            </div>
+      <section v-if="pestanaActiva === 'simulador'" class="space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 text-left">
+          <!-- Panel Izquierdo: Entrada de Prueba -->
+          <div class="lg:col-span-7 space-y-4">
+            <div class="p-5 sm:p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+              <div class="flex items-center justify-between">
+                <h2 class="text-sm font-black flex items-center gap-2">
+                  <Zap class="w-4 h-4 text-indigo-500" />
+                  Probar Respuesta Abierta en Tiempo Real
+                </h2>
+                <span class="text-[11px] text-slate-400">Simulador con motor activo</span>
+              </div>
 
-            <div>
-              <label class="text-xs font-bold text-slate-600 dark:text-slate-300 block mb-1.5">
-                Escribe cualquier respuesta o comentario del colaborador:
-              </label>
-              <textarea
-                v-model="textoPrueba"
-                rows="4"
-                placeholder="Ejemplo: 'Mi supervisor no me escucha cuando tengo dudas y solo me grita delante de todos cuando algo sale mal...'"
-                class="w-full p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-y"
-                @keydown.enter.ctrl="ejecutarAnalisisPrueba"
-              ></textarea>
-              <span class="text-[10px] text-slate-400 mt-1 block">Presiona Ctrl + Enter o el botón para analizar.</span>
-            </div>
+              <div>
+                <label class="text-xs font-bold text-slate-600 dark:text-slate-300 block mb-1.5">
+                  Escribe cualquier respuesta o comentario del colaborador:
+                </label>
+                <textarea
+                  v-model="textoPrueba"
+                  rows="4"
+                  placeholder="Ejemplo: 'Mi supervisor no me escucha cuando tengo dudas y solo me grita delante de todos cuando algo sale mal...'"
+                  class="w-full p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-900 dark:text-slate-100 outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-y"
+                  @keydown.enter.ctrl="ejecutarAnalisisPrueba"
+                ></textarea>
+                <span class="text-[10px] text-slate-400 mt-1 block">Presiona Ctrl + Enter o el botón para analizar.</span>
+              </div>
 
-            <div class="flex items-center justify-between gap-3 pt-1">
-              <button
-                type="button"
-                @click="textoPrueba = ''; resultadoPrueba = null"
-                class="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer"
-              >
-                Limpiar
-              </button>
-
-              <button
-                type="button"
-                @click="ejecutarAnalisisPrueba"
-                :disabled="analizando"
-                class="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-sky-600 hover:from-indigo-500 hover:to-sky-500 text-white text-xs font-bold shadow-md shadow-indigo-600/20 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
-              >
-                <RefreshCw v-if="analizando" class="w-4 h-4 animate-spin" />
-                <Sparkles v-else class="w-4 h-4" />
-                <span>{{ analizando ? 'Analizando...' : 'Analizar y Encasillar con IA' }}</span>
-              </button>
-            </div>
-
-            <!-- Ejemplos Rápidos de Prueba -->
-            <div class="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2">
-              <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400 block">
-                Cargar frases de prueba rápidas:
-              </span>
-              <div class="flex flex-wrap gap-1.5">
+              <div class="flex items-center justify-between gap-3 pt-1">
                 <button
                   type="button"
-                  @click="cargarFraseRapida('Mi supervisor hace favoritismo y descalifica mi trabajo sin motivo.')"
-                  class="px-2.5 py-1 rounded-xl text-[11px] bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900/50 hover:bg-rose-100 transition-colors cursor-pointer font-medium"
+                  @click="textoPrueba = ''; resultadoPrueba = null"
+                  class="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer"
                 >
-                  🚨 Queja de Liderazgo
+                  Limpiar
                 </button>
+
                 <button
                   type="button"
-                  @click="cargarFraseRapida('Llego a mi casa con ansiedad y colapso emocional por la presión diaria.')"
-                  class="px-2.5 py-1 rounded-xl text-[11px] bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900/50 hover:bg-rose-100 transition-colors cursor-pointer font-medium"
+                  @click="ejecutarAnalisisPrueba"
+                  :disabled="analizando"
+                  class="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-sky-600 hover:from-indigo-500 hover:to-sky-500 text-white text-xs font-bold shadow-md shadow-indigo-600/20 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
                 >
-                  🚨 Crisis Anímica
+                  <RefreshCw v-if="analizando" class="w-4 h-4 animate-spin" />
+                  <Sparkles v-else class="w-4 h-4" />
+                  <span>{{ analizando ? 'Analizando...' : 'Analizar y Encasillar con IA' }}</span>
                 </button>
+              </div>
+
+              <!-- Ejemplos Rápidos de Prueba -->
+              <div class="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2">
+                <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400 block">
+                  Cargar frases de prueba rápidas:
+                </span>
+                <div class="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    @click="cargarFraseRapida('Daniel me tocó sin mi consentimiento en la oficina y fue inapropiado.')"
+                    class="px-2.5 py-1 rounded-xl text-[11px] bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-900 hover:bg-red-200 transition-colors cursor-pointer font-bold flex items-center gap-1"
+                  >
+                    <AlertTriangle class="w-3 h-3 text-red-600" />
+                    <span>🚨 Acoso Físico (Daniel)</span>
+                  </button>
+                  <button
+                    type="button"
+                    @click="cargarFraseRapida('Varias personas en el equipo opinamos que Omar nos trata mal y nos descalifica en público.')"
+                    class="px-2.5 py-1 rounded-xl text-[11px] bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900/50 hover:bg-rose-100 transition-colors cursor-pointer font-medium flex items-center gap-1"
+                  >
+                    <Users class="w-3 h-3 text-rose-500" />
+                    <span>🚨 Conflicto / Mención (Omar)</span>
+                  </button>
+                  <button
+                    type="button"
+                    @click="cargarFraseRapida('El ambiente es cordial y me siento muy respaldado por todo el equipo.')"
+                    class="px-2.5 py-1 rounded-xl text-[11px] bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/50 hover:bg-emerald-100 transition-colors cursor-pointer font-medium"
+                  >
+                    ✅ Percepción Positiva
+                  </button>
+                  <button
+                    type="button"
+                    @click="cargarFraseRapida('Sugiero pausas activas obligatorias y talleres de comunicación.')"
+                    class="px-2.5 py-1 rounded-xl text-[11px] bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-900/50 hover:bg-sky-100 transition-colors cursor-pointer font-medium"
+                  >
+                    💡 Sugerencia de Mejora
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Panel Derecho: Veredicto de la IA -->
+          <div class="lg:col-span-5 space-y-4">
+            <div class="p-5 sm:p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4 min-h-[350px] flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+                  <h3 class="text-xs font-black tracking-wider uppercase text-slate-400 flex items-center gap-1.5">
+                    <Activity class="w-3.5 h-3.5 text-indigo-500" />
+                    Diagnóstico y Encasillamiento
+                  </h3>
+                  <span v-if="resultadoPrueba" class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500">
+                    Confianza: {{ resultadoPrueba.confianza }}%
+                  </span>
+                </div>
+
+                <div v-if="resultadoPrueba" class="space-y-4 pt-4">
+                  <!-- Badge de Clasificación -->
+                  <div class="flex items-center justify-between">
+                    <span 
+                      :class="[
+                        'px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider border flex items-center gap-1.5',
+                        resultadoPrueba.clasificacion === 'Mala'
+                          ? 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800'
+                          : resultadoPrueba.clasificacion === 'Buena'
+                          ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
+                          : 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800'
+                      ]"
+                    >
+                      <AlertTriangle v-if="resultadoPrueba.clasificacion === 'Mala'" class="w-3.5 h-3.5" />
+                      <CheckCircle2 v-else-if="resultadoPrueba.clasificacion === 'Buena'" class="w-3.5 h-3.5" />
+                      <HelpCircle v-else class="w-3.5 h-3.5" />
+                      <span>Respuesta {{ resultadoPrueba.clasificacion }}</span>
+                    </span>
+
+                    <span class="text-xs font-bold font-mono text-slate-600 dark:text-slate-300">
+                      Puntaje Estimado: {{ resultadoPrueba.puntajeEstimado }} / 5.0
+                    </span>
+                  </div>
+
+                  <!-- Alerta Asignada -->
+                  <div v-if="resultadoPrueba.alertaAsignada" class="p-3.5 rounded-2xl bg-rose-50/80 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 space-y-1">
+                    <span class="text-[10px] font-extrabold uppercase text-rose-600 dark:text-rose-400 block">
+                      🚨 Alerta Psicosocial Encasillada (Nivel {{ resultadoPrueba.alertaAsignada.nivel }})
+                    </span>
+                    <h4 class="text-xs font-extrabold text-slate-900 dark:text-white">
+                      {{ resultadoPrueba.alertaAsignada.nombre }}
+                    </h4>
+                    <p class="text-[11px] text-slate-600 dark:text-slate-300">
+                      {{ resultadoPrueba.sugerenciaAccion }}
+                    </p>
+                  </div>
+
+                  <!-- Razonamiento -->
+                  <div class="space-y-1 bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-100 dark:border-slate-800">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase block">Razonamiento de la IA:</span>
+                    <p class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed italic">
+                      "{{ resultadoPrueba.razonamiento }}"
+                    </p>
+                  </div>
+
+                  <!-- Palabras Clave Detectadas -->
+                  <div v-if="resultadoPrueba.palabrasDetectadas.length > 0" class="space-y-1">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase block">Términos Clave Coincidentes:</span>
+                    <div class="flex flex-wrap gap-1">
+                      <span 
+                        v-for="p in resultadoPrueba.palabrasDetectadas" 
+                        :key="p" 
+                        class="px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-[10px] font-mono font-bold"
+                      >
+                        {{ p }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div v-else class="py-16 text-center text-slate-400 space-y-2">
+                  <BrainCircuit class="w-10 h-10 mx-auto text-slate-300 dark:text-slate-700 animate-pulse" />
+                  <p class="text-xs font-medium">Esperando texto para analizar...</p>
+                  <p class="text-[11px] text-slate-400">Escribe una frase o selecciona un ejemplo rápido para ver la clasificación en vivo.</p>
+                </div>
+              </div>
+
+              <div v-if="resultadoPrueba" class="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-end">
                 <button
                   type="button"
-                  @click="cargarFraseRapida('El ambiente es cordial y me siento muy respaldado por todo el equipo.')"
-                  class="px-2.5 py-1 rounded-xl text-[11px] bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/50 hover:bg-emerald-100 transition-colors cursor-pointer font-medium"
+                  @click="guardarPruebaComoEjemplo"
+                  class="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
                 >
-                  ✅ Percepción Positiva
-                </button>
-                <button
-                  type="button"
-                  @click="cargarFraseRapida('Recomiendo mejorar la velocidad del internet y el aire acondicionado.')"
-                  class="px-2.5 py-1 rounded-xl text-[11px] bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-900/50 hover:bg-sky-100 transition-colors cursor-pointer font-medium"
-                >
-                  💡 Sugerencia Neutra
+                  <Plus class="w-3.5 h-3.5 text-indigo-500" />
+                  <span>Guardar como Ejemplo de Entrenamiento</span>
                 </button>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Panel Derecho: Veredicto de la IA -->
-        <div class="lg:col-span-5 space-y-4">
-          <div class="p-5 sm:p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4 min-h-[350px] flex flex-col justify-between">
-            <div>
-              <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
-                <h3 class="text-xs font-black tracking-wider uppercase text-slate-400 flex items-center gap-1.5">
-                  <Activity class="w-3.5 h-3.5 text-indigo-500" />
-                  Diagnóstico y Encasillamiento
-                </h3>
-                <span v-if="resultadoPrueba" class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 font-bold">
-                  Confianza: {{ resultadoPrueba.confianza }}%
+        <!-- ── SECCIÓN DE PATRONES Y MENCIONES RECURRENTES ── -->
+        <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4 text-left">
+          <div class="flex items-center justify-between">
+            <div class="space-y-1">
+              <span class="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                Extracción de Menciones por la IA
+              </span>
+              <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Users class="w-4 h-4 text-indigo-500" />
+                <span>Patrones y Menciones Recurrentes de Personas o Problemas</span>
+              </h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400">
+                La IA agrupa automáticamente respuestas cuando varias personas hacen referencia al mismo sujeto, líder o temática crítica.
+              </p>
+            </div>
+          </div>
+
+          <div v-if="patronesDetectadosReales.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div
+              v-for="patron in patronesDetectadosReales"
+              :key="patron.sujetoOTema"
+              class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2.5"
+            >
+              <div class="flex items-center justify-between">
+                <span 
+                  :class="[
+                    'text-[10px] font-extrabold px-2 py-0.5 rounded-full border',
+                    patron.categoria === 'Acoso / Vulneración'
+                      ? 'bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 border-red-300'
+                      : patron.categoria === 'Liderazgo & Trato'
+                      ? 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border-rose-300'
+                      : 'bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 border-sky-300'
+                  ]"
+                >
+                  {{ patron.categoria }}
+                </span>
+                <span class="text-xs font-black font-mono text-slate-700 dark:text-slate-300">
+                  {{ patron.conteo }} reportes reales
                 </span>
               </div>
 
-              <!-- Estado Inicial Sin Análisis -->
-              <div v-if="!resultadoPrueba" class="py-12 text-center space-y-2">
-                <div class="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800/50 flex items-center justify-center text-indigo-500 mx-auto">
-                  <Cpu class="w-6 h-6" />
-                </div>
-                <p class="text-xs font-bold text-slate-700 dark:text-slate-300">Esperando texto para analizar</p>
-                <p class="text-[11px] text-slate-400 max-w-xs mx-auto">
-                  Escribe una frase en el panel izquierdo o selecciona un ejemplo rápido para ver la clasificación en vivo.
-                </p>
-              </div>
+              <h4 class="text-sm font-bold text-slate-900 dark:text-white">
+                {{ patron.sujetoOTema }}
+              </h4>
 
-              <!-- Resultados del Análisis -->
-              <div v-else class="space-y-4 pt-3">
-                <div
-                  :class="[
-                    'p-3.5 rounded-2xl border flex items-center justify-between gap-3',
-                    resultadoPrueba.clasificacion === 'Buena'
-                      ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200'
-                      : resultadoPrueba.clasificacion === 'Mala'
-                      ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200'
-                      : 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-200'
-                  ]"
-                >
-                  <div class="flex items-center gap-2.5">
-                    <CheckCircle2 v-if="resultadoPrueba.clasificacion === 'Buena'" class="w-6 h-6 text-emerald-500 shrink-0" />
-                    <ShieldAlert v-else-if="resultadoPrueba.clasificacion === 'Mala'" class="w-6 h-6 text-rose-500 shrink-0" />
-                    <AlertTriangle v-else class="w-6 h-6 text-amber-500 shrink-0" />
-                    <div>
-                      <span class="text-[10px] uppercase font-mono font-bold opacity-80 block">Clasificación IA:</span>
-                      <strong class="text-sm font-black">
-                        {{ resultadoPrueba.clasificacion === 'Buena' ? 'Respuesta Favorable (Buena)' : resultadoPrueba.clasificacion === 'Mala' ? 'Respuesta Crítica (Alerta Activa)' : 'Respuesta Regular / Neutra' }}
-                      </strong>
-                    </div>
-                  </div>
-                  <span class="text-xs font-mono font-black px-2.5 py-1 rounded-xl bg-white/80 dark:bg-slate-900/80 shadow-sm border border-slate-200/60 dark:border-slate-700/60">
-                    {{ resultadoPrueba.puntajeEstimado }}/5.0
-                  </span>
-                </div>
-
-                <div v-if="resultadoPrueba.alertaAsignada" class="p-3.5 rounded-2xl bg-rose-100/50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/60 space-y-1.5">
-                  <div class="flex items-center justify-between text-xs">
-                    <span class="font-bold text-rose-800 dark:text-rose-200 flex items-center gap-1.5">
-                      <component :is="obtenerIconoComponente(resultadoPrueba.alertaAsignada.icono)" class="w-3.5 h-3.5 text-rose-600" />
-                      Alerta Encasillada:
-                    </span>
-                    <span class="text-[10px] font-mono px-2 py-0.5 rounded-full font-bold bg-rose-200 dark:bg-rose-900 text-rose-900 dark:text-rose-100">
-                      {{ obtenerEtiquetaNivel(resultadoPrueba.alertaAsignada.nivel) }}
-                    </span>
-                  </div>
-                  <p class="text-xs font-black text-rose-900 dark:text-rose-100">
-                    {{ resultadoPrueba.alertaAsignada.nombre }}
-                  </p>
-                  <p class="text-[11px] text-rose-700 dark:text-rose-300">
-                    Protocolo sugerido: {{ resultadoPrueba.alertaAsignada.protocoloAccion }}
-                  </p>
-                </div>
-
-                <div v-if="resultadoPrueba.palabrasDetectadas.length > 0" class="space-y-1">
-                  <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400">Términos gatillo detectados:</span>
-                  <div class="flex flex-wrap gap-1">
-                    <span
-                      v-for="pal in resultadoPrueba.palabrasDetectadas"
-                      :key="pal"
-                      class="text-[10px] font-mono px-2 py-0.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800"
-                    >
-                      #{{ pal }}
-                    </span>
-                  </div>
-                </div>
-
-                <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300 space-y-1">
-                  <span class="text-[10px] font-bold uppercase text-slate-400 block">Explicación del Razonamiento:</span>
-                  <p class="leading-relaxed">{{ resultadoPrueba.razonamiento }}</p>
+              <div class="space-y-1">
+                <span class="text-[10px] font-bold text-slate-400 uppercase block">Frases reales de muestra:</span>
+                <div v-for="(frase, fIdx) in patron.frasesMencionadas" :key="fIdx" class="text-[11px] text-slate-600 dark:text-slate-300 italic bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-100 dark:border-slate-800">
+                  "{{ frase }}"
                 </div>
               </div>
             </div>
-
-            <div v-if="resultadoPrueba" class="pt-3 border-t border-slate-200 dark:border-slate-800">
-              <button
-                type="button"
-                @click="guardarPruebaComoEjemplo"
-                class="w-full py-2.5 rounded-2xl bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-bold hover:bg-slate-800 dark:hover:bg-white transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer"
-              >
-                <Save class="w-4 h-4" />
-                <span>Guardar este caso como Ejemplo de Entrenamiento</span>
-              </button>
-            </div>
+          </div>
+          <div v-else class="p-8 text-center bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 text-xs text-slate-500">
+            No se han detectado patrones o menciones recurrentes en las respuestas reales registradas. El motor de IA procesará y agrupará automáticamente las respuestas a medida que ingresen en el sistema.
           </div>
         </div>
       </section>
 
       <!-- ═══════════════════════════════════════════════════════════════════════ -->
-      <!-- PESTAÑA 2: CRITERIOS DE ENTRENAMIENTO & REGLAS DE LA IA -->
+      <!-- PESTAÑA 2: CRITERIOS & EJEMPLOS DE ENTRENAMIENTO -->
       <!-- ═══════════════════════════════════════════════════════════════════════ -->
-      <section v-if="pestanaActiva === 'criterios'" class="space-y-6">
-        <div class="p-5 sm:p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
-            <div>
-              <h2 class="text-sm font-black flex items-center gap-2">
-                <BrainCircuit class="w-4 h-4 text-indigo-500" />
-                Directrices Generales &amp; Criterios de Calificación
-              </h2>
-              <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Define cómo la Inteligencia Artificial debe interpretar las respuestas del personal.
-              </p>
-            </div>
-
-            <div class="flex items-center gap-2">
-              <span class="text-xs font-bold text-slate-600 dark:text-slate-300">Sensibilidad:</span>
-              <select
-                v-model="configuracion.sensibilidad"
-                @change="actualizarConfiguracion({ sensibilidad: configuracion.sensibilidad })"
-                class="px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-              >
-                <option value="Estricta">Estricta (Cero Falsas Alarmas)</option>
-                <option value="Equilibrada">Equilibrada (Recomendada)</option>
-                <option value="Sensible">Sensible (Detección Temprana)</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="p-4 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40 space-y-2">
-              <div class="flex items-center gap-2 text-emerald-700 dark:text-emerald-300 font-bold text-xs">
-                <CheckCircle2 class="w-4 h-4 text-emerald-500" />
-                <span>¿Cuándo es "Buena" (Favorable)?</span>
-              </div>
-              <textarea
-                v-model="configuracion.criteriosBuenas"
-                rows="3"
-                class="w-full p-2.5 rounded-xl bg-white dark:bg-slate-950 border border-emerald-300 dark:border-emerald-800/80 text-xs text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-emerald-500"
-              ></textarea>
-            </div>
-
-            <div class="p-4 rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 space-y-2">
-              <div class="flex items-center gap-2 text-amber-700 dark:text-amber-300 font-bold text-xs">
-                <AlertTriangle class="w-4 h-4 text-amber-500" />
-                <span>¿Cuándo es "Regular" (Neutra)?</span>
-              </div>
-              <textarea
-                v-model="configuracion.criteriosRegulares"
-                rows="3"
-                class="w-full p-2.5 rounded-xl bg-white dark:bg-slate-950 border border-amber-300 dark:border-amber-800/80 text-xs text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-amber-500"
-              ></textarea>
-            </div>
-
-            <div class="p-4 rounded-2xl bg-rose-50/60 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/40 space-y-2">
-              <div class="flex items-center gap-2 text-rose-700 dark:text-rose-300 font-bold text-xs">
-                <ShieldAlert class="w-4 h-4 text-rose-500" />
-                <span>¿Cuándo es "Mala" (Alerta Crítica)?</span>
-              </div>
-              <textarea
-                v-model="configuracion.criteriosMalas"
-                rows="3"
-                class="w-full p-2.5 rounded-xl bg-white dark:bg-slate-950 border border-rose-300 dark:border-rose-800/80 text-xs text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-rose-500"
-              ></textarea>
-            </div>
-          </div>
-
-          <div class="flex items-center justify-end">
+      <section v-else-if="pestanaActiva === 'criterios'" class="space-y-6 text-left">
+        <!-- Tarjetas de Directivas Generales -->
+        <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-base font-bold flex items-center gap-2">
+              <Sliders class="w-4 h-4 text-indigo-500" />
+              <span>Directrices de Calibración General</span>
+            </h3>
             <button
               type="button"
-              @click="actualizarConfiguracion(configuracion)"
-              class="px-5 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-600/20 transition-all flex items-center gap-2 cursor-pointer"
+              @click="guardarCalibracionForm"
+              class="px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
             >
-              <Save class="w-4 h-4" />
-              <span>Guardar Criterios de IA</span>
+              Guardar Cambios de Calibración
             </button>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+            <div class="space-y-1.5 p-4 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-900/40">
+              <label class="font-bold text-emerald-800 dark:text-emerald-300 block">Criterio para Respuestas BUENAS:</label>
+              <textarea
+                v-model="configuracionForm.criteriosBuenas"
+                rows="3"
+                class="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-900 text-xs outline-none"
+              ></textarea>
+            </div>
+
+            <div class="space-y-1.5 p-4 rounded-2xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/40">
+              <label class="font-bold text-amber-800 dark:text-amber-300 block">Criterio para Respuestas REGULARES / MEJORAS:</label>
+              <textarea
+                v-model="configuracionForm.criteriosRegulares"
+                rows="3"
+                class="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900 text-xs outline-none"
+              ></textarea>
+            </div>
+
+            <div class="space-y-1.5 p-4 rounded-2xl bg-rose-50/50 dark:bg-rose-950/20 border border-rose-200/60 dark:border-rose-900/40">
+              <label class="font-bold text-rose-800 dark:text-rose-300 block">Criterio para Respuestas MALAS / ALERTAS:</label>
+              <textarea
+                v-model="configuracionForm.criteriosMalas"
+                rows="3"
+                class="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-900 text-xs outline-none"
+              ></textarea>
+            </div>
           </div>
         </div>
 
-        <!-- Casos de Entrenamiento -->
-        <div class="p-5 sm:p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <!-- Lista de Casos de Entrenamiento -->
+        <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
-              <h3 class="text-sm font-black flex items-center gap-2">
-                <BookOpen class="w-4 h-4 text-indigo-500" />
-                Casos y Ejemplos de Entrenamiento ({{ ejemplosEntrenamiento.length }})
+              <h3 class="text-base font-bold flex items-center gap-2">
+                <BrainCircuit class="w-4 h-4 text-indigo-500" />
+                <span>Casos Semilla de Aprendizaje ({{ ejemplosFiltrados.length }})</span>
               </h3>
-              <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                La IA aprende directamente de estos ejemplos prácticos para mejorar su precisión.
+              <p class="text-xs text-slate-500 dark:text-slate-400">
+                Ejemplos de entrenamiento que la IA consulta en tiempo real mediante aprendizaje guiado (Few-shot learning).
               </p>
             </div>
 
-            <div class="flex items-center gap-2">
-              <div class="flex rounded-xl bg-slate-100 dark:bg-slate-800 p-0.5 text-xs font-semibold">
-                <button
-                  type="button"
-                  @click="filtroEjemplos = 'Todas'"
-                  :class="['px-2.5 py-1 rounded-lg transition-all', filtroEjemplos === 'Todas' ? 'bg-white dark:bg-slate-900 text-indigo-600 shadow-sm' : 'text-slate-500']"
-                >Todas</button>
-                <button
-                  type="button"
-                  @click="filtroEjemplos = 'Buena'"
-                  :class="['px-2.5 py-1 rounded-lg transition-all', filtroEjemplos === 'Buena' ? 'bg-white dark:bg-slate-900 text-emerald-600 shadow-sm' : 'text-slate-500']"
-                >Buenas</button>
-                <button
-                  type="button"
-                  @click="filtroEjemplos = 'Regular'"
-                  :class="['px-2.5 py-1 rounded-lg transition-all', filtroEjemplos === 'Regular' ? 'bg-white dark:bg-slate-900 text-amber-600 shadow-sm' : 'text-slate-500']"
-                >Regulares</button>
-                <button
-                  type="button"
-                  @click="filtroEjemplos = 'Mala'"
-                  :class="['px-2.5 py-1 rounded-lg transition-all', filtroEjemplos === 'Mala' ? 'bg-white dark:bg-slate-900 text-rose-600 shadow-sm' : 'text-slate-500']"
-                >Malas</button>
-              </div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                @click="restablecerEjemplosPorDefecto"
+                class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-semibold hover:bg-slate-200 transition-colors cursor-pointer"
+              >
+                Restablecer Fábrica
+              </button>
 
               <button
                 type="button"
                 @click="modalNuevoEjemplo = true"
-                class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                class="px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm cursor-pointer flex items-center gap-1.5"
               >
                 <Plus class="w-4 h-4" />
-                <span>Añadir Caso</span>
+                <span>Nuevo Caso de Entrenamiento</span>
               </button>
             </div>
           </div>
 
-          <!-- Lista de Ejemplos -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+          <!-- Filtros de Ejemplos -->
+          <div class="flex items-center gap-2 text-xs">
+            <span class="text-slate-400 font-semibold">Filtrar:</span>
+            <button
+              v-for="f in (['Todas', 'Mala', 'Regular', 'Buena'] as const)"
+              :key="f"
+              type="button"
+              @click="filtroEjemplos = f"
+              :class="[
+                'px-3 py-1 rounded-xl font-bold transition-all cursor-pointer',
+                filtroEjemplos === f ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+              ]"
+            >
+              {{ f }}
+            </button>
+          </div>
+
+          <!-- Grid de Ejemplos -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div
               v-for="ej in ejemplosFiltrados"
               :key="ej.id"
-              class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800/80 flex flex-col justify-between gap-3 hover:border-indigo-300 dark:hover:border-indigo-800 transition-all"
+              class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3 relative group flex flex-col justify-between"
             >
               <div class="space-y-2">
                 <div class="flex items-center justify-between gap-2">
-                  <span
+                  <span 
                     :class="[
-                      'text-[10px] uppercase font-mono font-bold px-2 py-0.5 rounded-full border',
-                      ej.clasificacion === 'Buena'
-                        ? 'bg-emerald-100 dark:bg-emerald-950/80 border-emerald-300 text-emerald-800 dark:text-emerald-200'
-                        : ej.clasificacion === 'Mala'
-                        ? 'bg-rose-100 dark:bg-rose-950/80 border-rose-300 text-rose-800 dark:text-rose-200'
-                        : 'bg-amber-100 dark:bg-amber-950/80 border-amber-300 text-amber-800 dark:text-amber-200'
+                      'text-[10px] font-extrabold px-2 py-0.5 rounded-full border',
+                      ej.clasificacion === 'Mala'
+                        ? 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border-rose-300'
+                        : ej.clasificacion === 'Buena'
+                        ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-300'
+                        : 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-300'
                     ]"
                   >
-                    {{ ej.clasificacion }}
+                    Respuesta {{ ej.clasificacion }}
                   </span>
 
                   <button
                     type="button"
                     @click="eliminarEjemplo(ej.id)"
-                    class="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors cursor-pointer"
-                    title="Eliminar este ejemplo"
+                    class="text-slate-400 hover:text-rose-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                    title="Eliminar caso"
                   >
                     <Trash2 class="w-3.5 h-3.5" />
                   </button>
                 </div>
 
-                <p class="text-xs font-medium text-slate-900 dark:text-slate-100 italic leading-relaxed">
+                <p class="text-xs font-semibold text-slate-800 dark:text-slate-200 leading-relaxed italic">
                   "{{ ej.textoEjemplo }}"
                 </p>
 
-                <div v-if="ej.nombreAlerta" class="flex items-center gap-1.5 text-[11px] text-rose-700 dark:text-rose-300 font-semibold bg-rose-50 dark:bg-rose-950/50 px-2 py-1 rounded-lg border border-rose-200 dark:border-rose-900/50">
-                  <ShieldAlert class="w-3.5 h-3.5 text-rose-500" />
-                  <span>Alerta: {{ ej.nombreAlerta }}</span>
-                </div>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                  <strong>Criterio:</strong> {{ ej.explicacionCriterio }}
+                </p>
               </div>
 
-              <div class="text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-200/60 dark:border-slate-800/60">
-                <strong class="text-slate-700 dark:text-slate-300">Criterio:</strong> {{ ej.explicacionCriterio }}
+              <div v-if="ej.nombreAlerta" class="pt-2 border-t border-slate-200 dark:border-slate-800 text-[10px] font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1">
+                <ShieldAlert class="w-3 h-3 shrink-0" />
+                <span class="truncate">Encasilla en: {{ ej.nombreAlerta }}</span>
               </div>
             </div>
           </div>
@@ -474,521 +512,249 @@
       </section>
 
       <!-- ═══════════════════════════════════════════════════════════════════════ -->
-      <!-- PESTAÑA 3: CATÁLOGO DE ALERTAS & PALABRAS ASOCIADAS -->
+      <!-- PESTAÑA 3: CATÁLOGO DE ALERTAS Y PALABRAS CLAVE -->
       <!-- ═══════════════════════════════════════════════════════════════════════ -->
-      <section v-if="pestanaActiva === 'alertas'" class="space-y-6">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h2 class="text-base font-black flex items-center gap-2">
-              <ShieldAlert class="w-5 h-5 text-rose-500" />
-              Tipos de Alertas, Íconos, Colores &amp; Niveles
-            </h2>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Crea o personaliza alertas con íconos identificativos, colores distintivos, niveles de severidad y palabras asociadas.
-            </p>
+      <section v-else-if="pestanaActiva === 'alertas'" class="space-y-6 text-left">
+        <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-base font-bold flex items-center gap-2">
+                <ShieldAlert class="w-4 h-4 text-indigo-500" />
+                <span>Tipos de Alerta Configurados en la IA</span>
+              </h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400">
+                Configura los niveles (1 al 4), íconos, colores y palabras clave que activan cada protocolo.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              @click="abrirModalCrearAlerta"
+              class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm cursor-pointer flex items-center gap-1.5"
+            >
+              <Plus class="w-4 h-4" />
+              <span>Crear Nuevo Tipo de Alerta</span>
+            </button>
           </div>
 
-          <button
-            type="button"
-            @click="abrirModalCrearAlerta"
-            class="px-4 py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-md shadow-rose-600/20 transition-all flex items-center gap-2 cursor-pointer self-start sm:self-auto"
-          >
-            <Plus class="w-4 h-4" />
-            <span>Crear Nueva Alerta</span>
-          </button>
-        </div>
-
-        <!-- Tarjetas de Alertas con Ícono y Color Personalizado -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div
-            v-for="alerta in tiposAlertas"
-            :key="alerta.id"
-            class="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between gap-4 transition-all relative overflow-hidden"
-            :style="{ borderTop: `4px solid ${alerta.color || '#ef4444'}` }"
-          >
-            <div class="space-y-3">
-              <!-- Header de la Alerta -->
-              <div class="flex items-start justify-between gap-2">
-                <div class="flex items-center gap-2.5">
-                  <div
-                    class="w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-md shrink-0"
-                    :style="{ backgroundColor: alerta.color || '#ef4444' }"
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div
+              v-for="tipo in tiposAlertas"
+              :key="tipo.id"
+              class="p-5 rounded-3xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3 flex flex-col justify-between text-left"
+            >
+              <div class="space-y-2">
+                <div class="flex items-center justify-between gap-2">
+                  <span 
+                    class="text-[9px] font-mono font-extrabold px-2 py-0.5 rounded border"
+                    :class="obtenerClaseColorNivel(tipo.nivel).badge"
                   >
-                    <component :is="obtenerIconoComponente(alerta.icono)" class="w-5 h-5" />
+                    Nivel {{ tipo.nivel }} — {{ tipo.severidad }}
+                  </span>
+
+                  <div class="flex items-center gap-1">
+                    <button
+                      type="button"
+                      @click="abrirModalEditarAlerta(tipo)"
+                      class="p-1 text-slate-400 hover:text-indigo-500 transition-colors cursor-pointer"
+                      title="Editar alerta"
+                    >
+                      <Edit3 class="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      @click="confirmarEliminarAlerta(tipo.id, tipo.nombre)"
+                      class="p-1 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
+                      title="Eliminar alerta"
+                    >
+                      <Trash2 class="w-3.5 h-3.5" />
+                    </button>
                   </div>
-                  <div>
-                    <h3 class="text-xs font-black leading-tight text-slate-900 dark:text-white">
-                      {{ alerta.nombre }}
-                    </h3>
-                    <span class="text-[10px] font-mono font-bold" :style="{ color: alerta.color || '#ef4444' }">
-                      {{ obtenerEtiquetaNivel(alerta.nivel) }} · {{ alerta.severidad }}
+                </div>
+
+                <h4 class="text-sm font-black text-slate-900 dark:text-white">
+                  {{ tipo.nombre }}
+                </h4>
+
+                <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                  {{ tipo.descripcion }}
+                </p>
+
+                <!-- Palabras Clave -->
+                <div class="space-y-1 pt-1">
+                  <span class="text-[10px] font-bold text-slate-400 uppercase block">Palabras Clave Desencadenantes:</span>
+                  <div class="flex flex-wrap gap-1">
+                    <span 
+                      v-for="kw in tipo.palabrasClave" 
+                      :key="kw" 
+                      class="px-2 py-0.5 rounded-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[10px] font-mono text-slate-700 dark:text-slate-300"
+                    >
+                      {{ kw }}
                     </span>
                   </div>
                 </div>
-
-                <button
-                  type="button"
-                  @click="toggleActiva(alerta.id)"
-                  :class="[
-                    'px-2 py-0.5 rounded-full text-[10px] font-bold border transition-colors cursor-pointer',
-                    alerta.activa
-                      ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border-emerald-300'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-300'
-                  ]"
-                >
-                  {{ alerta.activa ? 'Activa' : 'Inactiva' }}
-                </button>
               </div>
 
-              <!-- Descripción -->
-              <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                {{ alerta.descripcion }}
-              </p>
+              <div class="pt-3 border-t border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 space-y-1">
+                <strong>Protocolo de Acción:</strong>
+                <p class="text-[10px] text-slate-600 dark:text-slate-400 line-clamp-2">
+                  {{ tipo.protocoloAccion }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-              <!-- Palabras Clave Asociadas -->
-              <div class="space-y-1.5 pt-1">
-                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                  Palabras Clave Asociadas ({{ alerta.palabrasClave.length }}):
-                </span>
-                <div class="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
-                  <span
-                    v-for="pal in alerta.palabrasClave"
-                    :key="pal"
-                    class="text-[10px] font-mono px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
-                  >
-                    {{ pal }}
+      <!-- ═══════════════════════════════════════════════════════════════════════ -->
+      <!-- PESTAÑA 4: VINCULACIÓN CON ENCUESTAS -->
+      <!-- ═══════════════════════════════════════════════════════════════════════ -->
+      <section v-else-if="pestanaActiva === 'matriz'" class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4 text-left">
+        <div class="space-y-1">
+          <h3 class="text-base font-bold flex items-center gap-2">
+            <FolderOpen class="w-4 h-4 text-indigo-500" />
+            <span>Vinculación con Preguntas Abiertas de las Encuestas</span>
+          </h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400">
+            El motor analiza automáticamente las respuestas abiertas de texto libre al ser enviadas por los colaboradores.
+          </p>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-200/60 dark:border-indigo-800/60 text-xs space-y-2">
+          <div class="flex items-center gap-2 font-bold text-indigo-900 dark:text-indigo-300">
+            <CheckCircle2 class="w-4 h-4 text-indigo-500" />
+            <span>Integración Activa con el Módulo de Encuestas</span>
+          </div>
+          <p class="text-slate-600 dark:text-slate-300 leading-relaxed">
+            Cada respuesta enviada en encuestas de Clima Laboral es procesada por <strong class="text-indigo-600 dark:text-indigo-400">useReconocimientoIA</strong>. Si la respuesta contiene expresiones críticas, hostigamiento o acoso, se genera automáticamente una notificación de Alerta Psicosocial en el Dashboard.
+          </p>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════════════════════════════ -->
+      <!-- PESTAÑA 5: ESTUDIOS Y MARCOS PSICOSOCIALES APLICABLES -->
+      <!-- ═══════════════════════════════════════════════════════════════════════ -->
+      <section v-else-if="pestanaActiva === 'estudios'" class="space-y-6 text-left">
+        <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+          <div class="space-y-1">
+            <span class="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+              Marcos Normativos &amp; Psicométricos
+            </span>
+            <h3 class="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+              <GraduationCap class="w-5 h-5 text-indigo-500" />
+              <span>Estudios &amp; Diagnósticos Psicosociales Aplicables</span>
+            </h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+              Estudios científicos y regulaciones que la plataforma integra para evaluar salud mental, agotamiento laboral, acoso y clima organizacional.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div
+              v-for="estudio in listaEstudiosPsicosociales"
+              :key="estudio.id"
+              class="p-5 rounded-3xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3.5 flex flex-col justify-between text-left hover:border-indigo-300 dark:hover:border-indigo-800 transition-all"
+            >
+              <div class="space-y-3">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex items-center gap-3">
+                    <div 
+                      class="w-10 h-10 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-sm"
+                      :style="{ backgroundColor: estudio.color }"
+                    >
+                      <component :is="estudio.icono" class="w-5 h-5" />
+                    </div>
+
+                    <div>
+                      <span class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                        {{ estudio.codigo }}
+                      </span>
+                      <h4 class="text-sm font-black text-slate-900 dark:text-white mt-0.5">
+                        {{ estudio.titulo }}
+                      </h4>
+                    </div>
+                  </div>
+
+                  <span class="text-[10px] font-mono text-slate-400 shrink-0">
+                    {{ estudio.ano }}
                   </span>
+                </div>
+
+                <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                  {{ estudio.resumen }}
+                </p>
+
+                <div class="space-y-1.5 p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-850">
+                  <span class="text-[10px] font-bold text-slate-400 uppercase block">¿Qué mide exactamente?</span>
+                  <ul class="space-y-1">
+                    <li v-for="(m, mIdx) in estudio.queMide" :key="mIdx" class="text-[11px] text-slate-700 dark:text-slate-300 flex items-start gap-1.5">
+                      <span class="text-indigo-500 font-bold">•</span>
+                      <span>{{ m }}</span>
+                    </li>
+                  </ul>
                 </div>
               </div>
 
-              <!-- Protocolo -->
-              <div v-if="alerta.protocoloAccion" class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200/60 dark:border-slate-800/60 text-[11px] text-slate-600 dark:text-slate-400">
-                <strong class="text-slate-800 dark:text-slate-200">Protocolo:</strong> {{ alerta.protocoloAccion }}
+              <div class="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2 text-xs">
+                <div class="flex items-center justify-between text-[11px]">
+                  <span class="text-slate-400">Entidad / Autor:</span>
+                  <span class="font-bold text-slate-700 dark:text-slate-300">{{ estudio.entidad }}</span>
+                </div>
+                <div class="p-2.5 rounded-xl bg-sky-50/60 dark:bg-sky-950/30 border border-sky-200/60 dark:border-sky-900/40 text-[11px] text-sky-900 dark:text-sky-300">
+                  <strong>Utilidad Práctica:</strong> {{ estudio.utilidadPractica }}
+                </div>
               </div>
-            </div>
-
-            <!-- Acciones -->
-            <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-              <button
-                type="button"
-                @click="abrirModalEditarAlerta(alerta)"
-                class="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1 cursor-pointer"
-              >
-                <Edit class="w-3.5 h-3.5" />
-                <span>Editar</span>
-              </button>
-
-              <button
-                type="button"
-                @click="confirmarEliminarAlerta(alerta.id, alerta.nombre)"
-                class="px-3 py-1.5 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors flex items-center gap-1 cursor-pointer"
-              >
-                <Trash2 class="w-3.5 h-3.5" />
-                <span>Eliminar</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ═══════════════════════════════════════════════════════════════════════ -->
-      <!-- PESTAÑA 4: MATRIZ DE VINCULACIÓN CON ENCUESTAS -->
-      <!-- ═══════════════════════════════════════════════════════════════════════ -->
-      <section v-if="pestanaActiva === 'matriz'" class="space-y-4">
-        <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 flex items-center justify-center text-indigo-500 shrink-0">
-              <FolderOpen class="w-5 h-5" />
-            </div>
-            <div>
-              <h2 class="text-sm font-black">Vinculación de Alertas en Preguntas y Opciones</h2>
-              <p class="text-xs text-slate-500 dark:text-slate-400">
-                Las alertas creadas en este módulo están sincronizadas en tiempo real con todas las encuestas y editores de la plataforma.
-              </p>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-            <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2">
-              <div class="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-bold text-xs">
-                <Tag class="w-4 h-4" />
-                <span>1. En Respuestas de Opción Múltiple</span>
-              </div>
-              <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                En el <strong>Editor de Preguntas</strong>, puedes activar el ícono 🔔 en cualquier opción de respuesta específica (ej. *"Más de 6 meses"*, *"No recibo feedback"*) y elegir del selector la alerta correspondiente. Cuando un colaborador marque esa opción, se generará la alerta instantáneamente con su ícono y color.
-              </p>
-            </div>
-
-            <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2">
-              <div class="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-bold text-xs">
-                <BrainCircuit class="w-4 h-4" />
-                <span>2. En Respuestas Abiertas y Texto Libre</span>
-              </div>
-              <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                Cuando un colaborador escribe en una caja de texto libre (preguntas abiertas de diagnóstico, conflictos o sugerencias), el motor de <strong>Reconocimiento de IA</strong> analiza semánticamente el texto según tus criterios y palabras clave, y si detecta un caso crítico, lo encasilla y notifica en el Dashboard de Alertas.
-              </p>
             </div>
           </div>
         </div>
       </section>
 
     </div>
-
-    <!-- ═════════════════════════════════════════════════════════════════════════ -->
-    <!-- MODAL: CREAR / EDITAR ALERTA CON SELECTOR DE ÍCONO Y COLOR -->
-    <!-- ═════════════════════════════════════════════════════════════════════════ -->
-    <div
-      v-if="modalCrearAlerta"
-      class="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
-      @click.self="modalCrearAlerta = false"
-    >
-      <div class="w-full max-w-xl bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
-          <div class="flex items-center gap-2.5">
-            <div
-              class="w-8 h-8 rounded-xl flex items-center justify-center text-white shadow-sm"
-              :style="{ backgroundColor: formularioAlerta.color || '#ef4444' }"
-            >
-              <component :is="obtenerIconoComponente(formularioAlerta.icono)" class="w-4 h-4" />
-            </div>
-            <h3 class="text-sm font-black">
-              {{ editandoAlertaId ? 'Editar Tipo de Alerta' : 'Crear Nuevo Tipo de Alerta' }}
-            </h3>
-          </div>
-          <button
-            type="button"
-            @click="modalCrearAlerta = false"
-            class="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-          >
-            <X class="w-4 h-4" />
-          </button>
-        </div>
-
-        <div class="space-y-3 text-xs">
-          <!-- Nombre -->
-          <div>
-            <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">Nombre de la Alerta:</label>
-            <input
-              v-model="formularioAlerta.nombre"
-              type="text"
-              placeholder="Ej. Mala Gestión de los Jefes &amp; Liderazgo Tóxico"
-              class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-rose-500"
-            />
-          </div>
-
-          <!-- Selector de Ícono y Color -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-            <!-- Selector de Íconos -->
-            <div>
-              <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1.5">Ícono Identificativo:</label>
-              <div class="grid grid-cols-5 gap-1.5">
-                <button
-                  v-for="ico in listaIconosDisponibles"
-                  :key="ico.nombre"
-                  type="button"
-                  @click="formularioAlerta.icono = ico.nombre"
-                  :class="[
-                    'p-2 rounded-xl border flex items-center justify-center transition-all cursor-pointer',
-                    formularioAlerta.icono === ico.nombre
-                      ? 'bg-rose-500 text-white border-rose-600 ring-2 ring-rose-400/40'
-                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-rose-300'
-                  ]"
-                  :title="ico.etiqueta"
-                >
-                  <component :is="ico.componente" class="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            <!-- Selector de Color -->
-            <div>
-              <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1.5">Color Personalizado:</label>
-              <div class="grid grid-cols-5 gap-1.5">
-                <button
-                  v-for="col in listaColoresDisponibles"
-                  :key="col.hex"
-                  type="button"
-                  @click="formularioAlerta.color = col.hex"
-                  :class="[
-                    'w-7 h-7 rounded-xl border transition-all cursor-pointer mx-auto flex items-center justify-center text-white',
-                    formularioAlerta.color === col.hex ? 'ring-2 ring-slate-900 dark:ring-white scale-110 shadow-sm' : 'border-transparent opacity-80 hover:opacity-100'
-                  ]"
-                  :style="{ backgroundColor: col.hex }"
-                  :title="col.nombre"
-                >
-                  <Check v-if="formularioAlerta.color === col.hex" class="w-3 h-3 text-white" />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Nivel y Severidad -->
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">Nivel de Alerta:</label>
-              <select
-                v-model="formularioAlerta.nivel"
-                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-rose-500"
-              >
-                <option :value="1">Nivel 1 (Crítico / Inmediato)</option>
-                <option :value="2">Nivel 2 (Alto)</option>
-                <option :value="3">Nivel 3 (Moderado)</option>
-                <option :value="4">Nivel 4 (Preventivo / Bajo)</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">Severidad:</label>
-              <select
-                v-model="formularioAlerta.severidad"
-                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-rose-500"
-              >
-                <option value="Crítica">Crítica</option>
-                <option value="Alta">Alta</option>
-                <option value="Moderada">Moderada</option>
-                <option value="Baja">Baja</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Descripción -->
-          <div>
-            <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">Descripción para la IA:</label>
-            <textarea
-              v-model="formularioAlerta.descripcion"
-              rows="2"
-              placeholder="Explica qué conductas o hechos constituyen esta alerta para que la IA los reconozca..."
-              class="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-rose-500"
-            ></textarea>
-          </div>
-
-          <!-- Palabras Clave Asociadas (Chips) -->
-          <div>
-            <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">
-              Palabras Clave Asociadas (Escribe y presiona Enter):
-            </label>
-            <div class="flex items-center gap-2 mb-2">
-              <input
-                v-model="palabraInput"
-                type="text"
-                placeholder="Ej. favoritismo, gritos, autoritario..."
-                class="flex-1 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-rose-500"
-                @keydown.enter.prevent="agregarPalabraClave"
-              />
-              <button
-                type="button"
-                @click="agregarPalabraClave"
-                class="px-3.5 py-2 rounded-xl bg-slate-800 dark:bg-slate-700 text-white font-bold text-xs cursor-pointer"
-              >
-                Añadir
-              </button>
-            </div>
-
-            <div class="flex flex-wrap gap-1.5 min-h-[35px] p-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-              <span
-                v-for="p in formularioAlerta.palabrasClave"
-                :key="p"
-                class="inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-lg bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-200 border border-rose-300 dark:border-rose-800"
-              >
-                {{ p }}
-                <button type="button" @click="removerPalabraClave(p)" class="hover:text-rose-900 font-bold ml-0.5">&times;</button>
-              </span>
-              <span v-if="formularioAlerta.palabrasClave.length === 0" class="text-[11px] text-slate-400 italic">
-                Sin palabras clave asociadas aún.
-              </span>
-            </div>
-          </div>
-
-          <!-- Protocolo de Acción -->
-          <div>
-            <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">Protocolo de Acción:</label>
-            <input
-              v-model="formularioAlerta.protocoloAccion"
-              type="text"
-              placeholder="Ej. Citación inmediata a Comité de Convivencia..."
-              class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-rose-500"
-            />
-          </div>
-        </div>
-
-        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
-          <button
-            type="button"
-            @click="modalCrearAlerta = false"
-            class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            @click="guardarAlertaFormulario"
-            class="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-md shadow-rose-600/20"
-          >
-            {{ editandoAlertaId ? 'Guardar Cambios' : 'Crear Alerta' }}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ═════════════════════════════════════════════════════════════════════════ -->
-    <!-- MODAL: AÑADIR CASO DE ENTRENAMIENTO -->
-    <!-- ═════════════════════════════════════════════════════════════════════════ -->
-    <div
-      v-if="modalNuevoEjemplo"
-      class="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
-      @click.self="modalNuevoEjemplo = false"
-    >
-      <div class="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden p-6 space-y-4">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
-          <h3 class="text-sm font-black flex items-center gap-2">
-            <Plus class="w-4 h-4 text-indigo-500" />
-            Añadir Ejemplo de Entrenamiento para la IA
-          </h3>
-          <button
-            type="button"
-            @click="modalNuevoEjemplo = false"
-            class="p-1 rounded-lg text-slate-400 hover:text-slate-600"
-          >
-            <X class="w-4 h-4" />
-          </button>
-        </div>
-
-        <div class="space-y-3 text-xs">
-          <div>
-            <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">Frase o Respuesta de Muestra:</label>
-            <textarea
-              v-model="nuevoEjemploForm.texto"
-              rows="3"
-              placeholder="Escribe la frase que un empleado podría responder..."
-              class="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
-            ></textarea>
-          </div>
-
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">Calificación Esperada:</label>
-              <select
-                v-model="nuevoEjemploForm.clasificacion"
-                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="Mala">Mala (Alerta Crítica)</option>
-                <option value="Regular">Regular (Neutra / Sugerencia)</option>
-                <option value="Buena">Buena (Favorable)</option>
-              </select>
-            </div>
-
-            <div v-if="nuevoEjemploForm.clasificacion === 'Mala'">
-              <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">Alerta a Encasillar:</label>
-              <select
-                v-model="nuevoEjemploForm.tipoAlertaId"
-                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="">-- Seleccionar Alerta --</option>
-                <option
-                  v-for="al in tiposAlertas"
-                  :key="al.id"
-                  :value="al.id"
-                >
-                  {{ al.nombre }}
-                </option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label class="font-bold text-slate-700 dark:text-slate-300 block mb-1">Explicación del Criterio para la IA:</label>
-            <input
-              v-model="nuevoEjemploForm.explicacion"
-              type="text"
-              placeholder="Ej. Manifiesta trato despectivo y favoritismo injustificado..."
-              class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-        </div>
-
-        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
-          <button
-            type="button"
-            @click="modalNuevoEjemplo = false"
-            class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-500"
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            @click="guardarNuevoEjemploManual"
-            class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-600/20"
-          >
-            Guardar Caso
-          </button>
-        </div>
-      </div>
-    </div>
-
   </div>
 </template>
 
-<script lang="ts">
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+import {
+  useReconocimientoIA,
+  type CalificacionRespuesta,
+  type ResultadoAnalisisIA
+} from '@/Almacenes/useReconocimientoIA'
+import {
+  useTiposAlertas,
+  type TipoAlertaPersonalizada,
+  type NivelAlerta,
+  type ModoEnfoqueAlerta,
+  type SeveridadAlerta
+} from '@/Almacenes/useTiposAlertas'
+import { useToast } from '@/Almacenes/useToast'
+import { useNotificaciones } from '@/Almacenes/useNotificaciones'
+import { useEncuestas } from '@/Almacenes/useEncuestas'
 import {
   BrainCircuit,
   Sparkles,
-  Sliders,
-  Plus,
-  Trash2,
-  Edit,
-  CheckCircle2,
-  AlertTriangle,
-  ShieldAlert,
-  Search,
-  RotateCcw,
-  BookOpen,
-  Activity,
-  Tag,
   Zap,
-  HelpCircle,
-  TrendingUp,
-  Save,
-  MessageSquare,
-  Flame,
-  Check,
-  X,
-  Cpu,
-  RefreshCw,
+  ShieldAlert,
   FolderOpen,
-  HeartCrack,
-  Skull,
-  UserX,
-  Clock,
-  Coins,
-  Scale,
-  Smile,
-  Frown,
-  Meh
+  RefreshCw,
+  Activity,
+  AlertTriangle,
+  CheckCircle2,
+  HelpCircle,
+  Plus,
+  Sliders,
+  Trash2,
+  Edit3,
+  Users,
+  GraduationCap,
+  ShieldCheck,
+  Flame,
+  Lock,
+  HeartHandshake,
+  BarChart3
 } from 'lucide-vue-next'
 
-export default {
-  name: 'ReconocimientoIAView'
-}
-</script>
-
-<script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useTiposAlertas, type TipoAlertaPersonalizada, type NivelAlerta, type SeveridadAlerta, type ModoEnfoqueAlerta } from '@/Almacenes/useTiposAlertas'
-import { useReconocimientoIA, type CalificacionRespuesta, type NivelSensibilidad, type ResultadoAnalisisIA } from '@/Almacenes/useReconocimientoIA'
-import { useToast } from '@/Almacenes/useToast'
-
-const { mostrarExito, mostrarAviso, mostrarError } = useToast()
-const {
-  tiposAlertas,
-  tiposActivos,
-  crearTipoAlerta,
-  editarTipoAlerta,
-  actualizarTipoAlerta,
-  eliminarTipoAlerta,
-  toggleActiva,
-  obtenerEtiquetaNivel,
-  obtenerClaseColorNivel
-} = useTiposAlertas()
+const pestanaActiva = ref<'simulador' | 'criterios' | 'alertas' | 'matriz' | 'estudios'>('simulador')
 
 const {
   configuracion,
@@ -998,54 +764,28 @@ const {
   agregarEjemplo,
   eliminarEjemplo,
   restablecerEjemplosPorDefecto,
-  analizarTextoConIA
+  analizarTextoConIA,
+  extraerPatronesYMenciones
 } = useReconocimientoIA()
 
-// Mapa de íconos disponibles
-const listaIconosDisponibles = [
-  { nombre: 'ShieldAlert', etiqueta: 'Escudo Alerta', componente: ShieldAlert },
-  { nombre: 'Flame', etiqueta: 'Fuego / Urgencia', componente: Flame },
-  { nombre: 'HeartCrack', etiqueta: 'Corazón Roto / Salud', componente: HeartCrack },
-  { nombre: 'AlertTriangle', etiqueta: 'Triángulo Alerta', componente: AlertTriangle },
-  { nombre: 'UserX', etiqueta: 'Usuario / Conflicto', componente: UserX },
-  { nombre: 'Skull', etiqueta: 'Riesgo Crítico', componente: Skull },
-  { nombre: 'Clock', etiqueta: 'Tiempo / Horario', componente: Clock },
-  { nombre: 'Coins', etiqueta: 'Salario / Finanzas', componente: Coins },
-  { nombre: 'Scale', etiqueta: 'Justicia / Equidad', componente: Scale },
-  { nombre: 'Zap', etiqueta: 'Rayo / Impacto', componente: Zap }
-]
+const {
+  tiposAlertas,
+  crearTipoAlerta,
+  editarTipoAlerta,
+  eliminarTipoAlerta,
+  obtenerClaseColorNivel
+} = useTiposAlertas()
 
-// Mapa de colores disponibles
-const listaColoresDisponibles = [
-  { nombre: 'Rojo Carmesí', hex: '#ef4444' },
-  { nombre: 'Rosa Intenso', hex: '#f43f5e' },
-  { nombre: 'Naranja Fuego', hex: '#f97316' },
-  { nombre: 'Ámbar Alerta', hex: '#f59e0b' },
-  { nombre: 'Púrpura Profundo', hex: '#8b5cf6' },
-  { nombre: 'Azul Eléctrico', hex: '#3b82f6' },
-  { nombre: 'Cian Claro', hex: '#06b6d4' },
-  { nombre: 'Esmeralda', hex: '#10b981' },
-  { nombre: 'Índigo Real', hex: '#6366f1' },
-  { nombre: 'Pizarra Oscura', hex: '#64748b' }
-]
+const { mostrarExito, mostrarAviso } = useToast()
 
-const obtenerIconoComponente = (nombre?: string) => {
-  const encontrado = listaIconosDisponibles.find(i => i.nombre === nombre)
-  return encontrado ? encontrado.componente : ShieldAlert
-}
-
-// Pestañas de la vista
-type PestanaActiva = 'simulador' | 'criterios' | 'alertas' | 'matriz'
-const pestanaActiva = ref<PestanaActiva>('simulador')
-
-// ─── ESTADO: SIMULADOR EN VIVO (PLAYGROUND) ──────────────────────────────────
+// ─── ESTADO: SIMULADOR ───────────────────────────────────────────────────────
 const textoPrueba = ref('')
-const resultadoPrueba = ref<ResultadoAnalisisIA | null>(null)
 const analizando = ref(false)
+const resultadoPrueba = ref<ResultadoAnalisisIA | null>(null)
 
 const ejecutarAnalisisPrueba = () => {
   if (!textoPrueba.value.trim()) {
-    mostrarAviso('Texto requerido', 'Escribe o selecciona una respuesta de prueba.')
+    resultadoPrueba.value = null
     return
   }
   analizando.value = true
@@ -1072,53 +812,154 @@ const guardarPruebaComoEjemplo = async () => {
   })
 }
 
-// ─── ESTADO: CRITERIOS & EJEMPLOS ────────────────────────────────────────────
+const { alertasConvivencia } = useNotificaciones()
+const { respuestasAnonimas } = useEncuestas()
+
+const respuestasRealesAbiertas = computed(() => {
+  const lista: string[] = []
+  
+  alertasConvivencia.value.forEach((a: any) => {
+    if (a.detalleRespuesta && a.detalleRespuesta.trim()) {
+      lista.push(a.detalleRespuesta.trim())
+    } else if (a.mensaje && a.mensaje.trim()) {
+      lista.push(a.mensaje.trim())
+    }
+  })
+
+  respuestasAnonimas.value.forEach((r: any) => {
+    r.respuestas?.forEach((item: any) => {
+      if (typeof item.valor === 'string' && item.valor.trim().length > 3) {
+        lista.push(item.valor.trim())
+      }
+    })
+  })
+
+  return lista
+})
+
+const patronesDetectadosReales = computed(() => {
+  return extraerPatronesYMenciones(respuestasRealesAbiertas.value)
+})
+
+// ─── ESTADO: CRITERIOS & CONFIGURACIÓN ───────────────────────────────────────
+const configuracionForm = ref({ ...configuracion.value })
 const filtroEjemplos = ref<'Todas' | 'Buena' | 'Regular' | 'Mala'>('Todas')
 const modalNuevoEjemplo = ref(false)
-
-const nuevoEjemploForm = ref<{
-  texto: string
-  clasificacion: CalificacionRespuesta
-  tipoAlertaId?: string
-  explicacion: string
-}>({
-  texto: '',
-  clasificacion: 'Mala',
-  tipoAlertaId: '',
-  explicacion: ''
-})
 
 const ejemplosFiltrados = computed(() => {
   if (filtroEjemplos.value === 'Todas') return ejemplosEntrenamiento.value
   return ejemplosEntrenamiento.value.filter(e => e.clasificacion === filtroEjemplos.value)
 })
 
-const guardarNuevoEjemploManual = async () => {
-  if (!nuevoEjemploForm.value.texto.trim()) {
-    mostrarAviso('Campo requerido', 'Ingresa el texto del ejemplo de respuesta.')
-    return
-  }
-
-  const alertaAsoc = nuevoEjemploForm.value.tipoAlertaId
-    ? tiposAlertas.value.find(t => t.id === nuevoEjemploForm.value.tipoAlertaId)
-    : undefined
-
-  await agregarEjemplo({
-    textoEjemplo: nuevoEjemploForm.value.texto.trim(),
-    clasificacion: nuevoEjemploForm.value.clasificacion,
-    tipoAlertaId: alertaAsoc?.id,
-    nombreAlerta: alertaAsoc?.nombre,
-    explicacionCriterio: nuevoEjemploForm.value.explicacion.trim() || `Clasificado como ${nuevoEjemploForm.value.clasificacion} por el administrador.`
-  })
-
-  nuevoEjemploForm.value = {
-    texto: '',
-    clasificacion: 'Mala',
-    tipoAlertaId: '',
-    explicacion: ''
-  }
-  modalNuevoEjemplo.value = false
+const guardarCalibracionForm = async () => {
+  await actualizarConfiguracion(configuracionForm.value)
 }
+
+// ─── ESTADO: ESTUDIOS PSICOSOCIALES ──────────────────────────────────────────
+interface EstudioPsicosocial {
+  id: string
+  titulo: string
+  codigo: string
+  entidad: string
+  ano: string
+  categoria: string
+  resumen: string
+  queMide: string[]
+  utilidadPractica: string
+  icono: any
+  color: string
+}
+
+const listaEstudiosPsicosociales: EstudioPsicosocial[] = [
+  {
+    id: 'estudio-001',
+    titulo: 'Batería de Evaluación de Riesgo Psicosocial',
+    codigo: 'Res. 2646 / NOM-035',
+    entidad: 'Ministerio de Trabajo & Secretarías de Salud',
+    ano: 'Normativa Oficial',
+    categoria: 'Riesgo Intralaboral & Estrés',
+    resumen: 'Herramienta psicométrica oficial para identificar, evaluar y prevenir los factores de riesgo psicosocial en el trabajo (demandas cualitativas/cuantitativas, control, liderazgo y jornada laboral).',
+    queMide: [
+      'Demandas de carga de trabajo y exigencias emocionales',
+      'Control y autonomía sobre la jornada laboral',
+      'Liderazgo, relaciones sociales y trato en el trabajo',
+      'Recompensa y reconocimiento del desempeño'
+    ],
+    utilidadPractica: 'Permite clasificar a las áreas en nivel de riesgo Bajo, Medio, Alto o Muy Alto y generar los informes legales requeridos por entes reguladores.',
+    icono: ShieldCheck,
+    color: '#059669'
+  },
+  {
+    id: 'estudio-002',
+    titulo: 'Inventario de Burnout de Maslach (MBI)',
+    codigo: 'MBI-GS / Human Services',
+    entidad: 'Dra. Christina Maslach (Univ. de California, Berkeley)',
+    ano: 'Estudio Estandarizado',
+    categoria: 'Agotamiento Emocional & Salud Mental',
+    resumen: 'Instrumento científico líder mundial para evaluar la prevalencia del síndrome de desgaste profesional (Burnout) en colaboradores.',
+    queMide: [
+      'Agotamiento Emocional (sensación de vaciamiento de recursos emocionales)',
+      'Despersonalización / Cinismo (actitudes distantes o frías hacia el trabajo)',
+      'Realización Personal (sentimiento de competencia y logro profesional)'
+    ],
+    utilidadPractica: 'Diagnostica si el malestar de un equipo es estrés pasajero o un estado avanzado de despersonalización y colapso anímico.',
+    icono: Flame,
+    color: '#ef4444'
+  },
+  {
+    id: 'estudio-003',
+    titulo: 'Escala de Seguridad Psicológica',
+    codigo: 'Harvard Psychological Safety Survey',
+    entidad: 'Dra. Amy Edmondson (Harvard Business School)',
+    ano: 'Investigación Harvard',
+    categoria: 'Seguridad Psicológica & Apertura',
+    resumen: 'Estudio que mide la creencia compartida por un equipo de que el entorno es seguro para asumir riesgos interpersonales sin temor a represalias, gritos o humillación.',
+    queMide: [
+      'Libertad para admitir errores sin ser castigado',
+      'Aceptación de la diversidad de opiniones y sugerencias',
+      'Nivel de respeto e inclusión genuina entre pares y líderes'
+    ],
+    utilidadPractica: 'Indica si los colaboradores se sienten con la confianza de reportar abusos, quejas u observaciones sin miedo a ser despedidos o señalados.',
+    icono: Lock,
+    color: '#0284c7'
+  },
+  {
+    id: 'estudio-004',
+    titulo: 'Protocolo de Primeros Auxilios Psicológicos (PAP)',
+    codigo: 'PAP - OMS & OPS',
+    entidad: 'Organización Mundial de la Salud',
+    ano: 'Guía Internacional',
+    categoria: 'Intervención en Crisis & Acoso',
+    resumen: 'Protocolo de contención e intervención inmediata ante reportes de violencia, acoso físico/sexual, tocamientos indebidos o colapsos emocionales.',
+    queMide: [
+      'Evaluación rápida del estado de vulnerabilidad y seguridad del afectado',
+      'Detección de necesidades de protección inmediata y confidencialidad',
+      'Canalización hacia el Comité de Convivencia y apoyo profesional'
+    ],
+    utilidadPractica: 'Asegura que ante una alerta crítica (ej: tocamiento o acoso), el sistema aplique pasos inmediatos de protección.',
+    icono: HeartHandshake,
+    color: '#7c3aed'
+  },
+  {
+    id: 'estudio-005',
+    titulo: 'Cuestionario de Clima Organizacional',
+    codigo: 'Litwin & Stringer Climate Model',
+    entidad: 'Harvard University Press',
+    ano: 'Modelo de Clima',
+    categoria: 'Dimensiones del Entorno Laboral',
+    resumen: 'Evalúa la percepción de los empleados respecto a 6 factores determinantes de la cultura organizacional.',
+    queMide: [
+      'Estructura (reglas, trámites y burocracia percibida)',
+      'Responsabilidad (autonomía en la toma de decisiones)',
+      'Recompensa (sensación de justicia en el reconocimiento)',
+      'Riesgo & Desafío (estímulo a la innovación y superación)',
+      'Calidez & Apoyo (compañerismo y respaldo de la empresa)'
+    ],
+    utilidadPractica: 'Brinda el mapa completo para correlacionar la percepción del clima con los resultados de productividad y retención de talento.',
+    icono: BarChart3,
+    color: '#d97706'
+  }
+]
 
 // ─── ESTADO: GESTOR DE ALERTAS & PALABRAS CLAVE ──────────────────────────────
 const modalCrearAlerta = ref(false)

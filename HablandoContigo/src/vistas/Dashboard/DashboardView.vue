@@ -31,7 +31,7 @@ import { useNotificaciones, type NotificacionItem } from '@/Almacenes/useNotific
 import { useEncuestas } from '@/Almacenes/useEncuestas'
 import { useHighlight } from '@/Almacenes/useHighlight'
 import { useAuth } from '@/Almacenes/useAuth'
-import { Bot } from 'lucide-vue-next'
+import { Bot, BarChart3 } from 'lucide-vue-next'
 
 // Subcomponentes modulares del Dashboard
 import DashboardColaboradorAnonimo from '@/componentes/Dashboard/DashboardColaboradorAnonimo.vue'
@@ -40,9 +40,12 @@ import DashboardNavegacionPestanas from '@/componentes/Dashboard/DashboardNavega
 import DashboardPestanaGeneral from '@/componentes/Dashboard/DashboardPestanaGeneral.vue'
 import DashboardPestanaAlertas from '@/componentes/Dashboard/DashboardPestanaAlertas.vue'
 import DashboardPestanaAuditoria from '@/componentes/Dashboard/DashboardPestanaAuditoria.vue'
+import PestanaGraficosAnclados from '@/componentes/Dashboard/Pestanas/PestanaGraficosAnclados.vue'
 import DesglosePreguntasDetallado from '@/componentes/Dashboard/DesglosePreguntasDetallado.vue'
 import ModalDetalleAlerta from '@/componentes/Dashboard/ModalDetalleAlerta.vue'
 import ModalExportarInforme from '@/componentes/Dashboard/ModalExportarInforme.vue'
+import ModalCrearGraficoAnclado from '@/componentes/Dashboard/Modales/ModalCrearGraficoAnclado.vue'
+import { useGraficosAnclados } from '@/Almacenes/useGraficosAnclados'
 
 const route = useRoute()
 const { elementoResaltadoId } = useHighlight()
@@ -97,14 +100,31 @@ const encuestasDisponiblesSegunModo = computed(() => {
   )
 })
 
+const { totalGraficos, anclarNuevoGrafico } = useGraficosAnclados()
+
+// Modal de Creación de Estadística de Pregunta
+const modalCrearEstadisticaAbierto = ref(false)
+const preguntaInicialParaEstadistica = ref<string | undefined>(undefined)
+
+const abrirModalCrearEstadistica = (idPregunta?: string) => {
+  preguntaInicialParaEstadistica.value = idPregunta
+  modalCrearEstadisticaAbierto.value = true
+}
+
+const manejarEstadisticaCreada = (nuevoGrafico: any) => {
+  anclarNuevoGrafico(nuevoGrafico)
+  modalCrearEstadisticaAbierto.value = false
+  pestanaActiva.value = 'anclados'
+}
+
 // Navegación de Pestañas (Inicia en Estadísticas Generales)
-const pestanaActiva = ref<'general' | 'preguntas' | 'alertas' | 'auditoria'>('general')
+const pestanaActiva = ref<'general' | 'preguntas' | 'anclados' | 'alertas' | 'auditoria'>('general')
 
 // Sincronizar con el parámetro de URL (?seccion=...)
 watch(
   () => route.query.seccion,
   (nuevaSeccion) => {
-    if (nuevaSeccion && ['general', 'preguntas', 'alertas', 'auditoria'].includes(nuevaSeccion as string)) {
+    if (nuevaSeccion && ['general', 'preguntas', 'anclados', 'alertas', 'auditoria'].includes(nuevaSeccion as string)) {
       pestanaActiva.value = nuevaSeccion as any
     }
   },
@@ -122,6 +142,22 @@ const alertaSeleccionada = ref<NotificacionItem | null>(null)
 const encuestaSeleccionadaObj = computed(() => {
   if (encuestaFiltro.value === 'todas') return null
   return encuestas.value.find(e => e.id === encuestaFiltro.value) || null
+})
+
+// Preguntas disponibles según el alcance seleccionado
+const preguntasDisponiblesAlcance = computed(() => {
+  if (encuestaSeleccionadaObj.value?.preguntas) {
+    return encuestaSeleccionadaObj.value.preguntas
+  }
+  const mapa = new Map<string, any>()
+  encuestasDisponiblesSegunModo.value.forEach(enc => {
+    enc.preguntas?.forEach(p => {
+      if (!mapa.has(p.id)) {
+        mapa.set(p.id, p)
+      }
+    })
+  })
+  return Array.from(mapa.values())
 })
 
 // Respuestas válidas en el alcance actual (filtradas por modalidad, encuesta, depto y sin descartadas)
@@ -387,12 +423,20 @@ const manejarEliminarRespuestaIndividual = async (idRespuesta: string) => {
             </p>
           </div>
 
-          <div class="flex items-center gap-3 shrink-0">
+          <div class="flex items-center gap-2.5 shrink-0 flex-wrap">
+            <button
+              @click="abrirModalCrearEstadistica()"
+              class="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white text-xs font-black flex items-center gap-2 transition-all shadow-md shadow-sky-600/25 active:scale-95 cursor-pointer"
+            >
+              <BarChart3 class="w-4 h-4" />
+              <span>Crear Estadística de Pregunta</span>
+            </button>
+
             <router-link
               to="/proyectos"
-              class="px-5 py-2.5 rounded-2xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold flex items-center gap-2 transition-all shadow-md shadow-sky-600/20 active:scale-95 cursor-pointer"
+              class="px-4 py-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 text-xs font-bold flex items-center gap-2 transition-all border border-slate-200 dark:border-slate-700 active:scale-95 cursor-pointer"
             >
-              <Bot class="w-4 h-4" />
+              <Bot class="w-4 h-4 text-sky-500" />
               <span>Crear Encuesta con IA</span>
             </router-link>
           </div>
@@ -414,6 +458,7 @@ const manejarEliminarRespuestaIndividual = async (idRespuesta: string) => {
         <DashboardNavegacionPestanas
           v-model:pestanaActiva="pestanaActiva"
           :totalAlertas="alertasValidasAlcance.length"
+          :totalGraficosAnclados="totalGraficos"
         />
 
         <!-- PESTAÑA 1: VISIÓN GENERAL Y ESTADÍSTICAS -->
@@ -431,9 +476,20 @@ const manejarEliminarRespuestaIndividual = async (idRespuesta: string) => {
           @cambiarPestana="pestanaActiva = $event"
         />
 
-        <!-- PESTAÑA 2: DESGLOSE DE PREGUNTAS -->
+        <!-- PESTAÑA 2: GRÁFICOS ANCLADOS & ANÁLISIS IA (CERO CARGA OPERATIVA) -->
+        <PestanaGraficosAnclados
+          v-else-if="pestanaActiva === 'anclados'"
+          :respuestas="respuestasValidasAlcance"
+          :preguntasDisponibles="preguntasDisponiblesAlcance"
+          :idEncuestaActual="encuestaFiltro"
+        />
+
+        <!-- PESTAÑA 3: DESGLOSE DE PREGUNTAS -->
         <div v-else-if="pestanaActiva === 'preguntas'" class="space-y-6">
-          <DesglosePreguntasDetallado :preguntas="datosEstadisticas.desgloseRespuestasDetalladas" />
+          <DesglosePreguntasDetallado 
+            :preguntas="datosEstadisticas.desgloseRespuestasDetalladas" 
+            @crearEstadistica="abrirModalCrearEstadistica"
+          />
         </div>
 
         <!-- PESTAÑA 4: ALERTAS DE CONVIVENCIA Y ACOSO -->
@@ -470,6 +526,16 @@ const manejarEliminarRespuestaIndividual = async (idRespuesta: string) => {
       :encuestas="encuestas"
       :respuestas="respuestasAnonimas"
       @cerrar="modalExportarAbierto = false"
+    />
+
+    <!-- Modal para Crear Estadística de Pregunta y Anclar a Dashboard -->
+    <ModalCrearGraficoAnclado
+      :abierto="modalCrearEstadisticaAbierto"
+      :preguntasDisponibles="preguntasDisponiblesAlcance"
+      :idEncuestaActual="encuestaFiltro"
+      :preguntaInicialId="preguntaInicialParaEstadistica"
+      @cerrar="modalCrearEstadisticaAbierto = false"
+      @anclar="manejarEstadisticaCreada"
     />
 
   </div>

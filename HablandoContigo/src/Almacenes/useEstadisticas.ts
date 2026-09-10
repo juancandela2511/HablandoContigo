@@ -165,11 +165,11 @@ const dimensionesPersonalizadas = ref<DimensionRadial[] | null>(null)
  */
 export const DIMENSIONES_RADIALES_BASE: DimensionRadial[] = [
   { eje: 'Liderazgo y Confianza', valor: 0, meta: 85, estado: 'Óptimo', color: '#0284c7', inclinacion: 0, categoriaMapeada: 'Liderazgo y Confianza' },
-  { eje: 'Carga Laboral y Estrés', valor: 0, meta: 85, estado: 'Óptimo', color: '#10b981', inclinacion: 0, categoriaMapeada: 'Carga Laboral y Estrés' },
-  { eje: 'Bienestar y Reconocimiento', valor: 0, meta: 85, estado: 'Óptimo', color: '#6366f1', inclinacion: 0, categoriaMapeada: 'Bienestar y Reconocimiento' },
-  { eje: 'Trabajo en Equipo y Apoyo', valor: 0, meta: 85, estado: 'Óptimo', color: '#8b5cf6', inclinacion: 0, categoriaMapeada: 'Trabajo en Equipo y Apoyo' },
-  { eje: 'Clima y Ambiente Físico', valor: 0, meta: 85, estado: 'Óptimo', color: '#0ea5e9', inclinacion: 0, categoriaMapeada: 'Clima y Ambiente Físico' },
-  { eje: 'Comunicación Organizacional', valor: 0, meta: 85, estado: 'Óptimo', color: '#f59e0b', inclinacion: 0, categoriaMapeada: 'Comunicación Organizacional' }
+  { eje: 'Carga Laboral y Estrés', valor: 0, meta: 85, estado: 'Óptimo', color: '#10b981', inclinacion: 60, categoriaMapeada: 'Carga Laboral y Estrés' },
+  { eje: 'Bienestar y Reconocimiento', valor: 0, meta: 85, estado: 'Óptimo', color: '#6366f1', inclinacion: 120, categoriaMapeada: 'Bienestar y Reconocimiento' },
+  { eje: 'Trabajo en Equipo y Apoyo', valor: 0, meta: 85, estado: 'Óptimo', color: '#8b5cf6', inclinacion: 180, categoriaMapeada: 'Trabajo en Equipo y Apoyo' },
+  { eje: 'Clima y Ambiente Físico', valor: 0, meta: 85, estado: 'Óptimo', color: '#0ea5e9', inclinacion: 240, categoriaMapeada: 'Clima y Ambiente Físico' },
+  { eje: 'Comunicación Organizacional', valor: 0, meta: 85, estado: 'Óptimo', color: '#f59e0b', inclinacion: 300, categoriaMapeada: 'Comunicación Organizacional' }
 ]
 
 /**

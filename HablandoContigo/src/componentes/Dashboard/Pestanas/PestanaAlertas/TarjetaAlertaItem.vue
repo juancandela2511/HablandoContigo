@@ -15,7 +15,8 @@ import {
   Users2,
   Flame,
   Laptop,
-  Target
+  Target,
+  Trash2
 } from 'lucide-vue-next'
 import { BotonBase } from '@/componentes/ElementosBase'
 import type { NotificacionItem } from '@/Almacenes/useNotificaciones'
@@ -30,6 +31,7 @@ const props = defineProps<{
 
 defineEmits<{
   (e: 'inspeccionar', alerta: NotificacionItem): void
+  (e: 'eliminar', id: string): void
 }>()
 
 const obtenerIconoAlerta = (tipo: string) => {
@@ -79,19 +81,30 @@ const obtenerIconoAlerta = (tipo: string) => {
           </div>
         </div>
 
-        <!-- Badge de Estado -->
-        <span 
-          :class="[
-            'text-[10px] font-bold px-2 py-0.5 rounded-full border',
-            alerta.estado === 'Descartada'
-              ? 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400'
-              : alerta.estado === 'Atendida'
-              ? 'bg-emerald-100 dark:bg-emerald-950 border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400'
-              : 'bg-amber-100 dark:bg-amber-950 border-amber-300 dark:border-amber-800 text-amber-700 dark:text-amber-400'
-          ]"
-        >
-          {{ alerta.estado || 'Detectada' }}
-        </span>
+        <div class="flex items-center gap-1.5">
+          <!-- Badge de Estado -->
+          <span 
+            :class="[
+              'text-[10px] font-bold px-2 py-0.5 rounded-full border',
+              alerta.estado === 'Descartada'
+                ? 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+                : alerta.estado === 'Atendida'
+                ? 'bg-emerald-100 dark:bg-emerald-950 border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400'
+                : 'bg-amber-100 dark:bg-amber-950 border-amber-300 dark:border-amber-800 text-amber-700 dark:text-amber-400'
+            ]"
+          >
+            {{ alerta.estado || 'Detectada' }}
+          </span>
+
+          <!-- Botón Eliminar Alerta -->
+          <button
+            class="w-7 h-7 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/50 transition-all opacity-0 group-hover:opacity-100"
+            title="Eliminar esta alerta"
+            @click.stop="$emit('eliminar', alerta.id)"
+          >
+            <Trash2 class="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
 
       <!-- Mensaje / Motivo de Alerta con Criterio de Encasillamiento -->

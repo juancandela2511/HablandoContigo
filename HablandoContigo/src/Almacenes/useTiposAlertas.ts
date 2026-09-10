@@ -47,47 +47,7 @@ export interface TipoAlertaPersonalizada {
 const CLAVE_LOCAL_STORAGE_TIPOS_ALERTAS = 'hablandocontigo_tipos_alertas_solo_3_v1'
 
 // Tipos de alerta iniciales: EXACTAMENTE 3 ALERTAS CRÍTICAS
-const TIPOS_ALERTAS_INICIALES: TipoAlertaPersonalizada[] = [
-  {
-    id: 'tipo-jefes-gestion',
-    nombre: 'Mala Gestión de los Jefes & Liderazgo Tóxico',
-    descripcion: 'Conductas de abuso de poder, trato despectivo por parte de líderes, órdenes contradictorias, falta de empatía o favoritismo injustificado.',
-    nivel: 1,
-    severidad: 'Crítica',
-    modoEnfoque: 'especifico',
-    enfoqueDetalle: 'Enfócate en maltrato verbal, órdenes humillantes, autoritarismo y falta de escucha de supervisores y directores.',
-    palabrasClave: ['jefe', 'jefes', 'liderazgo', 'supervisor', 'mala gestión', 'favoritismo', 'autoritarismo', 'gritos', 'maltrato líder'],
-    protocoloAccion: 'Revisión prioritaria por Gestión Humana y citación a evaluación 360° del cuadro de mando.',
-    icono: 'ShieldAlert',
-    activa: true
-  },
-  {
-    id: 'tipo-acoso',
-    nombre: 'Acoso Laboral & Hostigamiento',
-    descripcion: 'Conductas de maltrato reiterado, intimidación, amenazas, humillación pública o conductas que vulneren la dignidad del colaborador.',
-    nivel: 1,
-    severidad: 'Crítica',
-    modoEnfoque: 'especifico',
-    enfoqueDetalle: 'Enfócate en persecución laboral, amenazas de despido injustas, humillaciones colectivas y mobbing.',
-    palabrasClave: ['acoso', 'hostigamiento', 'humillación', 'amenaza', 'intimidación', 'insulto', 'maltrato', 'mobbing'],
-    protocoloAccion: 'Activar inmediatamente el Comité de Convivencia y medidas de protección confidencial.',
-    icono: 'ShieldAlert',
-    activa: true
-  },
-  {
-    id: 'tipo-depresion',
-    nombre: 'Crisis Anímica & Salud Mental',
-    descripcion: 'Estados de tristeza profunda, depresión severa, desánimo extremo constante, fatiga emocional o ideaciones de colapso.',
-    nivel: 1,
-    severidad: 'Crítica',
-    modoEnfoque: 'especifico',
-    enfoqueDetalle: 'Vas a estar pendiente de todo signo de colapso emocional, llanto frecuente, desesperanza o angustia crítica.',
-    palabrasClave: ['depresión', 'crisis anímica', 'tristeza profunda', 'desesperanza', 'llanto incontrolable', 'colapso emocional', 'no puedo más'],
-    protocoloAccion: 'Ofrecer contención psicológica confidencial inmediata y activación de canal de Bienestar.',
-    icono: 'HeartCrack',
-    activa: true
-  }
-]
+const TIPOS_ALERTAS_INICIALES: TipoAlertaPersonalizada[] = []
 
 // Estado reactivo global
 const tiposAlertas = ref<TipoAlertaPersonalizada[]>([...TIPOS_ALERTAS_INICIALES])
@@ -146,7 +106,8 @@ async function cargarTiposAlertasDesdeSupabase() {
       .select('*')
       .order('creado_en', { ascending: false })
 
-    if (res.error || !res.data || res.data.length === 0) {
+    // Solo consultar tabla alternativa si tipos_alertas_config arrojó error (ej. tabla no existe)
+    if (res.error) {
       res = await supabase
         .from('tipos_alertas')
         .select('*')
@@ -203,6 +164,70 @@ function guardarEnLocalStorage() {
     localStorage.setItem(CLAVE_LOCAL_STORAGE_TIPOS_ALERTAS, JSON.stringify(tiposAlertas.value))
   } catch (e) {
     console.warn('Error guardando alertas en localStorage:', e)
+  }
+}
+
+/**
+ * Sincroniza las operaciones de alertas con la tabla oficial `tipos_alertas_config` en Supabase.
+ * IMPORTANTE: No envía columnas inexistentes en la base de datos (como 'color') para evitar errores 400 Bad Request.
+ */
+async function sincronizarAlertaConSupabase(
+  accion: 'upsert' | 'update' | 'delete',
+  id: string,
+  datos?: Partial<TipoAlertaPersonalizada>
+) {
+  try {
+    if (accion === 'delete') {
+      const { error } = await supabase.from('tipos_alertas_config').delete().eq('id', id)
+      if (error) {
+        console.warn('[useTiposAlertas] Supabase delete:', error.message)
+      }
+      return
+    }
+
+    if (accion === 'update' && datos) {
+      const payloadUpdate: Record<string, any> = {}
+      if (datos.nombre !== undefined) payloadUpdate.nombre = datos.nombre
+      if (datos.descripcion !== undefined) payloadUpdate.descripcion = datos.descripcion
+      if (datos.nivel !== undefined) payloadUpdate.nivel = datos.nivel
+      if (datos.severidad !== undefined) payloadUpdate.severidad = datos.severidad
+      if (datos.modoEnfoque !== undefined) payloadUpdate.modo_enfoque = datos.modoEnfoque
+      if (datos.enfoqueDetalle !== undefined) payloadUpdate.enfoque_detalle = datos.enfoqueDetalle
+      if (datos.palabrasClave !== undefined) payloadUpdate.palabras_clave = datos.palabrasClave
+      if (datos.protocoloAccion !== undefined) payloadUpdate.protocolo_accion = datos.protocoloAccion
+      if (datos.icono !== undefined) payloadUpdate.icono = datos.icono
+      if (datos.activa !== undefined) payloadUpdate.activa = datos.activa
+
+      const { error } = await supabase.from('tipos_alertas_config').update(payloadUpdate).eq('id', id)
+      if (error) {
+        console.warn('[useTiposAlertas] Supabase update:', error.message)
+      }
+      return
+    }
+
+    if (accion === 'upsert' && datos) {
+      const payloadUpsert: Record<string, any> = {
+        id,
+        nombre: datos.nombre,
+        descripcion: datos.descripcion,
+        nivel: datos.nivel || 1,
+        severidad: datos.severidad || 'Crítica',
+        modo_enfoque: datos.modoEnfoque || 'especifico',
+        enfoque_detalle: datos.enfoqueDetalle || datos.descripcion,
+        palabras_clave: Array.isArray(datos.palabrasClave) ? datos.palabrasClave : [],
+        protocolo_accion: datos.protocoloAccion || '',
+        icono: datos.icono || 'ShieldAlert',
+        activa: datos.activa !== undefined ? datos.activa : true
+      }
+
+      const { error } = await supabase.from('tipos_alertas_config').upsert(payloadUpsert)
+      if (error) {
+        console.warn('[useTiposAlertas] Supabase upsert:', error.message)
+      }
+      return
+    }
+  } catch (err: any) {
+    console.warn('[useTiposAlertas] Error sincronizando con Supabase:', err?.message || err)
   }
 }
 
@@ -265,29 +290,8 @@ export function useTiposAlertas() {
     tiposAlertas.value.unshift(registro)
     guardarEnLocalStorage()
 
-    // Sincronizar con Supabase en ambas tablas por compatibilidad
-    ;(async () => {
-      const payload = {
-        id: registro.id,
-        nombre: registro.nombre,
-        descripcion: registro.descripcion,
-        nivel: registro.nivel,
-        severidad: registro.severidad,
-        modo_enfoque: registro.modoEnfoque,
-        enfoque_detalle: registro.enfoqueDetalle,
-        palabras_clave: registro.palabrasClave,
-        protocolo_accion: registro.protocoloAccion,
-        icono: registro.icono,
-        color: registro.color,
-        activa: registro.activa
-      }
-      try {
-        await supabase.from('tipos_alertas_config').upsert(payload)
-      } catch {}
-      try {
-        await supabase.from('tipos_alertas').upsert(payload)
-      } catch {}
-    })()
+    // Sincronizar con Supabase en tipos_alertas_config
+    sincronizarAlertaConSupabase('upsert', registro.id, registro)
 
     mostrarExito(
       'Alerta configurada',
@@ -310,27 +314,7 @@ export function useTiposAlertas() {
     Object.assign(item, datos)
     guardarEnLocalStorage()
 
-    ;(async () => {
-      const payload = {
-        nombre: item.nombre,
-        descripcion: item.descripcion,
-        nivel: item.nivel,
-        severidad: item.severidad,
-        modo_enfoque: item.modoEnfoque,
-        enfoque_detalle: item.enfoqueDetalle,
-        palabras_clave: item.palabrasClave,
-        protocolo_accion: item.protocoloAccion,
-        icono: item.icono,
-        color: item.color,
-        activa: item.activa
-      }
-      try {
-        await supabase.from('tipos_alertas_config').update(payload).eq('id', id)
-      } catch {}
-      try {
-        await supabase.from('tipos_alertas').update(payload).eq('id', id)
-      } catch {}
-    })()
+    sincronizarAlertaConSupabase('update', id, item)
 
     mostrarExito('Alerta actualizada', `Se guardaron los cambios en "${item.nombre}".`)
     return true
@@ -354,22 +338,7 @@ export function useTiposAlertas() {
 
     guardarEnLocalStorage()
 
-    ;(async () => {
-      const payload = {
-        nombre: item.nombre,
-        descripcion: item.descripcion,
-        enfoque_detalle: item.enfoqueDetalle,
-        palabras_clave: item.palabrasClave,
-        icono: item.icono,
-        color: item.color
-      }
-      try {
-        await supabase.from('tipos_alertas_config').update(payload).eq('id', id)
-      } catch {}
-      try {
-        await supabase.from('tipos_alertas').update(payload).eq('id', id)
-      } catch {}
-    })()
+    sincronizarAlertaConSupabase('update', id, item)
 
     mostrarExito('Criterio actualizado', `Se actualizaron las definiciones de "${item.nombre}".`)
     return true
@@ -385,14 +354,7 @@ export function useTiposAlertas() {
     const borrado = tiposAlertas.value.splice(idx, 1)[0]
     guardarEnLocalStorage()
 
-    ;(async () => {
-      try {
-        await supabase.from('tipos_alertas_config').delete().eq('id', id)
-      } catch {}
-      try {
-        await supabase.from('tipos_alertas').delete().eq('id', id)
-      } catch {}
-    })()
+    sincronizarAlertaConSupabase('delete', id)
 
     mostrarExito('Alerta eliminada', `"${borrado?.nombre || ''}" fue retirada de los criterios de IA.`)
     return true
@@ -408,14 +370,7 @@ export function useTiposAlertas() {
     item.activa = !item.activa
     guardarEnLocalStorage()
 
-    ;(async () => {
-      try {
-        await supabase.from('tipos_alertas_config').update({ activa: item.activa }).eq('id', id)
-      } catch {}
-      try {
-        await supabase.from('tipos_alertas').update({ activa: item.activa }).eq('id', id)
-      } catch {}
-    })()
+    sincronizarAlertaConSupabase('update', id, { activa: item.activa })
     return item.activa
   }
 

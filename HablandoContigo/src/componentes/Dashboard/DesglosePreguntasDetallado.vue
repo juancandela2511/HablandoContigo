@@ -20,10 +20,14 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import type { DesgloseRespuestaDetallada } from '@/Almacenes/useEstadisticas'
-import { HelpCircle, ShieldAlert, MessageSquareQuote, ChevronDown, ChevronUp } from 'lucide-vue-next'
+import { HelpCircle, ShieldAlert, MessageSquareQuote, ChevronDown, ChevronUp, BarChart3, Sparkles } from 'lucide-vue-next'
 
 const props = defineProps<{
   preguntas: DesgloseRespuestaDetallada[]
+}>()
+
+const emit = defineEmits<{
+  (e: 'crearEstadistica', idPregunta?: string): void
 }>()
 
 /** Filtro por categoría */
@@ -62,15 +66,25 @@ const toggleExpansion = (id: string) => {
         </p>
       </div>
 
-      <!-- Selector de Categorías -->
-      <select
-        v-model="categoriaFiltro"
-        class="bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-sky-500"
-      >
-        <option v-for="cat in categoriasUnicas" :key="cat" :value="cat">
-          {{ cat }}
-        </option>
-      </select>
+      <!-- Selector de Categorías y Botón Crear Estadística -->
+      <div class="flex items-center gap-2 flex-wrap">
+        <select
+          v-model="categoriaFiltro"
+          class="bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-sky-500 cursor-pointer"
+        >
+          <option v-for="cat in categoriasUnicas" :key="cat" :value="cat">
+            {{ cat }}
+          </option>
+        </select>
+
+        <button
+          @click="emit('crearEstadistica')"
+          class="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer shrink-0"
+        >
+          <BarChart3 class="w-3.5 h-3.5" />
+          <span>+ Crear Estadística de Pregunta</span>
+        </button>
+      </div>
     </div>
 
     <!-- Lista de Preguntas con Barras Apiladas -->
@@ -96,7 +110,16 @@ const toggleExpansion = (id: string) => {
           </div>
 
           <div class="flex items-center gap-3 text-xs font-mono">
-            <span class="text-slate-500">Consenso: 
+            <button
+              @click="emit('crearEstadistica', item.idPregunta)"
+              class="px-2.5 py-1 rounded-xl bg-sky-50 dark:bg-sky-950/60 hover:bg-sky-100 dark:hover:bg-sky-900/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95"
+              title="Crear estadística visual personalizada para esta pregunta"
+            >
+              <BarChart3 class="w-3.5 h-3.5 text-sky-500" />
+              <span>Crear Estadística</span>
+            </button>
+
+            <span class="text-slate-500 hidden sm:inline">Consenso: 
               <strong :class="item.indiceConsenso === 'Alto' ? 'text-emerald-500' : item.indiceConsenso === 'Polarizado' ? 'text-red-500' : 'text-amber-500'">
                 {{ item.indiceConsenso }} (σ: {{ item.desviacionEstandar }})
               </strong>

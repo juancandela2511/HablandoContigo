@@ -6,9 +6,10 @@
  * ¿QUÉ ES Y QUÉ HACE?
  * Permite al Administrador calibrar y "entrenar" el motor de Inteligencia Artificial:
  * 1. Configurar criterios para clasificar respuestas abiertas como Buenas, Regulares o Malas (Alertas).
- * 2. Encasillar respuestas negativas en tipos de alertas específicas (Mala Gestión, Acoso, Depresión, etc.).
- * 3. Gestionar ejemplos de entrenamiento (Few-shot learning) para enseñarle a la IA cómo interpretar frases.
- * 4. Proveer un simulador en tiempo real para probar cómo la IA analiza y califica cualquier texto.
+ * 2. Encasillar respuestas negativas en tipos de alertas específicas (Mala Gestión, Acoso Físico/Verbal, Depresión, etc.).
+ * 3. Detección de patrones y menciones recurrentes por sujetos o temas.
+ * 4. Gestionar ejemplos de entrenamiento (Few-shot learning) para enseñarle a la IA cómo interpretar frases.
+ * 5. Proveer un simulador en tiempo real para probar cómo la IA analiza y califica cualquier texto.
  */
 
 import { ref, computed } from 'vue'
@@ -42,6 +43,13 @@ export interface ResultadoAnalisisIA {
   sugerenciaAccion?: string
 }
 
+export interface PatronMencionDetectado {
+  sujetoOTema: string
+  conteo: number
+  categoria: 'Acoso / Vulneración' | 'Liderazgo & Trato' | 'Carga & Sobrecarga' | 'Sugerencia / Mejora'
+  frasesMencionadas: string[]
+}
+
 export interface ConfiguracionEntrenamiento {
   instruccionesGenerales: string
   criteriosBuenas: string
@@ -57,10 +65,10 @@ const CLAVE_STORAGE_EJEMPLOS_IA = 'hablandocontigo_ia_ejemplos_entrenamiento_v1'
 
 // Configuración inicial por defecto
 const CONFIGURACION_INICIAL: ConfiguracionEntrenamiento = {
-  instruccionesGenerales: 'Analiza las respuestas de los colaboradores en encuestas de clima laboral. Identifica el sentimiento real, evalúa si existe insatisfacción, malestar o peligro psicosocial, y encasilla inmediatamente en la alerta correspondiente cuando corresponda.',
+  instruccionesGenerales: 'Analiza las respuestas de los colaboradores en encuestas de clima laboral. Identifica el sentimiento real, evalúa si existe insatisfacción, malestar o peligro psicosocial, e identifica menciones recurrentes de personas o acoso físico/verbal encasillando inmediatamente en la alerta correspondiente.',
   criteriosBuenas: 'Respuestas que reflejan motivación, satisfacción, excelente trabajo en equipo, agradecimiento, reconocimiento de líderes, bienestar o propuestas proactivas constructivas.',
   criteriosRegulares: 'Respuestas neutras, dudas sobre procesos, observaciones menores, solicitudes estándar de capacitación o comentarios sin carga emocional negativa severa.',
-  criteriosMalas: 'Respuestas que manifiestan autoritarismo, gritos, favoritismo, hostigamiento, acoso, estrés severo, sobrecarga extrema, desinterés de los jefes, mal ambiente o afectación a la salud física/mental.',
+  criteriosMalas: 'Respuestas que manifiestan autoritarismo, gritos, favoritismo, hostigamiento, tocamientos o acoso físico/verbal, agresión, estrés severo, sobrecarga extrema o afectación a la salud física/mental.',
   sensibilidad: 'Equilibrada',
   autoEncasillarAbiertas: true,
   notificarAlertasAbiertas: true
@@ -97,23 +105,34 @@ const EJEMPLOS_INICIALES: EjemploEntrenamientoIA[] = [
   },
   {
     id: 'ej-004',
+    textoEjemplo: 'Daniel me tocó sin mi consentimiento en la oficina y fue inapropiado.',
+    clasificacion: 'Mala',
+    tipoAlertaId: 'tipo-acoso',
+    nombreAlerta: 'Acoso Laboral & Hostigamiento Físico',
+    explicacionCriterio: 'Alerta crítica de vulneración física y contacto inapropiado no consentido en el entorno de trabajo.',
+    creadoEn: new Date().toISOString()
+  },
+  {
+    id: 'ej-005',
+    textoEjemplo: 'Varias personas en el equipo opinamos que Omar nos trata mal y nos descalifica en público.',
+    clasificacion: 'Mala',
+    tipoAlertaId: 'tipo-jefes-gestion',
+    nombreAlerta: 'Mala Gestión de los Jefes & Liderazgo Tóxico',
+    explicacionCriterio: 'Reporta abuso de poder interpersonal recurrente dirigido por un integrante o líder específico.',
+    creadoEn: new Date().toISOString()
+  },
+  {
+    id: 'ej-006',
     textoEjemplo: 'El ambiente en mi equipo es excelente, siempre nos apoyamos y mi líder es muy abierta al diálogo.',
     clasificacion: 'Buena',
     explicacionCriterio: 'Expresa colaboración, empatía y satisfacción total con el equipo y el liderazgo.',
     creadoEn: new Date().toISOString()
   },
   {
-    id: 'ej-005',
-    textoEjemplo: 'El trabajo es normal, a veces hay bastante flujo de llamadas pero se logra cumplir con la meta.',
+    id: 'ej-007',
+    textoEjemplo: 'Sugiero implementar pausas activas diarias y capacitaciones de liderazgo empático.',
     clasificacion: 'Regular',
-    explicacionCriterio: 'Comentario neutro y balanceado que describe la rutina habitual sin quejas ni alertas.',
-    creadoEn: new Date().toISOString()
-  },
-  {
-    id: 'ej-006',
-    textoEjemplo: 'Sugiero que mejoren los descansos y habiliten más hornos microondas en el comedor.',
-    clasificacion: 'Regular',
-    explicacionCriterio: 'Propuesta de mejora física constructiva, sin manifestar acoso ni conflicto.',
+    explicacionCriterio: 'Propuesta constructiva de bienestar y desarrollo organizacional.',
     creadoEn: new Date().toISOString()
   }
 ]
@@ -258,12 +277,19 @@ export function useReconocimientoIA() {
       }
     }
 
-    // 2. Diccionarios semánticos de apoyo
+    // 2. Diccionarios semánticos ampliados de apoyo
+    const terminosCriticosAcosoYFisicos = [
+      'me toco', 'me tocó', 'toqueteo', 'toqueteos', 'tocamiento', 'tocamientos', 
+      'inapropiado', 'inapropiada', 'sin mi consentimiento', 'vulneracion', 'vulneración', 
+      'abuso fisico', 'abuso físico', 'contacto indebido', 'acosar', 'acoso sexual'
+    ]
+
     const terminosCriticosGenerales = [
       'gritos', 'humillacion', 'humillación', 'grosero', 'grosera', 'amenaza', 'insulto', 
       'llanto', 'desesperado', 'desesperada', 'no aguanto', 'no puedo mas', 'no puedo más',
       'renuncio', 'renunciar', 'abuso', 'favoritismo', 'injusto', 'maltrato', 'acoso',
-      'hostigamiento', 'odio', 'asco', 'depresion', 'depresión', 'panico', 'pánico', 'ansiedad extrema'
+      'hostigamiento', 'odio', 'asco', 'depresion', 'depresión', 'panico', 'pánico', 
+      'ansiedad extrema', 'me trata mal', 'me cae mal', 'autoritario', 'descalifica'
     ]
 
     const terminosPositivos = [
@@ -272,8 +298,18 @@ export function useReconocimientoIA() {
       'tranquilo', 'tranquila', 'gran equipo', 'super bien', 'maravilloso', 'armonia', 'armonía'
     ]
 
+    let conteoAcosoFisico = 0
     let conteoCritico = 0
     let conteoPositivo = 0
+
+    terminosCriticosAcosoYFisicos.forEach(term => {
+      if (textoLimpio.includes(term)) {
+        conteoAcosoFisico++
+        if (!palabrasDetectadas.includes(term)) {
+          palabrasDetectadas.push(term)
+        }
+      }
+    })
 
     terminosCriticosGenerales.forEach(term => {
       if (textoLimpio.includes(term)) {
@@ -306,22 +342,37 @@ export function useReconocimientoIA() {
 
       return {
         clasificacion: ejemploCoincidente.clasificacion,
-        puntajeEstimado: ejemploCoincidente.clasificacion === 'Buena' ? 4.8 : ejemploCoincidente.clasificacion === 'Mala' ? 1.2 : 3.0,
+        puntajeEstimado: ejemploCoincidente.clasificacion === 'Buena' ? 4.8 : ejemploCoincidente.clasificacion === 'Mala' ? 1.0 : 3.0,
         esAlerta: ejemploCoincidente.clasificacion === 'Mala',
         alertaAsignada: alerta,
         palabrasDetectadas,
-        confianza: 98,
+        confianza: 99,
         razonamiento: `Coincidencia directa con caso de entrenamiento: "${ejemploCoincidente.explicacionCriterio}"`,
-        sugerenciaAccion: alerta ? alerta.protocoloAccion : undefined
+        sugerenciaAccion: alerta ? alerta.protocoloAccion : 'Remitir a Comité de Convivencia y Talento Humano.'
       }
     }
 
-    // 4. Decisión Final basada en Criterios y Sensibilidad
+    // 4. Evaluación prioritaria de Acoso Físico o Vulneración Grave (Nivel 1 Crítico)
+    if (conteoAcosoFisico > 0) {
+      const alertaAcoso = tiposAlertas.value.find(t => t.id === 'tipo-acoso' || t.nivel === 1) || tiposActivos.value[0] || null
+      return {
+        clasificacion: 'Mala',
+        puntajeEstimado: 1.0,
+        esAlerta: true,
+        alertaAsignada: alertaAcoso,
+        palabrasDetectadas,
+        confianza: 98,
+        razonamiento: `Detectada alerta crítica de acoso/tocamiento o vulneración física inapropiada. Términos clave: [${palabrasDetectadas.join(', ')}].`,
+        sugerenciaAccion: 'ALERTA CRÍTICA NIVEL 1: Activar de inmediato el Protocolo del Comité de Convivencia y brindar contención confidencial.'
+      }
+    }
+
+    // 5. Decisión Final basada en Criterios y Sensibilidad
     const umbralAlerta = configuracion.value.sensibilidad === 'Sensible' ? 1 : configuracion.value.sensibilidad === 'Estricta' ? 2 : 1
 
     if (conteoCritico >= umbralAlerta || maxCoincidencias > 0) {
       const alertaFinal = alertaEncontrada || tiposActivos.value[0] || null
-      const confianzaCalc = Math.min(95, 70 + (conteoCritico * 8) + (maxCoincidencias * 10))
+      const confianzaCalc = Math.min(96, 75 + (conteoCritico * 8) + (maxCoincidencias * 10))
 
       return {
         clasificacion: 'Mala',
@@ -349,7 +400,7 @@ export function useReconocimientoIA() {
       }
     }
 
-    // Caso neutro / regular
+    // Caso neutro / regular / propuesta de mejora
     return {
       clasificacion: 'Regular',
       puntajeEstimado: 3.2,
@@ -357,9 +408,44 @@ export function useReconocimientoIA() {
       alertaAsignada: null,
       palabrasDetectadas,
       confianza: 75,
-      razonamiento: 'Comentario de carácter constructivo, neutro o sugerencia operativa sin evidencia de riesgo psicosocial grave.',
-      sugerenciaAccion: 'Incluir en el informe general de sugerencias.'
+      razonamiento: 'Comentario de carácter constructivo, propuesta de mejora u observación operativa sin evidencia de riesgo psicosocial grave.',
+      sugerenciaAccion: 'Incluir en el informe general de sugerencias y planes de mejora continua.'
     }
+  }
+
+  // ─── EXTRACCIÓN DE PATRONES Y MENCIONES RECURRENTES ────────────────────────
+  const extraerPatronesYMenciones = (respuestas: string[]): PatronMencionDetectado[] => {
+    const mapaMenciones = new Map<string, { conteo: number; categoria: PatronMencionDetectado['categoria']; frases: string[] }>()
+
+    const nombresYPatronesComunes = [
+      { patron: /\b(omar)\b/i, nombre: 'Omar (Menciones de Liderazgo/Conflicto)', cat: 'Liderazgo & Trato' as const },
+      { patron: /\b(daniel)\b/i, nombre: 'Daniel (Reportes de Acoso/Contacto Inapropiado)', cat: 'Acoso / Vulneración' as const },
+      { patron: /\b(supervisor|jefe|lider|líder)\b/i, nombre: 'Líder / Jefatura Directa', cat: 'Liderazgo & Trato' as const },
+      { patron: /\b(sobrecarga|agotamiento|presion|presión|estres|estrés)\b/i, nombre: 'Sobrecarga y Estrés Laboral', cat: 'Carga & Sobrecarga' as const },
+      { patron: /\b(sugiero|mejorar|comedor|pausas|horarios|capacitacion|capacitación)\b/i, nombre: 'Propuestas de Mejora Operativa', cat: 'Sugerencia / Mejora' as const }
+    ]
+
+    respuestas.forEach(texto => {
+      nombresYPatronesComunes.forEach(({ patron, nombre, cat }) => {
+        if (patron.test(texto)) {
+          if (!mapaMenciones.has(nombre)) {
+            mapaMenciones.set(nombre, { conteo: 0, categoria: cat, frases: [] })
+          }
+          const item = mapaMenciones.get(nombre)!
+          item.conteo++
+          if (item.frases.length < 3) {
+            item.frases.push(texto)
+          }
+        }
+      })
+    })
+
+    return Array.from(mapaMenciones.entries()).map(([sujetoOTema, datos]) => ({
+      sujetoOTema,
+      conteo: datos.conteo,
+      categoria: datos.categoria,
+      frasesMencionadas: datos.frases
+    })).sort((a, b) => b.conteo - a.conteo)
   }
 
   // ─── Estadísticas de Entrenamiento ─────────────────────────────────────────
@@ -387,6 +473,7 @@ export function useReconocimientoIA() {
     agregarEjemplo,
     eliminarEjemplo,
     restablecerEjemplosPorDefecto,
-    analizarTextoConIA
+    analizarTextoConIA,
+    extraerPatronesYMenciones
   }
 }

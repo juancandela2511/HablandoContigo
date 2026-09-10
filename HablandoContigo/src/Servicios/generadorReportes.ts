@@ -359,20 +359,74 @@ export function exportarPDFEjecutivo(params: ParametrosReporte): void {
 
   const preguntasSlides: PreguntaSlide[] = []
 
+  const respuestas = params.respuestas || []
+
+  // Cálculo de distribución real sobre respuestas de la base de datos
+  const calcularDistribucionReal = (idPregunta: string, textoPregunta: string) => {
+    let pos = 0, neu = 0, neg = 0, total = 0
+    const txtMin = (textoPregunta || '').toLowerCase().trim()
+
+    respuestas.forEach(r => {
+      r.respuestas?.forEach(item => {
+        const idMatch = item.idPregunta && (item.idPregunta === idPregunta || idPregunta.includes(item.idPregunta) || item.idPregunta.includes(idPregunta))
+        const txtMatch = item.textoPregunta && txtMin && item.textoPregunta.toLowerCase().trim() === txtMin
+
+        if (idMatch || txtMatch) {
+          const val = typeof item.valor === 'number' ? item.valor : (Number(item.valor) || 0)
+          const valStr = String(item.valor || '').toLowerCase().trim()
+
+          if (val >= 4) pos++
+          else if (val === 3) neu++
+          else if (val >= 1) neg++
+          else if (valStr) {
+            if (valStr.includes('sí') || valStr.includes('si') || valStr.includes('excelente') || valStr.includes('buen')) pos++
+            else if (valStr.includes('regular') || valStr.includes('medio')) neu++
+            else if (valStr.includes('no') || valStr.includes('malo')) neg++
+          }
+          total++
+        }
+      })
+    })
+
+    if (total === 0) return { pos: 0, neu: 0, neg: 0, total: 0, fav: 0, neuPct: 0, des: 0 }
+
+    const fav = Math.round((pos / total) * 100)
+    const neuPct = Math.round((neu / total) * 100)
+    const des = Math.max(0, 100 - fav - neuPct)
+
+    return { pos, neu, neg, total, fav, neuPct, des }
+  }
+
   if (estadisticas.desgloseRespuestasDetalladas && estadisticas.desgloseRespuestasDetalladas.length > 0) {
     estadisticas.desgloseRespuestasDetalladas.forEach((d, idx) => {
-      const total = (d.distribucion.positivas + d.distribucion.neutrales + d.distribucion.negativas) || d.totalRespuestas || 1
-      const fav = Math.round((d.distribucion.positivas / total) * 100) || 72
-      const neu = Math.round((d.distribucion.neutrales / total) * 100) || 18
-      const des = Math.max(0, 100 - fav - neu)
-
+      const dist = calcularDistribucionReal(d.idPregunta, d.pregunta)
+      let fav = 0, neu = 0, des = 0, total = 0
       let textoAnalisis = ''
-      if (fav >= 75) {
-        textoAnalisis = `El ${fav}% de los colaboradores manifiesta una percepción altamente positiva frente a esta afirmación, evidenciando confianza y satisfacción en ${d.categoria.toLowerCase()}.`
-      } else if (fav >= 60) {
-        textoAnalisis = `El ${fav}% de los colaboradores califica favorablemente este aspecto. Se identifica una oportunidad de mejora con un ${neu}% de respuestas neutrales para optimizar los procesos del área.`
+
+      if (dist.total > 0) {
+        total = dist.total
+        fav = dist.fav
+        neu = dist.neuPct
+        des = dist.des
+
+        if (fav >= 75) {
+          textoAnalisis = `El ${fav}% de los colaboradores (${dist.pos} de ${total} respuestas reales) manifiesta una percepción altamente positiva en ${d.categoria.toLowerCase()}.`
+        } else if (fav >= 50) {
+          textoAnalisis = `El ${fav}% de los colaboradores califica favorablemente este aspecto. Se identifica un ${neu}% de respuestas neutrales y ${des}% desfavorables.`
+        } else {
+          textoAnalisis = `Foco prioritario de atención: el ${des}% de las respuestas son desfavorables (${dist.neg} de ${total} respuestas), requiriendo intervención en ${d.categoria.toLowerCase()}.`
+        }
       } else {
-        textoAnalisis = `Se evidencia un foco de atención con un ${des}% de percepción desfavorable, lo cual sugiere la necesidad de implementar acciones de acompañamiento directo y retroalimentación oportuna.`
+        const totalBase = (d.distribucion.positivas + d.distribucion.neutrales + d.distribucion.negativas) || d.totalRespuestas
+        if (totalBase > 0) {
+          total = totalBase
+          fav = Math.round((d.distribucion.positivas / totalBase) * 100)
+          neu = Math.round((d.distribucion.neutrales / totalBase) * 100)
+          des = Math.max(0, 100 - fav - neu)
+          textoAnalisis = `El ${fav}% de las respuestas registradas en esta dimensión refleja una evaluación positiva en ${d.categoria.toLowerCase()}.`
+        } else {
+          textoAnalisis = `Esta pregunta de ${d.categoria} aún no cuenta con respuestas registradas en las encuestas activas.`
+        }
       }
 
       preguntasSlides.push({
@@ -390,71 +444,30 @@ export function exportarPDFEjecutivo(params: ParametrosReporte): void {
     encuestas.forEach(enc => {
       if (enc.preguntas && enc.preguntas.length > 0) {
         enc.preguntas.forEach(p => {
+          const dist = calcularDistribucionReal(p.id, p.texto)
+          let fav = 0, neu = 0, des = 0
+          let textoAnalisis = ''
+
+          if (dist.total > 0) {
+            fav = dist.fav
+            neu = dist.neuPct
+            des = dist.des
+            textoAnalisis = `El ${fav}% de los participantes (${dist.pos} de ${dist.total} respuestas recibidas) califica de manera favorable este factor en ${enc.departamento}.`
+          } else {
+            textoAnalisis = `Pregunta de la encuesta "${enc.titulo}" (${enc.departamento}). Pendiente de recabar respuestas de colaboradores.`
+          }
+
           preguntasSlides.push({
             numero: globalIdx++,
             texto: p.texto,
             categoria: p.categoria || enc.titulo,
-            favorablePct: 74,
-            neutralPct: 16,
-            desfavorablePct: 10,
-            analisis: `El 74% de los participantes percibe condiciones adecuadas en este factor, reflejando un ambiente de compromiso en el área de ${enc.departamento}.`
+            favorablePct: fav,
+            neutralPct: neu,
+            desfavorablePct: des,
+            analisis: textoAnalisis
           })
         })
       }
-    })
-  }
-
-  // Si no había preguntas registradas, proveer las preguntas modelo representativas del estudio
-  if (preguntasSlides.length === 0) {
-    const preguntasModelo = [
-      {
-        texto: 'En tu jefe inmediato ves una persona con don de mando y liderazgo constructivo',
-        categoria: 'Liderazgo y Jefatura',
-        fav: 78, neu: 14, des: 8,
-        analisis: 'El 78% de los colaboradores reconoce una figura de liderazgo positiva en su jefe inmediato, destacando su capacidad de orientación y don de mando.'
-      },
-      {
-        texto: 'Recibes feedback y retroalimentación oportuna por parte de tu jefe inmediato',
-        categoria: 'Comunicación y Feedback',
-        fav: 68, neu: 20, des: 12,
-        analisis: 'El 68% de los colaboradores recibe retroalimentación regular sobre su desempeño, existiendo un 20% en estado neutro que requiere mayor periodicidad de seguimiento.'
-      },
-      {
-        texto: 'Sientes que haces parte del equipo de trabajo y compartes sus objetivos',
-        categoria: 'Pertenencia y Trabajo en Equipo',
-        fav: 84, neu: 11, des: 5,
-        analisis: 'El 84% de los colaboradores manifiesta un fuerte sentido de pertenencia y alineación con las metas operativas de la organización.'
-      },
-      {
-        texto: 'Mi jefe inmediato escucha al personal y toma en cuenta sus opiniones',
-        categoria: 'Escucha Activa y Participación',
-        fav: 73, neu: 17, des: 10,
-        analisis: 'El 73% de los colaboradores afirma contar con canales abiertos para expresar sus ideas y propuestas ante sus superiores.'
-      },
-      {
-        texto: 'Cuentas con las herramientas y equipos necesarios para realizar tu labor diaria',
-        categoria: 'Infraestructura y Herramientas',
-        fav: 70, neu: 18, des: 12,
-        analisis: 'El 70% considera que los equipos y periféricos son adecuados para la jornada, recomendándose optimizaciones periódicas de mantenimiento.'
-      },
-      {
-        texto: 'El ambiente de trabajo favorece el respeto mutuo y la convivencia armónica',
-        categoria: 'Clima y Convivencia',
-        fav: 81, neu: 13, des: 6,
-        analisis: 'El 81% de los colaboradores destaca un ambiente libre de tensiones y fundamentado en el respeto mutuo entre compañeros.'
-      }
-    ]
-
-    preguntasModelo.forEach((pm, idx) => {
-      preguntasSlides.push({
-        numero: idx + 1,
-        texto: pm.texto,
-        categoria: pm.categoria,
-        favorablePct: pm.fav,
-        neutralPct: pm.neu,
-        desfavorablePct: pm.des,
-        analisis: pm.analisis
-      })
     })
   }
 

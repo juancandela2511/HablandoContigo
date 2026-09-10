@@ -107,13 +107,7 @@ const emit = defineEmits<{
         />
       </div>
 
-      <div class="lg:col-span-6 p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md">
-        <GraficoBarras 
-          :datos="dimensionesBarras"
-          titulo="Comparativa de Dimensiones por Porcentaje"
-          subtitulo="Puntuación relativa y nivel de cumplimiento"
-        />
-      </div>
+     
     </div>
   </div>
 </template>

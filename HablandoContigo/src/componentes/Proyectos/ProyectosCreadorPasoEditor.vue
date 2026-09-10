@@ -14,7 +14,7 @@
 
 <script setup lang="ts">
 import type { PreguntaEncuesta, OpcionPregunta } from '@/Servicios/iaEncuestasService'
-import { Plus, Trash2, ShieldAlert, Send, Check, MessageSquare, ListChecks, Sliders, Bell, BellOff, AlertTriangle } from 'lucide-vue-next'
+import { Plus, Trash2, ShieldAlert, Send, Check, MessageSquare, ListChecks, Sliders, Bell, BellOff, AlertTriangle, GitBranch, Eye, EyeOff, Sparkles } from 'lucide-vue-next'
 import { useTiposAlertas } from '@/Almacenes/useTiposAlertas'
 
 const props = defineProps<{
@@ -79,6 +79,37 @@ const eliminarOpcionDePregunta = (preg: PreguntaEncuesta, index: number) => {
     return
   }
   preg.opciones.splice(index, 1)
+}
+
+const toggleCondicionalPregunta = (preg: PreguntaEncuesta) => {
+  preg.esCondicional = !preg.esCondicional
+  if (preg.esCondicional) {
+    if (!preg.disparadorPor) {
+      const padre = props.preguntasGeneradas.find(p => p.id !== preg.id)
+      if (padre) preg.disparadorPor = padre.id
+    }
+    if (!preg.accionCondicion) preg.accionCondicion = 'mostrar_si'
+    if (!preg.valoresDisparo || preg.valoresDisparo.length === 0) preg.valoresDisparo = ['Sí']
+  }
+}
+
+const toggleValorDisparoPregunta = (preg: PreguntaEncuesta, val: string) => {
+  if (!preg.valoresDisparo) preg.valoresDisparo = []
+  const idx = preg.valoresDisparo.findIndex(v => v.trim().toLowerCase() === val.trim().toLowerCase())
+  if (idx >= 0) {
+    preg.valoresDisparo.splice(idx, 1)
+  } else {
+    preg.valoresDisparo.push(val)
+  }
+}
+
+const obtenerOpcionesPadre = (disparadorId?: string) => {
+  if (!disparadorId) return ['Sí', 'No']
+  const padre = props.preguntasGeneradas.find(p => p.id === disparadorId)
+  if (padre?.opciones && padre.opciones.length > 0) {
+    return padre.opciones.map(o => o.texto)
+  }
+  return ['Sí', 'No']
 }
 </script>
 
@@ -178,6 +209,14 @@ const eliminarOpcionDePregunta = (preg: PreguntaEncuesta, index: number) => {
             >
               <ShieldAlert class="w-3 h-3" />
               Sensible
+            </span>
+
+            <span 
+              v-if="preg.esCondicional"
+              class="text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-800 flex items-center gap-1"
+            >
+              <GitBranch class="w-3 h-3" />
+              Condicional ({{ preg.accionCondicion === 'omitir_si' ? 'Omitir si' : 'Si' }} "{{ (preg.valoresDisparo || []).join(', ') || 'Sí' }}")
             </span>
           </div>
 
@@ -321,6 +360,113 @@ const eliminarOpcionDePregunta = (preg: PreguntaEncuesta, index: number) => {
         <div v-else class="p-3 rounded-2xl bg-sky-50/60 dark:bg-sky-950/30 border border-sky-200/60 dark:border-sky-800/40 text-xs text-sky-800 dark:text-sky-300 flex items-center gap-2">
           <MessageSquare class="w-4 h-4 text-sky-500 shrink-0" />
           <span>El colaborador responderá escribiendo libremente en una caja de texto sin límite de caracteres.</span>
+        </div>
+
+        <!-- ── LÓGICA CONDICIONAL Y SALTO DE PREGUNTA ── -->
+        <div class="pt-2 border-t border-slate-100 dark:border-slate-800/80">
+          <div class="p-4 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200/60 dark:border-indigo-900/40 space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <GitBranch class="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                <span class="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Lógica Condicional (Salto de Pregunta)
+                </span>
+              </div>
+              <button
+                type="button"
+                @click="toggleCondicionalPregunta(preg)"
+                :class="[
+                  'px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer',
+                  preg.esCondicional
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-indigo-600'
+                ]"
+              >
+                {{ preg.esCondicional ? 'Condición Activa' : '+ Activar Condición' }}
+              </button>
+            </div>
+
+            <div v-if="preg.esCondicional" class="space-y-3 pt-2 border-t border-indigo-100 dark:border-indigo-900/40">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div>
+                  <label class="block font-semibold text-slate-600 dark:text-slate-400 mb-1">Depende de la pregunta:</label>
+                  <select
+                    v-model="preg.disparadorPor"
+                    class="w-full p-2 rounded-xl bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800 text-xs text-slate-800 dark:text-slate-200"
+                  >
+                    <option
+                      v-for="(p, pIdx) in preguntasGeneradas.filter(item => item.id !== preg.id)"
+                      :key="p.id"
+                      :value="p.id"
+                    >
+                      [{{ pIdx + 1 }}] {{ p.texto.slice(0, 50) }}...
+                    </option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block font-semibold text-slate-600 dark:text-slate-400 mb-1">Comportamiento:</label>
+                  <div class="flex gap-2">
+                    <button
+                      type="button"
+                      @click="preg.accionCondicion = 'mostrar_si'"
+                      :class="[
+                        'flex-1 p-2 rounded-xl text-[11px] font-bold border transition-all cursor-pointer flex items-center justify-center gap-1',
+                        preg.accionCondicion === 'mostrar_si' || !preg.accionCondicion
+                          ? 'bg-emerald-500 text-white border-emerald-600 shadow-sm'
+                          : 'bg-white dark:bg-slate-900 text-slate-600 border-slate-200 dark:border-slate-700'
+                      ]"
+                    >
+                      <Eye class="w-3.5 h-3.5" /> Mostrar si
+                    </button>
+                    <button
+                      type="button"
+                      @click="preg.accionCondicion = 'omitir_si'"
+                      :class="[
+                        'flex-1 p-2 rounded-xl text-[11px] font-bold border transition-all cursor-pointer flex items-center justify-center gap-1',
+                        preg.accionCondicion === 'omitir_si'
+                          ? 'bg-rose-500 text-white border-rose-600 shadow-sm'
+                          : 'bg-white dark:bg-slate-900 text-slate-600 border-slate-200 dark:border-slate-700'
+                      ]"
+                    >
+                      <EyeOff class="w-3.5 h-3.5" /> Omitir si
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1.5">
+                  Respuestas de la pregunta anterior que activan esta condición:
+                </label>
+                <div class="flex flex-wrap gap-1.5">
+                  <button
+                    v-for="opc in obtenerOpcionesPadre(preg.disparadorPor)"
+                    :key="opc"
+                    type="button"
+                    @click="toggleValorDisparoPregunta(preg, opc)"
+                    :class="[
+                      'px-2.5 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer',
+                      preg.valoresDisparo?.some(v => v.trim().toLowerCase() === opc.trim().toLowerCase())
+                        ? 'bg-indigo-600 text-white border-indigo-700 shadow-sm'
+                        : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                    ]"
+                  >
+                    {{ opc }}
+                  </button>
+                </div>
+              </div>
+
+              <div class="p-2.5 rounded-xl bg-indigo-100/70 dark:bg-indigo-950/60 text-[11px] text-indigo-900 dark:text-indigo-200 flex items-center gap-1.5">
+                <Sparkles class="w-3.5 h-3.5 shrink-0 text-indigo-600 dark:text-indigo-400" />
+                <span>
+                  {{ preg.accionCondicion === 'omitir_si'
+                    ? `Si responde "${(preg.valoresDisparo || []).join(', ') || 'No'}", esta pregunta se OMITIRÁ.`
+                    : `Esta pregunta se MOSTRARÁ solo si responde "${(preg.valoresDisparo || []).join(', ') || 'Sí'}". Si no, se omitirá.` }}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
 
       </div>

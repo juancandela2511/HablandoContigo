@@ -720,6 +720,7 @@ const guardarEncuesta = () => {
     <ModalEditorPregunta
       :abierto="modalAbierto"
       :pregunta="preguntaEditando"
+      :todasLasPreguntas="preguntas"
       @guardar="guardarEdicionPregunta"
       @cerrar="cerrarModal"
     />

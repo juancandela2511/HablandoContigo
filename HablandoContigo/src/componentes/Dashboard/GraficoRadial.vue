@@ -4,27 +4,15 @@
   ============================================================================
   
   ¿QUÉ ES Y QUÉ HACE?
-  Renderiza un gráfico de radar / telaraña SVG vectorial 100% nativo con 6 ejes:
-  1. Liderazgo & Empatía
-  2. Prevención de Acoso
-  3. Balance de Carga & Salud
-  4. Seguridad Psicológica
-  5. Herramientas & Soporte
-  6. Reconocimiento & Pertenencia
-  
-  ¿PARA QUÉ SIRVE?
-  - Visualizar el equilibrio o desbalance holístico del clima laboral.
-  - Trazar el polígono de datos actual contra el polígono de meta de referencia corporativa.
-  
-  ¿CON QUÉ ESTÁ VINCULADO / CONECTADO?
-  - DashboardView.vue: Pestaña 1 "Visión Global".
-  - useEstadisticas.ts: Provee `dimensionesFiltradas` y `datosEstadisticas.metaGlobalRadial`.
+  Renderiza un gráfico de radar / telaraña SVG vectorial 100% nativo:
+  - Soporta anclaje de Bloques de Encuesta a cada esquina/eje del radar.
+  - Formateo inteligente multi-línea y alineación SVG según cuadrante angular.
 -->
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { DimensionRadial } from '@/Almacenes/useEstadisticas'
-import { Sliders, Lock } from 'lucide-vue-next'
+import { Sliders } from 'lucide-vue-next'
 
 const props = withDefaults(
   defineProps<{
@@ -45,28 +33,49 @@ defineEmits<{
 }>()
 
 /** Dimensiones espaciales del lienzo SVG */
-const anchoLienzo = 340
-const altoLienzo = 340
+const anchoLienzo = 380
+const altoLienzo = 380
 const puntoCentro = anchoLienzo / 2
 const radioMaximo = 115
 
 /**
- * Calcula el ángulo en radianes de cada eje considerando la inclinación global y personalizada
+ * Divide textos largos de ejes o bloques en 2 líneas para evitar colisiones en SVG
+ */
+const dividirTextoEje = (texto: string): string[] => {
+  if (!texto) return ['']
+  if (texto.length <= 18) return [texto]
+  const palabras = texto.split(' ')
+  if (palabras.length <= 1) return [texto]
+  
+  const mitad = Math.ceil(palabras.length / 2)
+  const l1 = palabras.slice(0, mitad).join(' ')
+  const l2 = palabras.slice(mitad).join(' ')
+  return [l1, l2]
+}
+
+/**
+ * Calcula el ángulo en radianes de cada eje considerando la inclinación proporcional y personalizada
  */
 const angulosPorEje = computed(() => {
   const totalEjes = props.dimensiones?.length || 6
   const rotacionGlobalRad = ((props.anguloInclinacion || 0) * Math.PI) / 180
 
+  const todasCero = (props.dimensiones || []).every(d => !d.inclinacion || d.inclinacion === 0)
+
   return (props.dimensiones || []).map((dim, indice) => {
-    const anguloBase = (Math.PI * 2 / totalEjes) * indice - Math.PI / 2
-    const offsetInclinacionRad = ((dim.inclinacion || 0) * Math.PI) / 180
-    return anguloBase + offsetInclinacionRad + rotacionGlobalRad
+    let anguloGrados = 0
+    if (!todasCero && typeof dim.inclinacion === 'number') {
+      anguloGrados = dim.inclinacion
+    } else {
+      anguloGrados = (360 / totalEjes) * indice
+    }
+    const anguloRad = ((anguloGrados - 90) * Math.PI) / 180
+    return anguloRad + rotacionGlobalRad
   })
 })
 
 /**
  * Calcula los vértices del polígono radial según el valor de cada dimensión (0 a 100)
- * 100% proporcional a las respuestas de las encuestas
  */
 const puntosPoligonoDatos = computed(() => {
   if (!props.dimensiones || props.dimensiones.length === 0) return ''
@@ -111,22 +120,42 @@ const puntosAnillo = (nivel: number) => {
 }
 
 /**
- * Coordenadas espaciales para las líneas guía y etiquetas de cada dimensión
+ * Coordenadas espaciales e inclinaciones para etiquetas de cada esquina del radar
  */
 const posicionesEjesCalculadas = computed(() => {
   const totalEjes = props.dimensiones?.length || 6
   
   return (props.dimensiones || []).map((dim, indice) => {
     const angulo = angulosPorEje.value[indice] ?? ((Math.PI * 2 / totalEjes) * indice - Math.PI / 2)
-    const lineaX = puntoCentro + radioMaximo * Math.cos(angulo)
-    const lineaY = puntoCentro + radioMaximo * Math.sin(angulo)
-    const etiquetaX = puntoCentro + (radioMaximo + 28) * Math.cos(angulo)
-    const etiquetaY = puntoCentro + (radioMaximo + 16) * Math.sin(angulo)
+    const cosA = Math.cos(angulo)
+    const sinA = Math.sin(angulo)
+
+    const lineaX = puntoCentro + radioMaximo * cosA
+    const lineaY = puntoCentro + radioMaximo * sinA
+    
+    // Anclaje dinámico de texto según el cuadrante
+    let textAnchor = 'middle'
+    let deltaXMargin = 22
+
+    if (cosA > 0.25) {
+      textAnchor = 'start'
+      deltaXMargin = 12
+    } else if (cosA < -0.25) {
+      textAnchor = 'end'
+      deltaXMargin = 12
+    }
+
+    const deltaYMargin = sinA > 0.4 ? 22 : sinA < -0.4 ? 14 : 18
+
+    const etiquetaX = puntoCentro + (radioMaximo + deltaXMargin) * cosA
+    const etiquetaY = puntoCentro + (radioMaximo + deltaYMargin) * sinA
     
     // Posición del nodo de dato proporcional
     const distanciaDato = (Math.min(Math.max(dim.valor, 0), 100) / 100) * radioMaximo
-    const datoX = puntoCentro + distanciaDato * Math.cos(angulo)
-    const datoY = puntoCentro + distanciaDato * Math.sin(angulo)
+    const datoX = puntoCentro + distanciaDato * cosA
+    const datoY = puntoCentro + distanciaDato * sinA
+
+    const lineasTexto = dividirTextoEje(dim.eje)
 
     return {
       dim,
@@ -136,7 +165,9 @@ const posicionesEjesCalculadas = computed(() => {
       etiquetaX,
       etiquetaY,
       datoX,
-      datoY
+      datoY,
+      textAnchor,
+      lineasTexto
     }
   })
 })
@@ -146,7 +177,7 @@ const posicionesEjesCalculadas = computed(() => {
   <div 
     @dblclick="$emit('abrirConfiguracion')"
     class="flex flex-col items-center justify-center relative select-none w-full cursor-pointer group"
-    title="Doble clic para configurar y crear inclinaciones o ejes del radar"
+    title="Doble clic para configurar y anclar bloques a las esquinas del radar"
   >
     <!-- Botón de Configuración Rápida de Dimensiones e Inclinaciones -->
     <div v-if="mostrarBotonConfig" class="w-full flex items-center justify-between pb-1 text-xs">
@@ -164,7 +195,7 @@ const posicionesEjesCalculadas = computed(() => {
         <button
           type="button"
           @click="$emit('abrirConfiguracion')"
-          title="Clic para crear o editar inclinaciones y ejes"
+          title="Clic para crear o anclar bloques de encuestas a las esquinas del radar"
           class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-50 dark:bg-slate-800 hover:bg-sky-100 dark:hover:bg-slate-700 text-sky-700 dark:text-sky-300 text-[11px] font-semibold transition-all cursor-pointer border border-sky-200 dark:border-slate-700 shadow-sm"
         >
           <Sliders class="w-3 h-3 text-sky-500" />
@@ -173,7 +204,7 @@ const posicionesEjesCalculadas = computed(() => {
       </div>
     </div>
 
-    <svg :viewBox="`0 0 ${anchoLienzo} ${altoLienzo}`" class="w-full max-w-[320px] h-auto overflow-visible">
+    <svg :viewBox="`0 0 ${anchoLienzo} ${altoLienzo}`" class="w-full max-w-[350px] h-auto overflow-visible">
       <!-- Anillos concéntricos de referencia sólidos (20%, 40%, 60%, 80%, 100%) -->
       <polygon
         v-for="nivel in [0.2, 0.4, 0.6, 0.8, 1.0]"
@@ -209,7 +240,7 @@ const posicionesEjesCalculadas = computed(() => {
         opacity="0.75"
       />
 
-      <!-- Polígono de Datos del Clima Laboral (Color Sólido Ejecutivo) -->
+      <!-- Polígono de Datos del Clima Laboral -->
       <polygon
         :points="puntosPoligonoDatos"
         fill="#2563eb"
@@ -241,21 +272,27 @@ const posicionesEjesCalculadas = computed(() => {
         </text>
       </g>
 
-      <!-- Etiquetas de cada Dimensión -->
+      <!-- Etiquetas de cada Dimensión / Bloque en las esquinas -->
       <g v-for="(eje, idx) in posicionesEjesCalculadas" :key="'label-' + idx">
         <text
           :x="eje.etiquetaX"
           :y="eje.etiquetaY"
-          text-anchor="middle"
+          :text-anchor="eje.textAnchor"
           dominant-baseline="central"
-          class="text-[10px] font-medium fill-slate-700 dark:fill-slate-300"
+          class="text-[10px] font-bold fill-slate-800 dark:fill-slate-200 font-['Poppins',sans-serif]"
         >
-          {{ eje.dim.eje }}
+          <tspan v-if="eje.lineasTexto.length === 1" :x="eje.etiquetaX">
+            {{ eje.lineasTexto[0] }}
+          </tspan>
+          <template v-else>
+            <tspan :x="eje.etiquetaX" dy="-5">{{ eje.lineasTexto[0] }}</tspan>
+            <tspan :x="eje.etiquetaX" dy="11">{{ eje.lineasTexto[1] }}</tspan>
+          </template>
         </text>
       </g>
     </svg>
 
-    <!-- Leyenda Inferior Sólida -->
+    <!-- Leyenda Inferior -->
     <div class="flex flex-wrap items-center justify-center gap-4 text-[11px] pt-2">
       <span class="flex items-center gap-1.5 text-blue-700 dark:text-sky-400 font-semibold">
         <span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
@@ -266,6 +303,5 @@ const posicionesEjesCalculadas = computed(() => {
         Meta ({{ metaGlobal || 85 }}%)
       </span>
     </div>
-
   </div>
 </template>

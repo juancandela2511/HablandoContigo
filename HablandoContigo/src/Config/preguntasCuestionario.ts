@@ -187,7 +187,18 @@ export const PLANTILLA_CLIMA_INTEGRAL_DETALLADA: PreguntaEncuesta[] = [
       { id: 'b2p3-1', texto: 'Muy a gusto y motivado/a', valor: 5, esAlerta: false },
       { id: 'b2p3-2', texto: 'Satisfecho/a de manera regular', valor: 3, esAlerta: false },
       { id: 'b2p3-3', texto: 'Poco a gusto / Indiferente', valor: 2, esAlerta: true },
-      { id: 'b2p3-4', texto: 'Nada a gusto / Incómodo/a', valor: 1, esAlerta: true }
+      { 
+        id: 'b2p3-4', 
+        texto: 'Nada a gusto / Incómodo/a', 
+        valor: 1, 
+        esAlerta: true,
+        preguntaAnclada: {
+          texto: '¿Por qué te sientes así y qué situación en particular te incomoda?',
+          tipo: 'texto',
+          placeholder: 'Cuéntanos qué te pasó o qué genera tu malestar con total confidencialidad...',
+          obligatoria: true
+        }
+      }
     ]
   },
   {
@@ -196,7 +207,21 @@ export const PLANTILLA_CLIMA_INTEGRAL_DETALLADA: PreguntaEncuesta[] = [
     texto: 'Pregunta 4 — ¿Sientes niveles de estrés elevados en tus labores diarias?',
     tipo: 'multiple',
     opciones: [
-      { id: 'b2p4-si', texto: 'Sí', valor: 1, esAlerta: true, tipoAlertaId: 'tipo-depresion', nombreAlerta: 'Estrés Severo y Agotamiento Crónico', severidadAlerta: 'Crítica' },
+      { 
+        id: 'b2p4-si', 
+        texto: 'Sí', 
+        valor: 1, 
+        esAlerta: true, 
+        tipoAlertaId: 'tipo-depresion', 
+        nombreAlerta: 'Estrés Severo y Agotamiento Crónico', 
+        severidadAlerta: 'Crítica',
+        preguntaAnclada: {
+          texto: '¿Por qué? ¿Qué situaciones de tus labores diarias te generan mayor sobrecarga o estrés?',
+          tipo: 'texto',
+          placeholder: 'Cuéntanos qué te pasó o qué factores elevan tu nivel de fatiga...',
+          obligatoria: false
+        }
+      },
       { id: 'b2p4-av', texto: 'Algunas veces', valor: 3, esAlerta: false },
       { id: 'b2p4-no', texto: 'No', valor: 5, esAlerta: false }
     ]
@@ -276,7 +301,21 @@ export const PLANTILLA_CLIMA_INTEGRAL_DETALLADA: PreguntaEncuesta[] = [
     tieneBifurcacion: true,
     opciones: [
       { id: 'b3p12-no', texto: 'No, ninguno', valor: 5, esAlerta: false },
-      { id: 'b3p12-si', texto: 'Sí (indique el contexto en el campo de texto)', valor: 1, esAlerta: true, tipoAlertaId: 'tipo-acoso', nombreAlerta: 'Acoso Laboral y Hostigamiento', severidadAlerta: 'Crítica' }
+      { 
+        id: 'b3p12-si', 
+        texto: 'Sí (indique el contexto en el campo de texto)', 
+        valor: 1, 
+        esAlerta: true, 
+        tipoAlertaId: 'tipo-acoso', 
+        nombreAlerta: 'Acoso Laboral y Hostigamiento', 
+        severidadAlerta: 'Crítica',
+        preguntaAnclada: {
+          texto: '¿Qué te ocurrió y por qué se dio el conflicto? Cuéntanos con total confidencialidad:',
+          tipo: 'texto',
+          placeholder: 'Escribe aquí qué situación ocurrió y cómo te afectó...',
+          obligatoria: true
+        }
+      }
     ]
   },
   {

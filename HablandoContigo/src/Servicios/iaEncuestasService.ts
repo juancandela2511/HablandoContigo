@@ -11,6 +11,15 @@
  * escalas estandarizadas: Excelente, Bien, Regular, Mal y Muy Mal (Alerta Crítica).
  */
 
+export interface PreguntaAncladaConfig {
+  id?: string
+  texto: string
+  tipo?: 'texto' | 'multiple' | 'si_no'
+  placeholder?: string
+  opciones?: string[]
+  obligatoria?: boolean
+}
+
 export interface OpcionPregunta {
   id: string
   texto: string
@@ -19,6 +28,7 @@ export interface OpcionPregunta {
   tipoAlertaId?: string
   nombreAlerta?: string
   severidadAlerta?: string
+  preguntaAnclada?: PreguntaAncladaConfig
 }
 
 export interface PreguntaEncuesta {
@@ -35,6 +45,8 @@ export interface PreguntaEncuesta {
   esCondicional?: boolean
   disparadorPor?: string
   valoresDisparo?: string[]
+  accionCondicion?: 'mostrar_si' | 'omitir_si'
+  preguntaAnclada?: PreguntaAncladaConfig
 }
 
 export interface PlantillaEncuestaGenerada {
@@ -552,6 +564,153 @@ REGLAS ESTRICTAS DE ALERTA:
       clasificacionGlobal: hayAlertas ? 'Mala' : 'Buena',
       alertas: alertasLocales
     }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// CLASIFICADOR IA DE RESPUESTAS ABIERTAS (BUENA / MALA / NEUTRA)
+// ────────────────────────────────────────────────────────────────────────────
+
+export interface ClasificacionRespuestaAbierta {
+  clasificacion: 'Buena' | 'Mala' | 'Neutra'
+  puntaje: number // 1 a 5
+  tema: string
+  justificacion: string
+  palabrasClave?: string[]
+}
+
+const cacheClasificacionesIA = new Map<string, ClasificacionRespuestaAbierta>()
+
+export async function clasificarRespuestaAbiertaConIA(
+  preguntaTexto: string,
+  respuestaTexto: string
+): Promise<ClasificacionRespuestaAbierta> {
+  const clave = `${(preguntaTexto || '').trim()}:::${(respuestaTexto || '').trim()}`
+  if (cacheClasificacionesIA.has(clave)) {
+    return cacheClasificacionesIA.get(clave)!
+  }
+
+  const textoLimpio = (respuestaTexto || '').trim()
+  if (!textoLimpio || textoLimpio.length < 2) {
+    const defaultRes: ClasificacionRespuestaAbierta = {
+      clasificacion: 'Neutra',
+      puntaje: 3,
+      tema: 'Sin comentarios',
+      justificacion: 'Respuesta vacía o sin detalles.'
+    }
+    cacheClasificacionesIA.set(clave, defaultRes)
+    return defaultRes
+  }
+
+  // Intentar con Google Gemini si la clave es válida
+  const apiKey = obtenerClaveApiGemini()
+  if (esClaveApiValida(apiKey)) {
+    try {
+      const prompt = `Actúa como un psicólogo laboral y analista de datos organizacionales.
+Analiza la siguiente respuesta abierta a una pregunta de clima laboral:
+PREGUNTA: "${preguntaTexto}"
+RESPUESTA DEL COLABORADOR: "${textoLimpio}"
+
+Debes clasificar esta respuesta obligatoriamente en:
+- clasificacion: "Buena" (si denota satisfacción, optimismo, agradecimiento o propuestas favorables), "Mala" (si denota quejas graves, hostigamiento, malestar, sobrecarga, insatisfacción o toxicidad), o "Neutra" (si es informativa, sugerencia moderada o balanceada).
+- puntaje: Un número de 1 a 5 (1=muy negativa/alerta, 2=negativa, 3=neutral/constructiva, 4=positiva, 5=muy positiva).
+- tema: Nombre corto del tema principal (ej: "Liderazgo", "Carga Laboral", "Herramientas de Trabajo", "Salario y Beneficios", "Convivencia y Compañerismo", "Infraestructura", "Procesos Operativos", "Reconocimiento").
+- justificacion: Explicación breve de 1 frase.
+
+Responde ÚNICAMENTE un JSON con:
+{
+  "clasificacion": "Buena" | "Mala" | "Neutra",
+  "puntaje": number,
+  "tema": "string",
+  "justificacion": "string"
+}`
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODELO_GEMINI_PRINCIPAL}:generateContent?key=${apiKey}`
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.1 }
+        })
+      })
+      if (res.ok) {
+        const data = await res.json()
+        const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
+        const parsed = JSON.parse(extraerJSONLimpio(raw))
+        const resIA: ClasificacionRespuestaAbierta = {
+          clasificacion: (parsed.clasificacion === 'Buena' || parsed.clasificacion === 'Mala' || parsed.clasificacion === 'Neutra') ? parsed.clasificacion : 'Neutra',
+          puntaje: typeof parsed.puntaje === 'number' ? Math.max(1, Math.min(5, parsed.puntaje)) : (parsed.clasificacion === 'Buena' ? 5 : parsed.clasificacion === 'Mala' ? 1 : 3),
+          tema: parsed.tema || 'General',
+          justificacion: parsed.justificacion || 'Clasificación procesada por Gemini IA.'
+        }
+        cacheClasificacionesIA.set(clave, resIA)
+        return resIA
+      }
+    } catch {
+      // Fallback a heurística semántica local
+    }
+  }
+
+  // Heurística Semántica Local en Español (Rápida y precisa)
+  const low = textoLimpio.toLowerCase()
+  const palabrasMalas = [
+    'mal', 'pésim', 'terribl', 'estrés', 'estres', 'agotad', 'cansad', 'fatiga',
+    'injust', 'acoso', 'grito', 'insulto', 'amenaz', 'renunci', 'tóxic', 'toxic',
+    'sobrecarga', 'horribl', 'asco', 'miedo', 'falta de respeto', 'desorganizad',
+    'odio', 'explotaci', 'no sirve', 'roto', 'dañado', 'abuso', 'presión excesiva',
+    'favoritismo', 'desigual', 'nunca escuchan', 'pesimo', 'no me gusta', 'desmotiv'
+  ]
+  const palabrasBuenas = [
+    'excelent', 'genial', 'muy bien', 'content', 'feliz', 'motivad', 'agrad',
+    'satisfech', 'apoyo', 'oportunidad', 'agradecid', 'tranquil', 'óptim', 'optim',
+    'perfect', 'buen ambiente', 'gran equipo', 'reconocimient', 'me gusta', 'gracias',
+    'felicit', 'correcto', 'buena gestión', 'orgull', 'armonía', 'compañerismo'
+  ]
+
+  let conteoMalo = 0
+  let conteoBueno = 0
+  palabrasMalas.forEach(p => { if (low.includes(p)) conteoMalo++ })
+  palabrasBuenas.forEach(p => { if (low.includes(p)) conteoBueno++ })
+
+  let clasificacion: 'Buena' | 'Mala' | 'Neutra' = 'Neutra'
+  let puntaje = 3
+  if (conteoMalo > conteoBueno || (low.includes('no ') && conteoMalo > 0)) {
+    clasificacion = 'Mala'
+    puntaje = conteoMalo >= 2 ? 1 : 2
+  } else if (conteoBueno > conteoMalo) {
+    clasificacion = 'Buena'
+    puntaje = conteoBueno >= 2 ? 5 : 4
+  }
+
+  // Detectar tema automático
+  let tema = 'General'
+  if (low.includes('jefe') || low.includes('líder') || low.includes('lider') || low.includes('gerente') || low.includes('coordinad')) {
+    tema = 'Liderazgo & Jefaturas'
+  } else if (low.includes('sueldo') || low.includes('salario') || low.includes('pago') || low.includes('plata') || low.includes('beneficio')) {
+    tema = 'Compensaciones & Salario'
+  } else if (low.includes('computador') || low.includes('equipo') || low.includes('diadema') || low.includes('internet') || low.includes('herramienta') || low.includes('silla')) {
+    tema = 'Herramientas e Infraestructura'
+  } else if (low.includes('compañer') || low.includes('equipo') || low.includes('convivencia') || low.includes('respeto') || low.includes('ambiente')) {
+    tema = 'Convivencia y Clima'
+  } else if (low.includes('horario') || low.includes('carga') || low.includes('turno') || low.includes('descanso') || low.includes('tiempo')) {
+    tema = 'Carga Laboral y Horarios'
+  } else if (low.includes('capacit') || low.includes('carrera') || low.includes('crecimiento') || low.includes('estudio')) {
+    tema = 'Plan Carrera & Capacitación'
+  }
+
+  const justificacion = clasificacion === 'Buena' 
+    ? 'El comentario expresa satisfacción, colaboración o aspectos positivos de la organización.'
+    : clasificacion === 'Mala'
+    ? 'El colaborador señala inconformidad, dificultades operativas o aspectos de riesgo.'
+    : 'Aporte constructivo o neutral respecto al entorno de trabajo.'
+
+  const resultadoLocal: ClasificacionRespuestaAbierta = {
+    clasificacion,
+    puntaje,
+    tema,
+    justificacion
+  }
+  cacheClasificacionesIA.set(clave, resultadoLocal)
+  return resultadoLocal
 }
 
 // ────────────────────────────────────────────────────────────────────────────

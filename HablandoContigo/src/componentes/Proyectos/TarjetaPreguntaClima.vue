@@ -19,7 +19,8 @@ import {
   AlertTriangle,
   Info,
   CheckCircle2,
-  Sparkles
+  Sparkles,
+  GitBranch
 } from 'lucide-vue-next'
 import type { PreguntaEncuesta, OpcionPregunta } from '@/Servicios/iaEncuestasService'
 import { useEncuestas } from '@/Almacenes/useEncuestas'
@@ -165,6 +166,16 @@ const handleDblClick = () => {
         <!-- Badge de tipo de pregunta -->
         <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 uppercase font-semibold">
           {{ pregunta.tipo }}
+        </span>
+
+        <!-- Badge Condicional (Salto de Pregunta) -->
+        <span
+          v-if="pregunta.esCondicional"
+          class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 flex items-center gap-1 border border-indigo-200 dark:border-indigo-900/50"
+          :title="`Condición: ${pregunta.accionCondicion === 'omitir_si' ? 'Omitir si responde' : 'Mostrar si responde'} ${(pregunta.valoresDisparo || []).join(', ') || 'Sí'}`"
+        >
+          <GitBranch class="w-2.5 h-2.5" />
+          {{ pregunta.accionCondicion === 'omitir_si' ? 'Omitir si' : 'Si' }} "{{ (pregunta.valoresDisparo || []).join(', ') || 'Sí' }}"
         </span>
 
         <!-- Badge de total de alertas activas en esta pregunta -->

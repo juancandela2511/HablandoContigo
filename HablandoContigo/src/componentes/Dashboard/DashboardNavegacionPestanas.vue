@@ -19,16 +19,17 @@
 -->
 
 <script setup lang="ts">
-import { LayoutDashboard, HelpCircle, ShieldAlert, Laptop } from 'lucide-vue-next'
+import { LayoutDashboard, HelpCircle, ShieldAlert, Laptop, Sparkles, PieChart } from 'lucide-vue-next'
 
 defineProps<{
-  pestanaActiva: 'general' | 'preguntas' | 'alertas' | 'auditoria'
+  pestanaActiva: 'general' | 'preguntas' | 'anclados' | 'alertas' | 'auditoria'
   totalAlertas: number
+  totalGraficosAnclados?: number
   mostrarAlertas?: boolean
 }>()
 
 defineEmits<{
-  (e: 'update:pestanaActiva', pestana: 'general' | 'preguntas' | 'alertas' | 'auditoria'): void
+  (e: 'update:pestanaActiva', pestana: 'general' | 'preguntas' | 'anclados' | 'alertas' | 'auditoria'): void
 }>()
 </script>
 
@@ -46,6 +47,25 @@ defineEmits<{
     >
       <LayoutDashboard class="w-3.5 h-3.5" />
       <span>Estadísticas Generales</span>
+    </button>
+
+    <button
+      @click="$emit('update:pestanaActiva', 'anclados')"
+      :class="[
+        'px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all whitespace-nowrap cursor-pointer',
+        pestanaActiva === 'anclados'
+          ? 'bg-white dark:bg-slate-800 text-sky-600 dark:text-sky-400 shadow-md font-bold'
+          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+      ]"
+    >
+      <Sparkles class="w-3.5 h-3.5 text-sky-500 animate-pulse" />
+      <span>Gráficos Anclados & IA</span>
+      <span 
+        v-if="totalGraficosAnclados !== undefined && totalGraficosAnclados > 0"
+        class="px-1.5 py-0.2 rounded-full bg-sky-500/20 text-sky-600 dark:text-sky-400 text-[10px] font-bold"
+      >
+        {{ totalGraficosAnclados }}
+      </span>
     </button>
 
     <button
