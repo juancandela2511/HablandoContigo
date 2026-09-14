@@ -18,7 +18,7 @@
 -->
 
 <script setup lang="ts">
-import { ChevronRight, Download, Eraser, Building2, Zap, BarChart3 } from 'lucide-vue-next'
+import { ChevronRight, Download, Eraser, Building2, Zap, BarChart3, Sparkles } from 'lucide-vue-next'
 
 defineProps<{
   departamentoSeleccionado: string
@@ -36,86 +36,20 @@ defineEmits<{
   (e: 'update:modoVista', valor: 'clima' | 'rapida' | 'consolidado'): void
   (e: 'abrirModalExportar'): void
   (e: 'purgarEstadisticas'): void
+  (e: 'inyectarDatos'): void
 }>()
 </script>
 
 <template>
   <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-slate-800">
-    <div class="space-y-2">
-      <div class="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
-        <span>Gestión de Talento</span>
-        <ChevronRight class="w-3.5 h-3.5 text-slate-400 dark:text-slate-600" />
-        <span class="text-sky-600 dark:text-sky-400 font-semibold">Analítica y Diagnóstico</span>
-      </div>
+    <div class="space-y-1">
       <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
-        <span>Dashboard Estadístico y de Bienestar</span>
+        <span>Dashboard Estadístico</span>
       </h1>
-      <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
-        Monitoreo en tiempo real de seguridad psicológica, prevención de acoso laboral y salud organizacional.
-      </p>
-
-      <!-- Selector Segmentado: Clima Laboral vs Encuestas Rápidas vs Consolidado -->
-      <div class="inline-flex items-center gap-1 p-1 rounded-2xl bg-slate-100 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 mt-2">
-        <button
-          type="button"
-          @click="$emit('update:modoVista', 'clima')"
-          :class="[
-            'px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer',
-            (modoVista || 'clima') === 'clima'
-              ? 'bg-sky-500 text-white shadow-md ring-2 ring-sky-400/30'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-          ]"
-        >
-          <Building2 class="w-3.5 h-3.5" />
-          <span>🌳 Clima Laboral (Integral)</span>
-        </button>
-
-        <button
-          type="button"
-          @click="$emit('update:modoVista', 'rapida')"
-          :class="[
-            'px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer',
-            modoVista === 'rapida'
-              ? 'bg-amber-500 text-white shadow-md ring-2 ring-amber-400/30'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-          ]"
-        >
-          <Zap class="w-3.5 h-3.5" />
-          <span>⚡ Encuestas Rápidas (Pulso)</span>
-        </button>
-
-        <button
-          type="button"
-          @click="$emit('update:modoVista', 'consolidado')"
-          :class="[
-            'px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer',
-            modoVista === 'consolidado'
-              ? 'bg-slate-800 dark:bg-slate-700 text-white shadow-md ring-2 ring-slate-400/30'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-          ]"
-        >
-          <BarChart3 class="w-3.5 h-3.5" />
-          <span>📊 Consolidado Global</span>
-        </button>
-      </div>
     </div>
 
     <!-- Controles de Filtros y Exportación -->
     <div class="flex flex-wrap items-center gap-2.5">
-      
-      <!-- Selector de Encuesta Específica o Consolidada -->
-      <div class="relative">
-        <select 
-          :value="encuestaSeleccionada || 'todas'"
-          @change="$emit('update:encuestaSeleccionada', ($event.target as HTMLSelectElement).value)"
-          class="bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-white/10 rounded-2xl px-3.5 py-2 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-sky-500 text-xs font-semibold backdrop-blur-xl shadow-sm max-w-[200px] truncate"
-        >
-          <option value="todas">📊 Todas las Encuestas (Consolidado)</option>
-          <option v-for="enc in encuestasDisponibles || []" :key="enc.id" :value="enc.id">
-            📋 {{ enc.titulo }}
-          </option>
-        </select>
-      </div>
 
       <!-- Selector Departamento -->
       <div class="relative">
@@ -144,6 +78,17 @@ defineEmits<{
           <option value="anual">Trimestral Anual</option>
         </select>
       </div>
+
+      <!-- Botón Inyectar Datos de Prueba -->
+      <button 
+        type="button"
+        @click="$emit('inyectarDatos')"
+        class="px-3 py-2 rounded-2xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 transition-all cursor-pointer shadow-sm flex items-center gap-1.5 text-xs font-bold"
+        title="Inyectar 30 respuestas de prueba para validar analítica y gráficos 3D"
+      >
+        <Sparkles class="w-4 h-4 text-emerald-500" />
+        <span class="hidden sm:inline">Inyectar Datos</span>
+      </button>
 
       <!-- Botón Limpiar / Purgar Estadísticas -->
       <button 

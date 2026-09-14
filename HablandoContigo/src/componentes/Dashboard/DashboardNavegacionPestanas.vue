@@ -46,7 +46,7 @@ defineEmits<{
       ]"
     >
       <LayoutDashboard class="w-3.5 h-3.5" />
-      <span>Estadísticas Generales</span>
+      <span>General</span>
     </button>
 
     <button
@@ -58,8 +58,8 @@ defineEmits<{
           : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
       ]"
     >
-      <Sparkles class="w-3.5 h-3.5 text-sky-500 animate-pulse" />
-      <span>Gráficos Anclados & IA</span>
+      <PieChart class="w-3.5 h-3.5 text-sky-500" />
+      <span>Estadísticas</span>
       <span 
         v-if="totalGraficosAnclados !== undefined && totalGraficosAnclados > 0"
         class="px-1.5 py-0.2 rounded-full bg-sky-500/20 text-sky-600 dark:text-sky-400 text-[10px] font-bold"
@@ -78,7 +78,7 @@ defineEmits<{
       ]"
     >
       <HelpCircle class="w-3.5 h-3.5" />
-      <span>Desglose de Preguntas</span>
+      <span>Preguntas</span>
     </button>
 
     <button
@@ -92,7 +92,7 @@ defineEmits<{
       ]"
     >
       <ShieldAlert class="w-3.5 h-3.5 text-amber-500" />
-      <span>Alertas de Convivencia</span>
+      <span>Alertas</span>
       <span 
         v-if="totalAlertas > 0"
         class="px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px] font-bold"
@@ -111,7 +111,7 @@ defineEmits<{
       ]"
     >
       <Laptop class="w-3.5 h-3.5 text-sky-500" />
-      <span>Auditoría de UUIDs</span>
+      <span>Auditoría</span>
     </button>
 
   </div>

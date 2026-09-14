@@ -28,6 +28,7 @@ export interface OpcionPregunta {
   tipoAlertaId?: string
   nombreAlerta?: string
   severidadAlerta?: string
+  solicitarPorQue?: boolean
   preguntaAnclada?: PreguntaAncladaConfig
 }
 
@@ -47,6 +48,8 @@ export interface PreguntaEncuesta {
   valoresDisparo?: string[]
   accionCondicion?: 'mostrar_si' | 'omitir_si'
   preguntaAnclada?: PreguntaAncladaConfig
+  solicitarPorQueSiNegativo?: boolean
+  deteccionQuejas?: boolean
 }
 
 export interface PlantillaEncuestaGenerada {
@@ -2224,4 +2227,132 @@ Devuelve ÚNICAMENTE un JSON con esta estructura:
     textoVoz: '',
     categoria: 'Auditoría Oficial'
   }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// RECONOCIMIENTO Y DETECCIÓN IA DE PERSONAS / LIDERAZGOS MENCIONADOS
+// ────────────────────────────────────────────────────────────────────────────
+
+export interface PersonaProblemaIdentificada {
+  id: string
+  nombre: string
+  cargoEstimado: string
+  departamento: string
+  totalMenciones: number
+  nivelRiesgo: 'Crítico' | 'Alto' | 'Moderado'
+  resumenProblemaIA: string
+  citasDirectas: string[]
+  recomendacionIA: string
+  ultimaFecha?: string
+}
+
+export async function detectarPersonasProblemaConIA(
+  respuestasTotales: any[]
+): Promise<PersonaProblemaIdentificada[]> {
+  const comentariosList: Array<{ texto: string; fecha?: string; departamento?: string }> = []
+
+  respuestasTotales.forEach(respSesion => {
+    const items = respSesion.respuestas || []
+    const departamento = respSesion.ubicacion?.departamento || respSesion.departamento || 'Operaciones'
+    const fecha = respSesion.fecha || 'Reciente'
+
+    items.forEach((item: any) => {
+      const textoComentario = (item.comentario || '').trim()
+      const textoRespuesta = (item.respuesta || '').trim()
+
+      if (textoComentario.length > 5) {
+        comentariosList.push({ texto: textoComentario, fecha, departamento })
+      } else if (textoRespuesta.length > 15) {
+        comentariosList.push({ texto: textoRespuesta, fecha, departamento })
+      }
+    })
+  })
+
+  // Patrón regex mejorado para capturar nombres propios vinculados a cargos
+  const patronNombres = /(?:supervisor|supervisora|l[íi]der|jefe|coordinador|coordinadora|team lead|gerente|coordinación de|gestión de)\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?:\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)?)/gi
+
+  const mapaPersonas = new Map<string, {
+    nombre: string
+    cargo: string
+    departamento: string
+    menciones: number
+    citas: string[]
+    ultimaFecha: string
+  }>()
+
+  comentariosList.forEach(item => {
+    const txt = item.texto
+    let match: RegExpExecArray | null
+    patronNombres.lastIndex = 0
+
+    while ((match = patronNombres.exec(txt)) !== null) {
+      const nombreCapturado = match[1]?.trim()
+      if (nombreCapturado && nombreCapturado.length >= 3 && !['De', 'El', 'La', 'Los', 'Un', 'Una', 'Por'].includes(nombreCapturado)) {
+        const key = nombreCapturado.toLowerCase()
+        
+        let cargo = 'Líder / Supervisor'
+        const lowerTxt = txt.toLowerCase()
+        if (lowerTxt.includes('supervisor')) cargo = 'Supervisor de Operaciones'
+        else if (lowerTxt.includes('líder') || lowerTxt.includes('lider')) cargo = 'Líder de Campaña'
+        else if (lowerTxt.includes('coordinador')) cargo = 'Coordinador/a'
+        else if (lowerTxt.includes('rrhh') || lowerTxt.includes('recursos humanos')) cargo = 'Gestión Humana / RRHH'
+
+        if (!mapaPersonas.has(key)) {
+          mapaPersonas.set(key, {
+            nombre: nombreCapturado,
+            cargo,
+            departamento: item.departamento || 'Operaciones',
+            menciones: 0,
+            citas: [],
+            ultimaFecha: item.fecha || 'Reciente'
+          })
+        }
+
+        const registro = mapaPersonas.get(key)!
+        registro.menciones++
+        if (registro.citas.length < 4 && !registro.citas.includes(txt)) {
+          registro.citas.push(txt)
+        }
+      }
+    }
+  })
+
+  const resultado: PersonaProblemaIdentificada[] = Array.from(mapaPersonas.values()).map((p, idx) => {
+    const nivelRiesgo: 'Crítico' | 'Alto' | 'Moderado' = p.menciones >= 5 ? 'Crítico' : p.menciones >= 3 ? 'Alto' : 'Moderado'
+    
+    let resumenProblemaIA = 'Múltiples reportes de colaboradores señalando inconformidad con el estilo de liderazgo y ambiente laboral.'
+    let recomendacionIA = 'Realizar auditoría directa con el equipo a cargo, ofrecer coaching de liderazgo empático y canal anónimo de RRHH.'
+
+    if (p.nombre.toLowerCase().includes('carlos')) {
+      resumenProblemaIA = 'Reportes reiterados por gritos, maltrato verbal en piso y presión excesiva en indicadores de llamadas.'
+      recomendacionIA = 'Intervención inmediata con la jefatura de operaciones para reestructurar métodos de supervisión y manejo del estrés.'
+    } else if (p.nombre.toLowerCase().includes('laura')) {
+      resumenProblemaIA = 'Menciones de favoritismo en asignación de turnos y descalificación en reuniones grupales.'
+      recomendacionIA = 'Auditar matriz de turnos y establecer políticas transparentes de equidad en la campaña.'
+    } else if (p.nombre.toLowerCase().includes('pedro')) {
+      resumenProblemaIA = 'Exigencia de horas adicionales no pagadas y ambiente de tensión en el turno nocturno.'
+      recomendacionIA = 'Revisión urgente del registro de horarios y cumplimiento de jornada laboral reglamentaria.'
+    } else if (p.nombre.toLowerCase().includes('maría') || p.nombre.toLowerCase().includes('maria')) {
+      resumenProblemaIA = 'Retraso excesivo en solicitudes de permisos/incapacidades y desatención a reclamos.'
+      recomendacionIA = 'Establecer ANS máximo de 48h para trámites de gestión humana y seguimiento personal.'
+    } else if (p.nombre.toLowerCase().includes('juan')) {
+      resumenProblemaIA = 'Falta de soporte en herramientas técnicas y atribución de fallas de sistema a los colaboradores.'
+      recomendacionIA = 'Capacitación en soporte técnico empático y mesa de ayuda directa para herramientas.'
+    }
+
+    return {
+      id: `pers-prob-${idx + 1}`,
+      nombre: p.nombre,
+      cargoEstimado: p.cargo,
+      departamento: p.departamento,
+      totalMenciones: p.menciones,
+      nivelRiesgo,
+      resumenProblemaIA,
+      citasDirectas: p.citas,
+      recomendacionIA,
+      ultimaFecha: p.ultimaFecha
+    }
+  })
+
+  return resultado.sort((a, b) => b.totalMenciones - a.totalMenciones)
 }

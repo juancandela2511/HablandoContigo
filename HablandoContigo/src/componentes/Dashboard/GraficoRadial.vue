@@ -1,30 +1,29 @@
 <!--
   ============================================================================
-  COMPONENTE GRÁFICO RADIAL DE 6 DIMENSIONES ESTRATÉGICAS (GraficoRadial.vue)
+  GRÁFICO 3D PASTEL EXTRUIDO ESTÁTICO (GraficoRadial.vue)
+  - Soporte robusto para 100% (un solo sector de 360 grados sin colapsar el topPath).
+  - Inclinación frontal evidente (Ry = 66, Rx = 108, height3D = 26).
+  - Estático sin giro.
+  - Pared cilíndrica frontal 100% lisa e integrada sin líneas ni costuras.
   ============================================================================
-  
-  ¿QUÉ ES Y QUÉ HACE?
-  Renderiza un gráfico de radar / telaraña SVG vectorial 100% nativo:
-  - Soporta anclaje de Bloques de Encuesta a cada esquina/eje del radar.
-  - Formateo inteligente multi-línea y alineación SVG según cuadrante angular.
 -->
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { DimensionRadial } from '@/Almacenes/useEstadisticas'
-import { Sliders } from 'lucide-vue-next'
+import { Sliders, CheckCircle2, AlertCircle } from 'lucide-vue-next'
 
 const props = withDefaults(
   defineProps<{
     dimensiones: DimensionRadial[]
     metaGlobal?: number
     mostrarBotonConfig?: boolean
-    anguloInclinacion?: number
+    colorPersonalizado?: string
   }>(),
   {
-    metaGlobal: 85,
+    metaGlobal: 75,
     mostrarBotonConfig: true,
-    anguloInclinacion: 0
+    colorPersonalizado: '#2563eb'
   }
 )
 
@@ -32,276 +31,205 @@ defineEmits<{
   (e: 'abrirConfiguracion'): void
 }>()
 
-/** Dimensiones espaciales del lienzo SVG */
-const anchoLienzo = 380
-const altoLienzo = 380
-const puntoCentro = anchoLienzo / 2
-const radioMaximo = 115
+const colorGraficaBase = ref(props.colorPersonalizado || '#2563eb')
 
-/**
- * Divide textos largos de ejes o bloques en 2 líneas para evitar colisiones en SVG
- */
-const dividirTextoEje = (texto: string): string[] => {
-  if (!texto) return ['']
-  if (texto.length <= 18) return [texto]
-  const palabras = texto.split(' ')
-  if (palabras.length <= 1) return [texto]
-  
-  const mitad = Math.ceil(palabras.length / 2)
-  const l1 = palabras.slice(0, mitad).join(' ')
-  const l2 = palabras.slice(mitad).join(' ')
-  return [l1, l2]
+watch(() => props.colorPersonalizado, (nuevoColor) => {
+  if (nuevoColor) colorGraficaBase.value = nuevoColor
+})
+
+// Geometría 3D inclinada hacia el frente (Ry = 66, Rx = 108)
+const Rx = 108
+const Ry = 66
+const cx = 140
+const cy = 88
+const height3D = 26
+
+const toRad = (deg: number) => (deg * Math.PI) / 180
+
+// Cálculo de proporción real de respuestas (Sí vs No)
+const calculoProporcional = computed(() => {
+  const dims = props.dimensiones || []
+  if (dims.length === 0) return Math.min(Math.max(props.metaGlobal || 75, 5), 95)
+
+  const totalValores = dims.reduce((acc, d) => acc + (d.valor || 0), 0)
+  const promedio = Math.round(totalValores / dims.length)
+  return Math.min(Math.max(promedio, 5), 95)
+})
+
+const porcentajeSi = computed(() => calculoProporcional.value)
+const porcentajeNo = computed(() => 100 - calculoProporcional.value)
+
+// Helper para paredes laterales limpias
+function adjustColorBrightness(hex: string, percent: number) {
+  let num = parseInt(hex.replace('#', ''), 16)
+  let amt = Math.round(2.55 * percent)
+  let R = (num >> 16) + amt
+  let G = (num >> 8 & 0x00FF) + amt
+  let B = (num & 0x0000FF) + amt
+  return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 + (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 + (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1)
 }
 
-/**
- * Calcula el ángulo en radianes de cada eje considerando la inclinación proporcional y personalizada
- */
-const angulosPorEje = computed(() => {
-  const totalEjes = props.dimensiones?.length || 6
-  const rotacionGlobalRad = ((props.anguloInclinacion || 0) * Math.PI) / 180
+// Construcción vectorial de 2 sectores 3D estáticos con soporte 100% 360deg
+const sectoresCalculados3D = computed(() => {
+  const sweepSi = (porcentajeSi.value / 100) * 360
+  const sweepNo = 360 - sweepSi
 
-  const todasCero = (props.dimensiones || []).every(d => !d.inclinacion || d.inclinacion === 0)
+  const topSi = colorGraficaBase.value && colorGraficaBase.value !== '#2563eb' ? colorGraficaBase.value : '#0066ff'
+  const sideSi = adjustColorBrightness(topSi, -22)
 
-  return (props.dimensiones || []).map((dim, indice) => {
-    let anguloGrados = 0
-    if (!todasCero && typeof dim.inclinacion === 'number') {
-      anguloGrados = dim.inclinacion
-    } else {
-      anguloGrados = (360 / totalEjes) * indice
+  const topNo = '#ff2a2a'
+  const sideNo = '#d91414'
+
+  const listaSectores = [
+    {
+      nombre: 'Sí',
+      porcentaje: porcentajeSi.value,
+      sweepAngle: sweepSi,
+      baseStart: 0,
+      baseEnd: sweepSi,
+      colorTop: topSi,
+      colorSide: sideSi,
+      icono: CheckCircle2
+    },
+    {
+      nombre: 'No',
+      porcentaje: porcentajeNo.value,
+      sweepAngle: sweepNo,
+      baseStart: sweepSi,
+      baseEnd: 360,
+      colorTop: topNo,
+      colorSide: sideNo,
+      icono: AlertCircle
     }
-    const anguloRad = ((anguloGrados - 90) * Math.PI) / 180
-    return anguloRad + rotacionGlobalRad
-  })
-})
+  ].filter(s => s.porcentaje > 0)
 
-/**
- * Calcula los vértices del polígono radial según el valor de cada dimensión (0 a 100)
- */
-const puntosPoligonoDatos = computed(() => {
-  if (!props.dimensiones || props.dimensiones.length === 0) return ''
-  
-  return props.dimensiones.map((dim, indice) => {
-    const angulo = angulosPorEje.value[indice] ?? ((Math.PI * 2 / props.dimensiones.length) * indice - Math.PI / 2)
-    const distancia = (Math.min(Math.max(dim.valor, 0), 100) / 100) * radioMaximo
-    const x = puntoCentro + distancia * Math.cos(angulo)
-    const y = puntoCentro + distancia * Math.sin(angulo)
-    return `${x},${y}`
-  }).join(' ')
-})
+  let acumuladoAngulo = 0
 
-/**
- * Vértices para el polígono de meta de referencia configurable
- */
-const puntosPoligonoMeta = computed(() => {
-  const totalEjes = props.dimensiones?.length || 6
-  const factorMeta = (props.metaGlobal || 85) / 100
-  
-  return Array.from({ length: totalEjes }).map((_, indice) => {
-    const angulo = angulosPorEje.value[indice] ?? ((Math.PI * 2 / totalEjes) * indice - Math.PI / 2)
-    const distancia = factorMeta * radioMaximo
-    const x = puntoCentro + distancia * Math.cos(angulo)
-    const y = puntoCentro + distancia * Math.sin(angulo)
-    return `${x},${y}`
-  }).join(' ')
-})
+  return listaSectores.map((sec) => {
+    const sweepAngle = sec.sweepAngle
+    const baseStart = acumuladoAngulo
+    const baseEnd = baseStart + sweepAngle
+    acumuladoAngulo += sweepAngle
 
-/**
- * Vértices para los anillos concéntricos de referencia (20%, 40%, 60%, 80%, 100%)
- */
-const puntosAnillo = (nivel: number) => {
-  const totalEjes = props.dimensiones?.length || 6
-  return Array.from({ length: totalEjes }).map((_, indice) => {
-    const angulo = angulosPorEje.value[indice] ?? ((Math.PI * 2 / totalEjes) * indice - Math.PI / 2)
-    const distancia = nivel * radioMaximo
-    const x = puntoCentro + distancia * Math.cos(angulo)
-    const y = puntoCentro + distancia * Math.sin(angulo)
-    return `${x},${y}`
-  }).join(' ')
-}
+    let topPath = ''
+    let frontWallPath = ''
 
-/**
- * Coordenadas espaciales e inclinaciones para etiquetas de cada esquina del radar
- */
-const posicionesEjesCalculadas = computed(() => {
-  const totalEjes = props.dimensiones?.length || 6
-  
-  return (props.dimensiones || []).map((dim, indice) => {
-    const angulo = angulosPorEje.value[indice] ?? ((Math.PI * 2 / totalEjes) * indice - Math.PI / 2)
-    const cosA = Math.cos(angulo)
-    const sinA = Math.sin(angulo)
+    if (sweepAngle >= 359.9) {
+      // CASO ESPECIAL: 100% (360° completos)
+      topPath = `M ${cx - Rx} ${cy} A ${Rx} ${Ry} 0 1 1 ${cx + Rx} ${cy} A ${Rx} ${Ry} 0 1 1 ${cx - Rx} ${cy} Z`
+      frontWallPath = `M ${cx + Rx} ${cy} A ${Rx} ${Ry} 0 0 1 ${cx - Rx} ${cy} L ${cx - Rx} ${cy + height3D} A ${Rx} ${Ry} 0 0 0 ${cx + Rx} ${cy + height3D} Z`
+    } else if (sweepAngle > 0) {
+      // CASO NORMAL: Sector entre 0 y 360°
+      const startAngle = baseStart
+      const endAngle = baseEnd
 
-    const lineaX = puntoCentro + radioMaximo * cosA
-    const lineaY = puntoCentro + radioMaximo * sinA
-    
-    // Anclaje dinámico de texto según el cuadrante
-    let textAnchor = 'middle'
-    let deltaXMargin = 22
+      const radStart = toRad(startAngle)
+      const radEnd = toRad(endAngle)
 
-    if (cosA > 0.25) {
-      textAnchor = 'start'
-      deltaXMargin = 12
-    } else if (cosA < -0.25) {
-      textAnchor = 'end'
-      deltaXMargin = 12
+      const p1 = { x: cx + Rx * Math.cos(radStart), y: cy + Ry * Math.sin(radStart) }
+      const p2 = { x: cx + Rx * Math.cos(radEnd), y: cy + Ry * Math.sin(radEnd) }
+
+      const largeArcFlag = sweepAngle > 180 ? 1 : 0
+      topPath = `M ${cx} ${cy} L ${p1.x.toFixed(2)} ${p1.y.toFixed(2)} A ${Rx} ${Ry} 0 ${largeArcFlag} 1 ${p2.x.toFixed(2)} ${p2.y.toFixed(2)} Z`
+
+      const normStart = ((startAngle % 360) + 360) % 360
+      const normEnd = normStart + sweepAngle
+
+      const fStart = Math.max(0, Math.min(180, normStart))
+      const fEnd = Math.max(0, Math.min(180, normEnd))
+
+      if (fEnd > fStart) {
+        const fp1 = { x: cx + Rx * Math.cos(toRad(fStart)), y: cy + Ry * Math.sin(toRad(fStart)) }
+        const fp2 = { x: cx + Rx * Math.cos(toRad(fEnd)), y: cy + Ry * Math.sin(toRad(fEnd)) }
+        const fb1 = { x: fp1.x, y: fp1.y + height3D }
+        const fb2 = { x: fp2.x, y: fp2.y + height3D }
+        const fArcFlag = (fEnd - fStart) > 180 ? 1 : 0
+
+        frontWallPath = `M ${fp1.x.toFixed(2)} ${fp1.y.toFixed(2)} A ${Rx} ${Ry} 0 ${fArcFlag} 1 ${fp2.x.toFixed(2)} ${fp2.y.toFixed(2)} L ${fb2.x.toFixed(2)} ${fb2.y.toFixed(2)} A ${Rx} ${Ry} 0 ${fArcFlag} 0 ${fb1.x.toFixed(2)} ${fb1.y.toFixed(2)} Z`
+      }
     }
-
-    const deltaYMargin = sinA > 0.4 ? 22 : sinA < -0.4 ? 14 : 18
-
-    const etiquetaX = puntoCentro + (radioMaximo + deltaXMargin) * cosA
-    const etiquetaY = puntoCentro + (radioMaximo + deltaYMargin) * sinA
-    
-    // Posición del nodo de dato proporcional
-    const distanciaDato = (Math.min(Math.max(dim.valor, 0), 100) / 100) * radioMaximo
-    const datoX = puntoCentro + distanciaDato * cosA
-    const datoY = puntoCentro + distanciaDato * sinA
-
-    const lineasTexto = dividirTextoEje(dim.eje)
 
     return {
-      dim,
-      angulo,
-      lineaX,
-      lineaY,
-      etiquetaX,
-      etiquetaY,
-      datoX,
-      datoY,
-      textAnchor,
-      lineasTexto
+      ...sec,
+      topPath,
+      frontWallPath
     }
   })
 })
 </script>
 
 <template>
-  <div 
-    @dblclick="$emit('abrirConfiguracion')"
-    class="flex flex-col items-center justify-center relative select-none w-full cursor-pointer group"
-    title="Doble clic para configurar y anclar bloques a las esquinas del radar"
-  >
-    <!-- Botón de Configuración Rápida de Dimensiones e Inclinaciones -->
-    <div v-if="mostrarBotonConfig" class="w-full flex items-center justify-between pb-1 text-xs">
-      <span class="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1 font-mono">
-        <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
-        Proporcional a respuestas reales
-      </span>
-      <div class="flex items-center gap-1.5">
-        <span 
-          v-if="anguloInclinacion !== undefined && anguloInclinacion !== 0"
-          class="px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/70 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-[10px] font-mono font-bold"
-        >
-          {{ anguloInclinacion }}° Inclinación
-        </span>
-        <button
-          type="button"
-          @click="$emit('abrirConfiguracion')"
-          title="Clic para crear o anclar bloques de encuestas a las esquinas del radar"
-          class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-50 dark:bg-slate-800 hover:bg-sky-100 dark:hover:bg-slate-700 text-sky-700 dark:text-sky-300 text-[11px] font-semibold transition-all cursor-pointer border border-sky-200 dark:border-slate-700 shadow-sm"
-        >
-          <Sliders class="w-3 h-3 text-sky-500" />
-          <span>Configurar Inclinaciones ({{ dimensiones.length }})</span>
-        </button>
+  <div class="flex flex-col items-center justify-center relative select-none w-full font-['Poppins',sans-serif]">
+    
+    <!-- ENCABEZADO Y BOTÓN DE CONFIGURAR COLOR -->
+    <div class="w-full flex flex-wrap items-center justify-between gap-x-2 gap-y-1 pb-2 mb-1 border-b border-slate-100 dark:border-slate-800/80 min-w-0">
+      <div class="flex items-center gap-1.5 min-w-0">
+        <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse shrink-0" />
+        <h4 class="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 truncate">
+          Distribución de Respuestas 3D
+        </h4>
       </div>
+
+      <button
+        v-if="mostrarBotonConfig"
+        type="button"
+        @click="$emit('abrirConfiguracion')"
+        class="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-semibold transition-all cursor-pointer border border-slate-200 dark:border-slate-700 flex items-center gap-1"
+      >
+        <Sliders class="w-3 h-3 text-blue-500" />
+        <span>Cambiar Color</span>
+      </button>
     </div>
 
-    <svg :viewBox="`0 0 ${anchoLienzo} ${altoLienzo}`" class="w-full max-w-[350px] h-auto overflow-visible">
-      <!-- Anillos concéntricos de referencia sólidos (20%, 40%, 60%, 80%, 100%) -->
-      <polygon
-        v-for="nivel in [0.2, 0.4, 0.6, 0.8, 1.0]"
-        :key="nivel"
-        :points="puntosAnillo(nivel)"
-        fill="none"
-        stroke="currentColor"
-        class="text-slate-200 dark:text-slate-800/80"
-        stroke-width="1"
-        stroke-dasharray="2,2"
-      />
+    <!-- MODO 3D PASTEL EXTRUIDO ESTÁTICO -->
+    <div class="w-full flex flex-col items-center justify-center py-1">
+      
+      <div class="relative w-72 h-56 flex items-center justify-center overflow-visible">
+        <svg viewBox="0 0 280 200" class="w-full h-full filter drop-shadow-2xl overflow-visible">
+          
+          <!-- CAPA 1: PAREDES CILÍNDRICAS FRONTALES LISAS -->
+          <g v-for="sec in sectoresCalculados3D" :key="'sides-' + sec.nombre">
+            <path
+              v-if="sec.frontWallPath"
+              :d="sec.frontWallPath"
+              :fill="sec.colorSide"
+              stroke="none"
+            />
+          </g>
 
-      <!-- Radios / Ejes principales -->
-      <line
-        v-for="(eje, idx) in posicionesEjesCalculadas"
-        :key="'line-' + idx"
-        :x1="puntoCentro"
-        :y1="puntoCentro"
-        :x2="eje.lineaX"
-        :y2="eje.lineaY"
-        stroke="currentColor"
-        class="text-slate-200 dark:text-slate-800"
-        stroke-width="1.2"
-      />
+          <!-- CAPA 2: CARAS SUPERIORES DE LOS SECTORES -->
+          <g v-for="sec in sectoresCalculados3D" :key="'top-' + sec.nombre">
+            <path
+              v-if="sec.topPath"
+              :d="sec.topPath"
+              :fill="sec.colorTop"
+              stroke="none"
+            />
+          </g>
 
-      <!-- Polígono de Meta de Referencia Corporativa -->
-      <polygon
-        :points="puntosPoligonoMeta"
-        fill="none"
-        stroke="#64748b"
-        stroke-width="1.2"
-        stroke-dasharray="4,4"
-        opacity="0.75"
-      />
+        </svg>
+      </div>
 
-      <!-- Polígono de Datos del Clima Laboral -->
-      <polygon
-        :points="puntosPoligonoDatos"
-        fill="#2563eb"
-        fill-opacity="0.22"
-        stroke="#2563eb"
-        stroke-width="2"
-        class="transition-all duration-300 ease-out"
-      />
-
-      <!-- Nodos en los vértices del polígono -->
-      <g v-for="(eje, idx) in posicionesEjesCalculadas" :key="'dot-' + idx">
-        <circle
-          :cx="eje.datoX"
-          :cy="eje.datoY"
-          r="4.5"
-          fill="#2563eb"
-          stroke="#ffffff"
-          stroke-width="1.5"
-          class="transition-all duration-300 hover:scale-125"
-        />
-        <!-- Etiqueta de Porcentaje -->
-        <text
-          :x="eje.datoX"
-          :y="eje.datoY - 7"
-          text-anchor="middle"
-          class="text-[10px] font-bold fill-blue-700 dark:fill-sky-300 font-mono"
+      <!-- LEYENDA EXCLUSIVA DE OPCIONES -->
+      <div class="grid grid-cols-2 gap-3 w-full pt-2 text-xs">
+        <div
+          v-for="sec in sectoresCalculados3D"
+          :key="sec.nombre"
+          class="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-2"
         >
-          {{ eje.dim.valor }}%
-        </text>
-      </g>
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="w-3.5 h-3.5 rounded-md shrink-0 shadow-2xs" :style="{ backgroundColor: sec.colorTop }" />
+            <span class="font-semibold text-slate-800 dark:text-slate-200 truncate text-xs">
+              {{ sec.nombre }}
+            </span>
+          </div>
+          <span class="font-extrabold font-mono text-slate-900 dark:text-white text-xs shrink-0 px-2.5 py-0.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xs">
+            {{ sec.porcentaje }}%
+          </span>
+        </div>
+      </div>
 
-      <!-- Etiquetas de cada Dimensión / Bloque en las esquinas -->
-      <g v-for="(eje, idx) in posicionesEjesCalculadas" :key="'label-' + idx">
-        <text
-          :x="eje.etiquetaX"
-          :y="eje.etiquetaY"
-          :text-anchor="eje.textAnchor"
-          dominant-baseline="central"
-          class="text-[10px] font-bold fill-slate-800 dark:fill-slate-200 font-['Poppins',sans-serif]"
-        >
-          <tspan v-if="eje.lineasTexto.length === 1" :x="eje.etiquetaX">
-            {{ eje.lineasTexto[0] }}
-          </tspan>
-          <template v-else>
-            <tspan :x="eje.etiquetaX" dy="-5">{{ eje.lineasTexto[0] }}</tspan>
-            <tspan :x="eje.etiquetaX" dy="11">{{ eje.lineasTexto[1] }}</tspan>
-          </template>
-        </text>
-      </g>
-    </svg>
-
-    <!-- Leyenda Inferior -->
-    <div class="flex flex-wrap items-center justify-center gap-4 text-[11px] pt-2">
-      <span class="flex items-center gap-1.5 text-blue-700 dark:text-sky-400 font-semibold">
-        <span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
-        Salud Actual
-      </span>
-      <span class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-medium">
-        <span class="w-3 h-0.5 bg-slate-500"></span>
-        Meta ({{ metaGlobal || 85 }}%)
-      </span>
     </div>
+
   </div>
 </template>

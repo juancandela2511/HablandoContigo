@@ -53,12 +53,17 @@ const obtenerColorSentimiento = (opcion: OpcionPregunta) => {
         />
         <div class="min-w-0">
           <span class="text-sm font-semibold leading-snug block truncate">{{ opc.texto }}</span>
-          <span 
-            v-if="opc.preguntaAnclada" 
-            class="text-[9px] font-mono font-bold text-sky-500 dark:text-sky-400 flex items-center gap-0.5 mt-0.5"
-          >
-            ⚡ Desglosa pregunta
-          </span>
+          <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
+            <span v-if="opc.valor !== undefined" class="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-sky-100 dark:bg-sky-950/80 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
+              {{ opc.valor }} pts
+            </span>
+            <span 
+              v-if="opc.preguntaAnclada" 
+              class="text-[9px] font-mono font-bold text-sky-500 dark:text-sky-400 flex items-center gap-0.5"
+            >
+              ⚡ Desglosa motivo
+            </span>
+          </div>
         </div>
       </div>
 

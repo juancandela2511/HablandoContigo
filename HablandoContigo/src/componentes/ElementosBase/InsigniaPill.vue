@@ -70,10 +70,7 @@ const colorPunto = computed(() => {
     <span v-if="conPulso" :class="['w-1.5 h-1.5 rounded-full shrink-0 animate-pulse', colorPunto]" />
 
     <!-- Icono Opcional -->
-    <span v-if="$slots.icono" class="shrink-0 flex items-center">
-      <slot name="icono"></slot>
-    </span>
-
+   
     <slot></slot>
   </span>
 </template>

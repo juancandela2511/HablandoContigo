@@ -64,7 +64,7 @@ defineProps<{
   participacion: MetricasParticipacion
   conclusionesIA: AnalisisConclusiones
   dimensionesRadiales: DimensionRadial[]
-  dimensionesBarras: ItemBarra[]
+  dimensionesBarras?: ItemBarra[]
   departamentosBarras: ItemBarra[]
   anguloInclinacion?: number
 }>()
@@ -120,7 +120,7 @@ const encasillarColaboradorComoAlerta = (mencion: any) => {
       :promedioSalud="promedioSalud"
       :conclusionesIA="conclusionesIA"
       :dimensionesRadiales="dimensionesRadiales"
-      :dimensionesBarras="dimensionesBarras"
+      :dimensionesBarras="dimensionesBarras || []"
       :anguloInclinacion="anguloInclinacion"
       @configurarRadial="modalConfigRadialAbierto = true"
     />

@@ -128,14 +128,15 @@ export function detectarPalabraClaveVoz(
     'hablandocontigo', 'hablando contigo'
   ]
 
-  // 1. Detección Prioritaria Máxima por Verbos de Acción Directa (Crear, Editar, Eliminar, Ajustar, etc.)
+  // 1. Detección Prioritaria Máxima por Verbos de Acción Directa (Redirigir, Crear, Editar, Eliminar, Ajustar, etc.)
   const verbosAccionPrioritarios = [
+    'redirigir', 'redirige', 'redirecciona', 'mandame', 'mándame', 'lleva', 'llevame', 'llévame', 've a', 'ir a', 'abrir', 'abre',
     'crear', 'crea', 'creame', 'creación', 'creacion', 'haz', 'hazme', 'generar', 'genera', 'construir',
     'editar', 'edita', 'editame', 'modificar', 'modifica', 'cambiar', 'cambia', 'pon', 'poner', 'ponle',
     'agregar', 'agrega', 'añadir', 'anade', 'eliminar', 'elimina', 'borrar', 'borra', 'quitar', 'quita',
     'ajustar', 'ajusta', 'programar', 'programa', 'configurar', 'configura', 'encasillar', 'encasilla',
-    'ir a', 'abrir', 'abre', 'llevame', 'mostrar', 'ver', 'dashboard', 'proyectos', 'cuentas', 'usuarios', 'encuestas',
-    'configuracion', 'ajustes', 'notificaciones', 'alertas', 'soporte', 'errores', 'spotlight', 'buscar',
+    'mostrar', 'ver', 'home', 'inicio', 'principal', 'dashboard', 'estadistica', 'estadisticas', 'proyectos', 'cuentas', 'usuarios', 'encuestas',
+    'configuracion', 'ajustes', 'notificaciones', 'alerta', 'alertas', 'panel', 'soporte', 'errores', 'spotlight', 'buscar',
     'modo oscuro', 'modo claro', 'modo dia', 'modo noche', 'tema', 'pantalla oscura', 'pantalla clara',
     'cerrar sesion', 'salir', 'logout', 'silencio', 'callate', 'para', 'stop', 'apagate',
     'hola', 'buenos dias', 'buenas tardes', 'buenas noches', 'que puedes hacer', 'quien eres', 'ayuda'
@@ -728,7 +729,68 @@ export function useAsistenteVoz() {
         return asisMsg
       }
 
-      // B) Detección de Eliminación Directa por Voz (Eliminar Alerta / Eliminar Usuario)
+      // B.1) Detección Directa de Redirección de Navegación por Voz ("Sofía redirige a...", "Sofía alerta", "home", etc.)
+      const esNavegacion = (
+        txtLower.includes('redirig') || txtLower.includes('redireccion') || txtLower.includes('manda') ||
+        txtLower.includes('lleva') || txtLower.includes('ve a') || txtLower.includes('ir a') ||
+        txtLower.includes('abrir') || txtLower.includes('abre') || txtLower.includes('home') ||
+        txtLower.includes('alerta') || txtLower.includes('estadistica')
+      )
+
+      if (esNavegacion && !txtLower.includes('crear') && !txtLower.includes('eliminar') && !txtLower.includes('editar') && !txtLower.includes('pregunta')) {
+        let destinoRuta = ''
+        let textoRespuesta = ''
+        let accionNotificacion = false
+
+        if (txtLower.includes('home') || txtLower.includes('inicio') || txtLower.includes('principal')) {
+          destinoRuta = '/dashboard'
+          textoRespuesta = '¡Entendido! Redirigiendo la vista a la pantalla principal Home.'
+        } else if (txtLower.includes('alerta') || txtLower.includes('alertas') || txtLower.includes('notificacion') || txtLower.includes('notificaciones')) {
+          if (txtLower.includes('panel') || txtLower.includes('abrir panel')) {
+            try {
+              const { togglePanel } = useNotificaciones()
+              togglePanel()
+              accionNotificacion = true
+            } catch {}
+          }
+          destinoRuta = '/reconocimiento-ia'
+          textoRespuesta = '¡Listo! Abriendo el panel de alertas y notificaciones organizacionales.'
+        } else if (txtLower.includes('estadistica') || txtLower.includes('estadísticas') || txtLower.includes('dashboard') || txtLower.includes('grafico')) {
+          destinoRuta = '/dashboard'
+          textoRespuesta = '¡Perfecto! Redirigiendo la vista al Dashboard de Estadísticas.'
+        } else if (txtLower.includes('proyecto') || txtLower.includes('proyectos') || txtLower.includes('encuesta') || txtLower.includes('encuestas')) {
+          destinoRuta = '/proyectos'
+          textoRespuesta = '¡Entendido! Redirigiendo al módulo de Proyectos y Encuestas.'
+        } else if (txtLower.includes('configuracion') || txtLower.includes('configuración') || txtLower.includes('ajuste') || txtLower.includes('ajustes')) {
+          destinoRuta = '/configuracion'
+          textoRespuesta = '¡Listo! Redirigiendo a Configuración y Ajustes del Asistente.'
+        } else if (txtLower.includes('usuario') || txtLower.includes('usuarios') || txtLower.includes('cuenta') || txtLower.includes('cuentas')) {
+          destinoRuta = '/admin/cuentas'
+          textoRespuesta = '¡Entendido! Redirigiendo a la Gestión de Cuentas y Usuarios.'
+        } else if (txtLower.includes('ia') || txtLower.includes('reconocimiento')) {
+          destinoRuta = '/reconocimiento-ia'
+          textoRespuesta = '¡Listo! Redirigiendo al Reconocimiento de Alertas por IA.'
+        }
+
+        if (destinoRuta || accionNotificacion) {
+          const asisMsg: MensajeChatAsistente = {
+            id: `asis-${Date.now()}`,
+            emisor: 'asistente',
+            texto: textoRespuesta,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            acciones: destinoRuta ? [{ tipo: 'NAVEGAR', ruta: destinoRuta }] : undefined
+          }
+          historialConversacion.value.push(asisMsg)
+          if (destinoRuta) {
+            try { router.push(destinoRuta) } catch (e) { console.warn('Error navegando por voz:', e) }
+          }
+          if (ajustes.value.vozHabilitada) await hablar(textoRespuesta)
+          procesandoIA.value = false
+          return asisMsg
+        }
+      }
+
+      // B.2) Detección de Eliminación Directa por Voz (Eliminar Alerta / Eliminar Usuario)
       if (txtLower.includes('eliminar') || txtLower.includes('elimina') || txtLower.includes('borrar') || txtLower.includes('borra')) {
         if (txtLower.includes('alerta')) {
           const match = txtLower.match(/(?:eliminar|elimina|borrar|borra)\s+(?:la\s+)?alerta\s+(.+)/i)

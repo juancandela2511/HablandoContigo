@@ -12,7 +12,9 @@
  */
 
 export { default as BotonBase } from './BotonBase.vue'
+export { default as BotonRevelacionFlecha } from './BotonRevelacionFlecha.vue'
 export { default as ModalBase } from './ModalBase.vue'
 export { default as TarjetaContenedor } from './TarjetaContenedor.vue'
 export { default as InsigniaPill } from './InsigniaPill.vue'
 export { default as InputTexto } from './InputTexto.vue'
+

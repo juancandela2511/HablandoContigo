@@ -30,9 +30,11 @@ import AlertasResumenNiveles from './Pestanas/PestanaAlertas/AlertasResumenNivel
 import AlertasBarraFiltros from './Pestanas/PestanaAlertas/AlertasBarraFiltros.vue'
 import TarjetaAlertaItem from './Pestanas/PestanaAlertas/TarjetaAlertaItem.vue'
 import TarjetaBloqueAlertaItem, { type BloqueAlertaItem } from './Pestanas/PestanaAlertas/TarjetaBloqueAlertaItem.vue'
+import SeccionDetectorPersonasIA from './SeccionDetectorPersonasIA.vue'
 
 const props = defineProps<{
   alertas: NotificacionItem[]
+  respuestas?: any[]
   elementoResaltadoId: string | null
 }>()
 
@@ -241,6 +243,11 @@ const manejarCambioEstadoIndiv = async (id: string, nuevoEstado: 'Detectada' | '
       :metricas="metricasPorNivel"
       :filtroNivel="filtroNivel"
       @update:filtroNivel="filtroNivel = $event"
+    />
+
+    <!-- DETECTOR Y RECONOCIMIENTO IA DE PERSONAS MENCIONADAS -->
+    <SeccionDetectorPersonasIA
+      :respuestas="respuestas || []"
     />
 
     <!-- 2. Barra de Filtros (Estado, Criterios y Selector de Modo de Vista) -->

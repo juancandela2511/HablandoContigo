@@ -31,7 +31,7 @@ import { useNotificaciones, type NotificacionItem } from '@/Almacenes/useNotific
 import { useEncuestas } from '@/Almacenes/useEncuestas'
 import { useHighlight } from '@/Almacenes/useHighlight'
 import { useAuth } from '@/Almacenes/useAuth'
-import { Bot, BarChart3 } from 'lucide-vue-next'
+import { Bot, BarChart3, Edit3 } from 'lucide-vue-next'
 
 // Subcomponentes modulares del Dashboard
 import DashboardColaboradorAnonimo from '@/componentes/Dashboard/DashboardColaboradorAnonimo.vue'
@@ -55,7 +55,8 @@ const {
   encuestas, 
   respuestasAnonimas, 
   eliminarRespuestaIndividual, 
-  vaciarTodasLasEstadisticas
+  vaciarTodasLasEstadisticas,
+  inyectarDatosDePrueba
 } = useEncuestas()
 
 const {
@@ -378,6 +379,10 @@ const manejarPurgarTodasEstadisticas = async () => {
   }
 }
 
+const manejarInyectarDatos = async () => {
+  await inyectarDatosDePrueba(30)
+}
+
 const manejarEliminarRespuestaIndividual = async (idRespuesta: string) => {
   await eliminarRespuestaIndividual(idRespuesta)
 }
@@ -404,44 +409,6 @@ const manejarEliminarRespuestaIndividual = async (idRespuesta: string) => {
       <!-- CASO B: USUARIO AUTENTICADO (CREACIÓN Y ANÁLISIS DETALLADO CON IA)-->
       <!-- ================================================================= -->
       <template v-else>
-        <!-- Banner Ejecutivo de Creación y Análisis con IA -->
-        <div class="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div class="space-y-1 text-left">
-            <div class="flex items-center gap-2">
-              <span class="text-xs font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400 font-mono">
-                Centro de Mando Administrativo
-              </span>
-              <span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold font-mono">
-                {{ usuarioActual?.rol || 'Administrador' }}
-              </span>
-            </div>
-            <h2 class="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white">
-              Análisis Detallado de Clima & Creación de Encuestas
-            </h2>
-            <p class="text-xs text-slate-500 dark:text-slate-400">
-              Monitorea el rigor analítico de Gemini, atiende alertas tempranas de convivencia y formula nuevos diagnósticos.
-            </p>
-          </div>
-
-          <div class="flex items-center gap-2.5 shrink-0 flex-wrap">
-            <button
-              @click="abrirModalCrearEstadistica()"
-              class="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white text-xs font-black flex items-center gap-2 transition-all shadow-md shadow-sky-600/25 active:scale-95 cursor-pointer"
-            >
-              <BarChart3 class="w-4 h-4" />
-              <span>Crear Estadística de Pregunta</span>
-            </button>
-
-            <router-link
-              to="/proyectos"
-              class="px-4 py-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 text-xs font-bold flex items-center gap-2 transition-all border border-slate-200 dark:border-slate-700 active:scale-95 cursor-pointer"
-            >
-              <Bot class="w-4 h-4 text-sky-500" />
-              <span>Crear Encuesta con IA</span>
-            </router-link>
-          </div>
-        </div>
-
         <!-- Top Bar: Encabezado y Filtros (Componente Modular) -->
         <DashboardEncabezado
           v-model:modoVista="modoDashboard"
@@ -452,6 +419,7 @@ const manejarEliminarRespuestaIndividual = async (idRespuesta: string) => {
           :encuestasDisponibles="encuestasDisponiblesSegunModo"
           @abrirModalExportar="modalExportarAbierto = true"
           @purgarEstadisticas="manejarPurgarTodasEstadisticas"
+          @inyectarDatos="manejarInyectarDatos"
         />
 
         <!-- Barra de Navegación de Pestañas del Dashboard -->
@@ -470,7 +438,6 @@ const manejarEliminarRespuestaIndividual = async (idRespuesta: string) => {
           :participacion="datosEstadisticas.participacion"
           :conclusionesIA="datosEstadisticas.analisisConclusionesIA"
           :dimensionesRadiales="dimensionesRadialesDinamicas"
-          :dimensionesBarras="dimensionesBarras"
           :departamentosBarras="departamentosBarras"
           :anguloInclinacion="anguloRotacionRadar"
           @cambiarPestana="pestanaActiva = $event"
@@ -496,6 +463,7 @@ const manejarEliminarRespuestaIndividual = async (idRespuesta: string) => {
         <DashboardPestanaAlertas
           v-else-if="pestanaActiva === 'alertas'"
           :alertas="alertasValidasAlcance"
+          :respuestas="respuestasValidasAlcance"
           :elementoResaltadoId="elementoResaltadoId"
           @inspeccionarAlerta="inspeccionarAlerta"
         />

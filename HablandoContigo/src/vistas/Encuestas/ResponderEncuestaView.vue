@@ -23,7 +23,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRoute, onBeforeRouteLeave } from 'vue-router'
+import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
+import { FlaskConical, LogOut } from 'lucide-vue-next'
 import { useEncuestas, type Encuesta, type RespuestaItem } from '@/Almacenes/useEncuestas'
 import { obtenerODefinirDispositivoUUID, obtenerFechaYHoraActual, obtenerUbicacionExactaDispositivo, iniciarCapturaUbicacion } from '@/Servicios/deviceService'
 import { 
@@ -36,6 +37,7 @@ import {
 import EncuestaBarraSuperior from '@/componentes/Encuestas/EncuestaBarraSuperior.vue'
 import EncuestaPreguntaItem from '@/componentes/Encuestas/EncuestaPreguntaItem.vue'
 import EncuestaPantallaExito from '@/componentes/Encuestas/EncuestaPantallaExito.vue'
+import EncuestaControlInactividad from '@/componentes/Encuestas/Subcomponentes/EncuestaControlInactividad.vue'
 
 // Componentes del Marco Legal
 import {
@@ -47,8 +49,14 @@ import {
 import { useLegal } from '@/Almacenes/useLegal'
 
 const ruta = useRoute()
+const router = useRouter()
 const { encuestas, registrarRespuestaAnonima, obtenerEncuestaPorId } = useEncuestas()
 const { registrarConsentimientoEncuesta, haAceptadoConsentimientoEncuesta } = useLegal()
+
+const esModoPrueba = computed(() => ruta.query.modoPrueba === 'true')
+const salirDeLaPrueba = () => {
+  router.push('/proyectos')
+}
 
 const idEncuesta = computed(() => (ruta.params.id as string) || 'enc-001')
 const encuesta = ref<Encuesta | null>(null)
@@ -72,10 +80,10 @@ const enviando = ref(false)
 const colaPreguntas = ref<PreguntaEncuesta[]>([])
 
 // ─────────────────────────────────────────────────────────────────────────────
-// BLOQUEO ESTRICTO DE SALIDA: NO PERMITIR SALIR HASTA FINALIZAR LA ENCUESTA
+// BLOQUEO ESTRICTO DE SALIDA: NO PERMITIR SALIR HASTA FINALIZAR LA ENCUESTA (PERMITIDO EN MODO PRUEBA)
 // ─────────────────────────────────────────────────────────────────────────────
 onBeforeRouteLeave((_to, _from) => {
-  if (!completada.value) {
+  if (!completada.value && !esModoPrueba.value) {
     alert('⚠️ La encuesta está en progreso. Para garantizar la confidencialidad e integridad de tus respuestas, no puedes salir hasta completarla y enviarla.')
     return false
   }
@@ -83,7 +91,7 @@ onBeforeRouteLeave((_to, _from) => {
 })
 
 const manejarBloqueoSalir = (e: BeforeUnloadEvent) => {
-  if (!completada.value) {
+  if (!completada.value && !esModoPrueba.value) {
     e.preventDefault()
     e.returnValue = ''
     return ''
@@ -91,7 +99,7 @@ const manejarBloqueoSalir = (e: BeforeUnloadEvent) => {
 }
 
 const manejarPopState = () => {
-  if (!completada.value) {
+  if (!completada.value && !esModoPrueba.value) {
     window.history.pushState(null, '', window.location.href)
     alert('⚠️ La encuesta está en progreso. Debes finalizarla y enviarla antes de poder salir.')
   }
@@ -555,6 +563,28 @@ const finalizarYEnviar = async () => {
     <div class="absolute -top-40 -left-40 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none"></div>
     <div class="absolute -bottom-40 -right-40 w-[500px] h-[500px] bg-sky-500/10 rounded-full blur-[120px] pointer-events-none"></div>
 
+    <!-- BANNER FLOTANTE DE MODO PRUEBA -->
+    <div 
+      v-if="esModoPrueba" 
+      class="sticky top-0 z-[100] w-full max-w-4xl mx-auto bg-gradient-to-r from-purple-900/90 via-indigo-900/90 to-purple-900/90 backdrop-blur-md border border-purple-500/40 rounded-2xl py-3 px-4 sm:px-6 mb-4 flex items-center justify-between shadow-xl text-left"
+    >
+      <div class="flex items-center gap-3 text-purple-200 text-xs sm:text-sm font-semibold">
+        <span class="px-2.5 py-1 rounded-lg bg-purple-500/30 text-purple-300 font-black text-[11px] uppercase tracking-wider border border-purple-400/30 flex items-center gap-1.5 shrink-0">
+          <FlaskConical class="w-3.5 h-3.5" />
+          Modo Prueba
+        </span>
+        <span class="hidden sm:inline">Estás en vista de prueba. Puedes salir en cualquier momento para revisar lo que quieras.</span>
+      </div>
+      <button
+        type="button"
+        @click="salirDeLaPrueba"
+        class="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-md active:scale-95 shrink-0"
+      >
+        <LogOut class="w-4 h-4" />
+        <span>Salir de la Prueba</span>
+      </button>
+    </div>
+
     <!-- Header Anónimo (Componente Modular) -->
     <EncuestaBarraSuperior 
       :dispositivoUUID="dispositivoUUID" 
@@ -614,54 +644,11 @@ const finalizarYEnviar = async () => {
     <ModalConsentimientoInformado />
 
     <!-- MODAL POPUP DE INACTIVIDAD: ¡EY, PRESTA ATENCIÓN! -->
-    <Teleport to="body">
-      <Transition
-        enter-active-class="transition duration-300 ease-out"
-        enter-from-class="opacity-0 scale-95"
-        enter-to-class="opacity-100 scale-100"
-        leave-active-class="transition duration-200 ease-in"
-        leave-from-class="opacity-100 scale-100"
-        leave-to-class="opacity-0 scale-95"
-      >
-        <div
-          v-if="inactividadModalAbierto"
-          class="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md font-['Poppins',sans-serif]"
-        >
-          <div class="relative w-full max-w-md p-6 sm:p-8 rounded-3xl bg-slate-900 border-2 border-amber-500/80 shadow-2xl text-center space-y-5 animate-pulse-subtle">
-            
-            <!-- Anillo pulsante de atención -->
-            <div class="relative w-20 h-20 mx-auto flex items-center justify-center">
-              <div class="absolute inset-0 rounded-full bg-amber-500/20 animate-ping"></div>
-              <div class="relative w-16 h-16 rounded-2xl bg-amber-500 text-slate-950 flex items-center justify-center font-black text-2xl shadow-lg">
-                ⚡
-              </div>
-            </div>
-
-            <div class="space-y-2">
-              <h3 class="text-lg sm:text-xl font-black text-white tracking-tight">
-                ¡Ey, presta atención! 🔔
-              </h3>
-              <p class="text-xs sm:text-sm text-slate-300 leading-relaxed font-medium">
-                Notamos que llevas un momento sin interactuar con la encuesta. Tu opinión anónima es clave para tomar medidas en la empresa.
-              </p>
-            </div>
-
-            <div class="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold">
-              <span>Por favor responde la pregunta en pantalla para poder continuar.</span>
-            </div>
-
-            <button
-              type="button"
-              @click="reanudarEncuestaPorActividad"
-              class="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-sm transition-all shadow-lg hover:shadow-amber-500/30 cursor-pointer active:scale-95 flex items-center justify-center gap-2"
-            >
-              <span>¡Estoy aquí! Continuar Respondiendo</span>
-            </button>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
-
+    <EncuestaControlInactividad
+      :modalAbierto="inactividadModalAbierto"
+      :segundosSinActividad="segundosSinActividad"
+      @reanudar="reanudarEncuestaPorActividad"
+    />
   </div>
 </template>
 

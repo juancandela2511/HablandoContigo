@@ -2,21 +2,6 @@
   ============================================================================
   COMPONENTE SECCIÓN TITULAR HERO (HeroSeccionTitular.vue)
   ============================================================================
-  
-  ¿QUÉ ES Y QUÉ HACE?
-  Despliega el titular principal, la insignia superior y los botones centrales de acción:
-  - Si !estaAutenticado: Destaca la confidencialidad total y el anonimato ("Exprésate Seguro, Sin Miedo").
-    Botones: "Responder Encuesta Anónima" y "Portal por Código".
-  - Si estaAutenticado: Destaca la consola de creación con IA y auditoría directiva.
-    Botones: "Crear Encuesta con IA" y "Ver Métricas en Dashboard".
-  
-  ¿PARA QUÉ SIRVE?
-  - Presentar un mensaje de impacto enfocado al usuario sin código disperso ni redundante.
-  
-  ¿DÓNDE SE USA Y CON QUÉ ARCHIVOS SE CONECTA?
-  - HeroPrincipal.vue: Subcomponente central del Hero.
-  - useAuth.ts: Lee `estaAutenticado`.
-  - BotonBase.vue, InsigniaPill.vue: Átomos UI reutilizables.
 -->
 
 <script setup lang="ts">
@@ -28,7 +13,7 @@ import {
   Sparkles,
   ArrowRight,
   Search,
-  Bot,
+  Building2,
   LayoutDashboard
 } from 'lucide-vue-next'
 
@@ -58,23 +43,26 @@ const { estaAutenticado } = useAuth()
       <!-- Titular Principal -->
       <h1 class="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-slate-950 dark:text-white leading-[1.08]">
         Exprésate Seguro. <br />
-        <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-sky-600 to-indigo-600 dark:from-white dark:via-emerald-200 dark:to-sky-400">
-          Sin Miedo ni Rastreos.
+        <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-sky-600 to-indigo-600 dark:from-emerald-400 dark:via-sky-300 dark:to-indigo-300">
+          Sin Miedo a Ninguna Represalia.
         </span>
       </h1>
 
       <!-- Subtítulo -->
       <p class="text-sm sm:text-base lg:text-lg text-slate-600 dark:text-slate-400 max-w-2xl font-normal leading-relaxed">
-        Tu opinión transforma la cultura y convivencia laboral con total seguridad psicológica. No requieres cuentas ni contraseñas: tus respuestas están protegidas con cifrado de hardware UUID y evaluadas con rigor estricto por IA para erradicar falsas alarmas.
+        Plataforma anónima de clima y bienestar laboral. Tu opinión sincera permite transformar la cultura de tu empresa con total protección y privacidad.
       </p>
 
-      <!-- Botones de Acción (Sin duplicados) -->
+      <!-- Botones de Acción -->
       <div class="flex flex-wrap items-center justify-center gap-4 pt-2 z-30">
         <BotonBase
           variante="primario"
           tamano="grande"
           @click="$emit('abrirModalEncuestas')"
         >
+          <template #iconoIzquierdo>
+            <Sparkles class="w-4 h-4 text-emerald-300 animate-pulse" />
+          </template>
           <span>Responder Encuesta Anónima</span>
           <template #iconoDerecho>
             <ArrowRight class="w-4 h-4" />
@@ -84,7 +72,7 @@ const { estaAutenticado } = useAuth()
         <BotonBase
           variante="secundario"
           tamano="grande"
-          @click="router.push('/dashboard')"
+          @click="$emit('abrirModalEncuestas')"
         >
           <template #iconoIzquierdo>
             <Search class="w-4 h-4 text-emerald-500" />
@@ -102,24 +90,24 @@ const { estaAutenticado } = useAuth()
           <template #icono>
             <Sparkles class="w-3.5 h-3.5 text-sky-500" />
           </template>
-          <span>CENTRO DE MANDO DIRECTIVO · GEMINI AI ESTRICTO</span>
+          <span>CENTRO DE MANDO DIRECTIVO · EVALUACIÓN OFICIAL</span>
         </InsigniaPill>
       </div>
 
       <!-- Titular Principal -->
       <h1 class="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-slate-950 dark:text-white leading-[1.08]">
-        Diseña y Analiza Encuestas <br />
+        Gestiona la Encuesta Máster <br />
         <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-600 via-indigo-600 to-purple-600 dark:from-white dark:via-sky-200 dark:to-indigo-300">
-          con Inteligencia Artificial.
+          y Compara la Evolución del Clima.
         </span>
       </h1>
 
       <!-- Subtítulo -->
       <p class="text-sm sm:text-base lg:text-lg text-slate-600 dark:text-slate-400 max-w-2xl font-normal leading-relaxed">
-        Bienvenido al centro de mando directivo. Crea diagnósticos organizacionales adaptativos en segundos, monitorea el mapa de calor de bienestar y atiende alertas críticas reales con cero falsos positivos.
+        Edita el cuestionario único de la empresa, centraliza todas las respuestas en un solo lugar y compara los indicadores del año actual respecto a periodos pasados.
       </p>
 
-      <!-- Botones de Acción (Sin duplicados) -->
+      <!-- Botones de Acción -->
       <div class="flex flex-wrap items-center justify-center gap-4 pt-2 z-30">
         <BotonBase
           variante="primario"
@@ -127,9 +115,9 @@ const { estaAutenticado } = useAuth()
           @click="router.push('/proyectos')"
         >
           <template #iconoIzquierdo>
-            <Bot class="w-4 h-4" />
+            <Building2 class="w-4 h-4" />
           </template>
-          <span>Crear Encuesta con IA</span>
+          <span>Gestionar / Editar Encuesta Única</span>
           <template #iconoDerecho>
             <ArrowRight class="w-4 h-4" />
           </template>
@@ -143,7 +131,7 @@ const { estaAutenticado } = useAuth()
           <template #iconoIzquierdo>
             <LayoutDashboard class="w-4 h-4 text-sky-500" />
           </template>
-          <span>Ver Métricas en Dashboard</span>
+          <span>Ver Métricas y Comparativa</span>
         </BotonBase>
       </div>
     </template>

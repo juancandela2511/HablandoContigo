@@ -31,11 +31,15 @@ import GraficoDonaCircular from '../Graficos/GraficoDonaCircular.vue'
 import ModalCrearGraficoAnclado from '../Modales/ModalCrearGraficoAnclado.vue'
 import BotonBase from '@/componentes/ElementosBase/BotonBase.vue'
 
+import { useToast } from '@/Almacenes/useToast'
+
 const props = defineProps<{
   respuestas: any[]
   preguntasDisponibles: PreguntaEncuesta[]
   idEncuestaActual?: string
 }>()
+
+const { mostrarExito, mostrarAviso } = useToast()
 
 const {
   graficosAnclados,
@@ -43,12 +47,23 @@ const {
   anclarNuevoGrafico,
   eliminarGraficoAnclado,
   restaurarGraficosPredeterminados,
+  generarEnlazarGraficosPredeterminadosIA,
   calcularDatosGrafico
 } = useGraficosAnclados()
 
 const modalCrearAbierto = ref(false)
 const cargandoCalculos = ref(false)
 const datosCalculadosPorGrafico = ref<Record<string, ResultadoCalculoGrafico>>({})
+
+const ejecutarAutoEnlaceIA = () => {
+  const creados = generarEnlazarGraficosPredeterminadosIA(props.preguntasDisponibles, props.idEncuestaActual)
+  if (creados > 0) {
+    mostrarExito('IA Auto-Enlace Completado', `Se generaron automáticamente ${creados} estadísticas predeterminadas recomendadas por IA. Puedes editarlas o ajustarlas a tu gusto.`)
+    procesarTodosLosGraficos()
+  } else {
+    mostrarAviso('Estadísticas al día', 'Ya tienes las estadísticas recomendadas creadas para estas preguntas o alcanzaste el límite por tipo de gráfico. Puedes editar las existentes.')
+  }
+}
 
 const procesarTodosLosGraficos = async () => {
   cargandoCalculos.value = true
@@ -95,8 +110,8 @@ const manejarNuevoAnclaje = (nuevo: Omit<GraficoAnclado, 'id' | 'fechaCreacion'>
       <div class="space-y-1">
         <div class="flex items-center gap-2">
           <span class="px-2.5 py-0.5 rounded-full bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-400 text-[10px] font-bold font-mono uppercase tracking-wider flex items-center gap-1">
-            <Sparkles class="w-3 h-3" />
-            Cero Carga Operativa
+            <BarChart3 class="w-3 h-3" />
+            Estadísticas Ancladas
           </span>
           <span class="text-xs text-slate-400 font-mono">
             {{ totalGraficos }} gráficos anclados
@@ -104,14 +119,14 @@ const manejarNuevoAnclaje = (nuevo: Omit<GraficoAnclado, 'id' | 'fechaCreacion'>
         </div>
 
         <h2 class="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white">
-          Gráficos Anclados & Análisis Inteligente con IA
+          Estadísticas y Gráficos Anclados
         </h2>
         <p class="text-xs text-slate-500 dark:text-slate-400 max-w-2xl">
-          Vincula cualquier pregunta de la encuesta a un gráfico interactivo. La IA encasilla automáticamente las respuestas abiertas en Buenas, Malas o Neutras, actualizando las visualizaciones en tiempo real sin requerir reportes manuales.
+          Vincula cualquier pregunta de la encuesta a un gráfico interactivo y monitorea la distribución de respuestas de la organización en tiempo real.
         </p>
       </div>
 
-      <div class="flex items-center gap-2.5 shrink-0">
+      <div class="flex items-center gap-2.5 shrink-0 flex-wrap">
         <button
           @click="procesarTodosLosGraficos"
           :disabled="cargandoCalculos"
@@ -119,6 +134,16 @@ const manejarNuevoAnclaje = (nuevo: Omit<GraficoAnclado, 'id' | 'fechaCreacion'>
           title="Recalcular métricas en tiempo real"
         >
           <RefreshCw :class="['w-4 h-4', cargandoCalculos ? 'animate-spin text-sky-500' : '']" />
+        </button>
+
+        <button
+          @click="ejecutarAutoEnlaceIA"
+          type="button"
+          class="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-md active:scale-95 border border-sky-400/30"
+          title="IA evaluará tus preguntas y sugerirá estadísticas predeterminadas listas para usar o editar"
+        >
+          <Sparkles class="w-4 h-4 text-amber-300" />
+          <span>Auto-Enlazar con IA</span>
         </button>
 
         <BotonBase
@@ -129,7 +154,7 @@ const manejarNuevoAnclaje = (nuevo: Omit<GraficoAnclado, 'id' | 'fechaCreacion'>
           <template #iconoIzquierdo>
             <BarChart3 class="w-4 h-4" />
           </template>
-          <span>Crear Estadística de Pregunta</span>
+          <span>Crear Estadística</span>
         </BotonBase>
       </div>
     </div>
@@ -145,15 +170,23 @@ const manejarNuevoAnclaje = (nuevo: Omit<GraficoAnclado, 'id' | 'fechaCreacion'>
       <div class="space-y-1">
         <h3 class="text-base font-bold text-slate-900 dark:text-white">No tienes estadísticas de preguntas creadas</h3>
         <p class="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-          Comienza creando la estadística para las preguntas clave que necesitas monitorear constantemente para quitarte la carga operativa.
+          Comienza creando estadísticas manualmente o usa la IA para auto-generar las estadísticas predeterminadas recomendadas para tus preguntas.
         </p>
       </div>
-      <div class="flex items-center justify-center gap-3 pt-2">
-        <BotonBase variante="primario" tamano="mediano" @click="modalCrearAbierto = true">
-          <span>+ Crear Estadística de Pregunta</span>
-        </BotonBase>
-        <BotonBase variante="esquema" tamano="mediano" @click="restaurarGraficosPredeterminados">
-          <span>Restaurar Predeterminados</span>
+      <div class="flex items-center justify-center gap-3 pt-2 flex-wrap">
+        <button
+          @click="ejecutarAutoEnlaceIA"
+          type="button"
+          class="px-5 py-3 rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white text-xs font-extrabold flex items-center gap-2 transition-all cursor-pointer shadow-lg active:scale-95 border border-sky-400/30"
+        >
+          <Sparkles class="w-4 h-4 text-amber-300" />
+          <span>Auto-Enlazar Estadísticas Recomendadas por IA</span>
+        </button>
+        <BotonBase variante="esquema" tamano="mediano" @click="modalCrearAbierto = true">
+          <template #iconoIzquierdo>
+            <BarChart3 class="w-4 h-4" />
+          </template>
+          <span>+ Crear Estadística Manualmente</span>
         </BotonBase>
       </div>
     </div>

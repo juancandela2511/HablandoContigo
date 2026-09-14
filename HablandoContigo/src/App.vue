@@ -108,8 +108,6 @@ const ocultarMenuLateral = computed(() => {
     <main class="w-full min-h-screen">
       <router-view />
     </main>
-
-
   </div>
 </template>
 

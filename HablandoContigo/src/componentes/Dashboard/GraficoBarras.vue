@@ -42,34 +42,37 @@ withDefaults(
 
 /**
  * Retorna las clases de gradiente cromático según el porcentaje y respuestas
+ * Bajo / Crítico / Riesgo (< 55%): Rojo
+ * Medio / Atención / Moderado (55% - 74%): Amarillo
+ * Alto / Óptimo (>= 75%): Azul
  */
 const obtenerColorBarra = (porcentaje: number, nivelAlerta?: string) => {
   if (nivelAlerta === 'Sin datos' || porcentaje <= 0) {
     return 'from-slate-400 to-slate-500 dark:from-slate-700 dark:to-slate-800'
   }
-  if (nivelAlerta === 'Critico' || nivelAlerta === 'Riesgo' || porcentaje < 65) {
-    return 'from-amber-500 via-orange-500 to-amber-600'
+  if (nivelAlerta === 'Critico' || nivelAlerta === 'Riesgo' || porcentaje < 55) {
+    return 'from-red-600 via-rose-500 to-red-500'
   }
-  if (nivelAlerta === 'Moderado' || nivelAlerta === 'Atencion' || porcentaje < 80) {
-    return 'from-sky-500 via-blue-500 to-indigo-500'
+  if (nivelAlerta === 'Moderado' || nivelAlerta === 'Atencion' || porcentaje < 75) {
+    return 'from-amber-500 via-amber-400 to-yellow-500'
   }
-  return 'from-emerald-500 via-teal-400 to-sky-500'
+  return 'from-sky-500 via-blue-600 to-indigo-600'
 }
 
 /**
- * Retorna las clases del badge según el nivel de riesgo y respuestas
+ * Retorna las clases del badge según el nivel de puntaje
  */
 const obtenerBadgeClase = (porcentaje: number, nivelAlerta?: string) => {
   if (nivelAlerta === 'Sin datos' || porcentaje <= 0) {
     return 'bg-slate-200/70 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700'
   }
-  if (nivelAlerta === 'Critico' || nivelAlerta === 'Riesgo' || porcentaje < 65) {
+  if (nivelAlerta === 'Critico' || nivelAlerta === 'Riesgo' || porcentaje < 55) {
+    return 'bg-red-100 dark:bg-red-950/80 text-red-700 dark:text-red-400 border-red-300 dark:border-red-800'
+  }
+  if (nivelAlerta === 'Moderado' || nivelAlerta === 'Atencion' || porcentaje < 75) {
     return 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-800'
   }
-  if (nivelAlerta === 'Moderado' || nivelAlerta === 'Atencion' || porcentaje < 80) {
-    return 'bg-sky-100 dark:bg-sky-950/80 text-sky-700 dark:text-sky-400 border-sky-300 dark:border-sky-800'
-  }
-  return 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800'
+  return 'bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-800'
 }
 </script>
 

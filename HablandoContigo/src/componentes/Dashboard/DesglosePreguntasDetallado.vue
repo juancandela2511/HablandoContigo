@@ -21,6 +21,7 @@
 import { ref, computed } from 'vue'
 import type { DesgloseRespuestaDetallada } from '@/Almacenes/useEstadisticas'
 import { HelpCircle, ShieldAlert, MessageSquareQuote, ChevronDown, ChevronUp, BarChart3, Sparkles } from 'lucide-vue-next'
+import ModalEstadisticaDetalladaPregunta from './Modales/ModalEstadisticaDetalladaPregunta.vue'
 
 const props = defineProps<{
   preguntas: DesgloseRespuestaDetallada[]
@@ -35,6 +36,15 @@ const categoriaFiltro = ref<string>('Todas')
 
 /** Preguntas expandidas para ver comentarios */
 const preguntasExpandidas = ref<Record<string, boolean>>({})
+
+// Estado para el modal de estadística personalizada por pregunta
+const modalEstadisticaAbierto = ref(false)
+const preguntaSeleccionadaModal = ref<DesgloseRespuestaDetallada | null>(null)
+
+const abrirEstadisticaPregunta = (pregunta: DesgloseRespuestaDetallada) => {
+  preguntaSeleccionadaModal.value = pregunta
+  modalEstadisticaAbierto.value = true
+}
 
 const categoriasUnicas = computed(() => {
   const setCat = new Set(props.preguntas.map(p => p.categoria))
@@ -111,12 +121,21 @@ const toggleExpansion = (id: string) => {
 
           <div class="flex items-center gap-3 text-xs font-mono">
             <button
+              @click="abrirEstadisticaPregunta(item)"
+              class="px-2.5 py-1 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95"
+              title="Ver desglose estadístico completo (puntos 1-5, antigüedad de empleados y áreas)"
+            >
+              <Sparkles class="w-3.5 h-3.5 text-indigo-500" />
+              <span>Ver Estadística Personalizada</span>
+            </button>
+
+            <button
               @click="emit('crearEstadistica', item.idPregunta)"
               class="px-2.5 py-1 rounded-xl bg-sky-50 dark:bg-sky-950/60 hover:bg-sky-100 dark:hover:bg-sky-900/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95"
-              title="Crear estadística visual personalizada para esta pregunta"
+              title="Crear gráfico anclado para el Dashboard"
             >
               <BarChart3 class="w-3.5 h-3.5 text-sky-500" />
-              <span>Crear Estadística</span>
+              <span>+ Anclar Gráfico</span>
             </button>
 
             <span class="text-slate-500 hidden sm:inline">Consenso: 
@@ -138,30 +157,30 @@ const toggleExpansion = (id: string) => {
         <!-- Barra Apilada de 3 Segmentos -->
         <div class="space-y-1.5">
           <div class="w-full h-3.5 rounded-full overflow-hidden flex bg-slate-200 dark:bg-slate-800 shadow-inner">
-            <!-- Positivo (Verde) -->
+            <!-- Positivo (Azul Vivo) -->
             <div
               :style="{ width: `${item.distribucion.positivas}%` }"
-              class="h-full bg-emerald-500 hover:bg-emerald-400 transition-all"
+              class="h-full bg-blue-600 hover:bg-blue-500 transition-all"
               :title="`Favorable: ${item.distribucion.positivas}%`"
             ></div>
-            <!-- Neutral (Amarillo) -->
+            <!-- Neutral (Amarillo Vivo) -->
             <div
               :style="{ width: `${item.distribucion.neutrales}%` }"
               class="h-full bg-amber-400 hover:bg-amber-300 transition-all"
               :title="`Neutral: ${item.distribucion.neutrales}%`"
             ></div>
-            <!-- Negativo (Rojo) -->
+            <!-- Negativo (Rojo Vivo) -->
             <div
               :style="{ width: `${item.distribucion.negativas}%` }"
-              class="h-full bg-red-500 hover:bg-red-400 transition-all"
+              class="h-full bg-red-600 hover:bg-red-500 transition-all"
               :title="`Alerta/Riesgo: ${item.distribucion.negativas}%`"
             ></div>
           </div>
 
           <!-- Etiquetas de Porcentajes -->
           <div class="flex items-center justify-between text-[11px] font-mono font-medium">
-            <span class="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span class="text-blue-600 dark:text-blue-400 flex items-center gap-1">
+              <span class="w-2 h-2 rounded-full bg-blue-600"></span>
               Favorable (4-5): {{ item.distribucion.positivas }}%
             </span>
             <span class="text-amber-600 dark:text-amber-400 flex items-center gap-1">
@@ -169,7 +188,7 @@ const toggleExpansion = (id: string) => {
               Neutral (3): {{ item.distribucion.neutrales }}%
             </span>
             <span class="text-red-600 dark:text-red-400 flex items-center gap-1">
-              <span class="w-2 h-2 rounded-full bg-red-500"></span>
+              <span class="w-2 h-2 rounded-full bg-red-600"></span>
               Alerta (1-2): {{ item.distribucion.negativas }}%
             </span>
           </div>
@@ -202,5 +221,11 @@ const toggleExpansion = (id: string) => {
       </div>
     </div>
 
+    <!-- Modal de Estadística Detallada y Cruzada por Pregunta -->
+    <ModalEstadisticaDetalladaPregunta
+      :abierto="modalEstadisticaAbierto"
+      :pregunta="preguntaSeleccionadaModal"
+      @cerrar="modalEstadisticaAbierto = false"
+    />
   </div>
 </template>

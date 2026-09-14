@@ -46,8 +46,69 @@ export interface TipoAlertaPersonalizada {
 
 const CLAVE_LOCAL_STORAGE_TIPOS_ALERTAS = 'hablandocontigo_tipos_alertas_solo_3_v1'
 
-// Tipos de alerta iniciales: EXACTAMENTE 3 ALERTAS CRÍTICAS
-const TIPOS_ALERTAS_INICIALES: TipoAlertaPersonalizada[] = []
+// Tipos de alerta iniciales: 4 ALERTAS CONFIGURADAS SEGÚN ESPECIFICACIÓN
+const TIPOS_ALERTAS_INICIALES: TipoAlertaPersonalizada[] = [
+  {
+    id: 'tipo-riesgo-fuga-desarrollo',
+    nombre: 'Riesgo de Fuga y Falta de Desarrollo',
+    descripcion: 'Se activa cuando los colaboradores reportan estar poco a gusto, sin oportunidades de desarrollo o manifiestan dudas/intención de no crecer a largo plazo en la empresa.',
+    nivel: 2,
+    severidad: 'Alta',
+    modoEnfoque: 'especifico',
+    enfoqueDetalle: 'Falta de planes de carrera, desmotivación general con el entorno y colaboradores que no visualizan crecimiento a largo plazo.',
+    palabrasClave: ['renuncia', 'irme', 'estancado', 'sin futuro', 'desmotivado', 'sin planes de carrera', 'me quiero ir'],
+    protocoloAccion: 'Entrevista de retención con Gestión Humana y revisión de plan de carrera o movilidad interna.',
+    icono: 'LogOut',
+    color: '#f97316',
+    activa: true,
+    creadoEn: '2026-09-11T00:00:00.000Z'
+  },
+  {
+    id: 'tipo-burnout-estres-herramientas',
+    nombre: 'Burnout, Estrés y Fallas de Herramientas',
+    descripcion: 'Se activa cuando el personal experimenta agotamiento extremo, estrés crónico o sufre por malas condiciones técnicas y físicas en su puesto de llamadas.',
+    nivel: 1,
+    severidad: 'Crítica',
+    modoEnfoque: 'especifico',
+    enfoqueDetalle: 'Niveles crónicos de estrés, sobrecarga laboral en operaciones y deficiencia o fallas en las herramientas de trabajo físicas.',
+    palabrasClave: ['estresado', 'burnout', 'colapso', 'cansancio', 'no sirven los equipos', 'diademas dañadas', 'sobrecarga', 'fatiga'],
+    protocoloAccion: 'Evaluación de cargas operativas por parte de supervisión y soporte técnico inmediato de equipos.',
+    icono: 'Flame',
+    color: '#ef4444',
+    activa: true,
+    creadoEn: '2026-09-11T00:00:00.000Z'
+  },
+  {
+    id: 'tipo-deficiencia-liderazgo-soporte',
+    nombre: 'Deficiencia en Liderazgo y Soporte Interno',
+    descripcion: 'Se activa cuando los agentes señalan que sus líderes no guían correctamente, solo retroalimentan cuando hay errores o cuando Gestión Humana no da respuesta.',
+    nivel: 2,
+    severidad: 'Alta',
+    modoEnfoque: 'especifico',
+    enfoqueDetalle: 'Mala gestión de jefes inmediatos, falta de claridad en instrucciones, ausencia de feedback positivo y lentitud en respuestas de RRHH.',
+    palabrasClave: ['jefe', 'supervisor', 'líder', 'no me apoyan', 'mal liderazgo', 'sin instrucciones claras', 'rrhh no responde'],
+    protocoloAccion: 'Citación a revisión de liderazgo y co-coaching directivo con el supervisor señalado.',
+    icono: 'Users2',
+    color: '#f59e0b',
+    activa: true,
+    creadoEn: '2026-09-11T00:00:00.000Z'
+  },
+  {
+    id: 'tipo-clima-hostil-conflictos',
+    nombre: 'Clima Hostil, Conflictos y Casos Abiertos',
+    descripcion: 'Se activa ante cualquier reporte de mala convivencia, fricciones severas entre pares, situaciones especiales de conflicto o menciones críticas en los textos libres y buzón de sugerencias.',
+    nivel: 1,
+    severidad: 'Crítica',
+    modoEnfoque: 'general',
+    enfoqueDetalle: 'Vas a estar pendiente de todo el flujo abierto (Monitoreo omnicanal preventivo).',
+    palabrasClave: ['acoso', 'maltrato', 'pelea', 'groserías', 'hostil', 'irrespeto', 'discriminación', 'clima pesado'],
+    protocoloAccion: 'Revisión humana obligatoria por parte de psicología o bienestar y acercamiento discreto con el colaborador.',
+    icono: 'HeartCrack',
+    color: '#dc2626',
+    activa: true,
+    creadoEn: '2026-09-11T00:00:00.000Z'
+  }
+]
 
 // Estado reactivo global
 const tiposAlertas = ref<TipoAlertaPersonalizada[]>([...TIPOS_ALERTAS_INICIALES])
@@ -116,7 +177,7 @@ async function cargarTiposAlertasDesdeSupabase() {
 
     if (!res.error && res.data && res.data.length > 0) {
       tablaExisteEnSupabase.value = true
-      tiposAlertas.value = res.data.map((d: any) => ({
+      const alertasDb = res.data.map((d: any) => ({
         id: d.id,
         nombre: d.nombre,
         descripcion: d.descripcion,
@@ -131,6 +192,17 @@ async function cargarTiposAlertasDesdeSupabase() {
         activa: d.activa !== undefined ? d.activa : true,
         creadoEn: d.creado_en
       }))
+
+      // Combinar con alertas iniciales requeridas si faltan
+      const mapExistentes = new Map(alertasDb.map((a: TipoAlertaPersonalizada) => [a.id, a]))
+      TIPOS_ALERTAS_INICIALES.forEach(inicial => {
+        if (!mapExistentes.has(inicial.id) && !Array.from(mapExistentes.values()).some(a => a.nombre.toLowerCase() === inicial.nombre.toLowerCase())) {
+          mapExistentes.set(inicial.id, inicial)
+          sincronizarAlertaConSupabase('upsert', inicial.id, inicial)
+        }
+      })
+
+      tiposAlertas.value = Array.from(mapExistentes.values())
       guardarEnLocalStorage()
       return
     }
@@ -147,7 +219,14 @@ function cargarTiposAlertasLocales() {
     if (raw) {
       const parseado = JSON.parse(raw)
       if (Array.isArray(parseado) && parseado.length > 0) {
-        tiposAlertas.value = parseado.map(normalizarTipoAlerta)
+        const mapa = new Map(parseado.map((item: any) => [item.id, normalizarTipoAlerta(item)]))
+        TIPOS_ALERTAS_INICIALES.forEach(inicial => {
+          if (!mapa.has(inicial.id) && !Array.from(mapa.values()).some(a => a.nombre.toLowerCase() === inicial.nombre.toLowerCase())) {
+            mapa.set(inicial.id, inicial)
+          }
+        })
+        tiposAlertas.value = Array.from(mapa.values())
+        guardarEnLocalStorage()
         return
       }
     }

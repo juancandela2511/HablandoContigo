@@ -13,7 +13,7 @@ import { supabase } from '@/supabase'
 import { useToast } from '@/Almacenes/useToast'
 import { useTiposAlertas } from '@/Almacenes/useTiposAlertas'
 import { obtenerODefinirDispositivoUUID, obtenerFechaYHoraActual, type UbicacionExacta } from '@/Servicios/deviceService'
-import type { PreguntaEncuesta, AlertaGeminiEstricta } from '@/Servicios/iaEncuestasService'
+import type { PreguntaEncuesta, OpcionPregunta, AlertaGeminiEstricta } from '@/Servicios/iaEncuestasService'
 import { useNotificaciones } from '@/Almacenes/useNotificaciones'
 import { 
   PLANTILLA_CLIMA_INTEGRAL_DETALLADA, 
@@ -838,11 +838,11 @@ export function useEncuestas() {
 
       if (error) throw new Error(error.message)
 
-      // 2. Eliminar todas las alertas de convivencia en Supabase
+      // 2. Eliminar el 100% de las alertas y notificaciones en Supabase (absolutamente todos los tipos)
       await supabase
         .from('notificaciones_alertas')
         .delete()
-        .in('tipo', ['alerta_clima', 'acoso', 'burnout', 'depresion', 'renuncia', 'social', 'alerta'])
+        .neq('id', 'dummy_no_match')
 
       // 3. Resetear contadores de todas las encuestas en Supabase a CERO
       encuestas.value.forEach(e => {
@@ -856,17 +856,260 @@ export function useEncuestas() {
         .update({ total_respuestas: 0, alertas_registradas: 0, puntaje_promedio: 0.0 })
         .neq('id', 'dummy_no_match')
 
-      // 4. Limpiar alertas psicosociales del almacén local de notificaciones
+      // 4. Limpiar 100% de las alertas y notificaciones del almacén local
       try {
-        const { limpiarAlertasConvivencia } = useNotificaciones()
-        await limpiarAlertasConvivencia()
+        const { limpiarTodasNotificaciones } = useNotificaciones()
+        await limpiarTodasNotificaciones()
       } catch {}
 
-      mostrarExito('Estadísticas y alertas purgadas', 'Todas las respuestas, estadísticas y alertas fueron reiniciadas a cero en Supabase.')
+      mostrarExito('Estadísticas y Alertas Limpiadas', 'Todas las respuestas, estadísticas y alertas fueron eliminadas 100% en Supabase.')
       return true
     } catch (e: any) {
       respuestasAnonimas.value = snapResp
       mostrarError('Fallo al vaciar estadísticas', `No se pudieron purgar los datos de Supabase. ${e.message || ''}`)
+      return false
+    }
+  }
+
+  /**
+   * Inyecta un lote completo de respuestas de prueba (para testing y demostración de gráficos 3D y analítica)
+   */
+  const inyectarDatosDePrueba = async (cantidad: number = 30): Promise<boolean> => {
+    localStorage.removeItem('hablandocontigo_datos_purged')
+    const encMaster = encuestas.value.find(e => e.id === 'enc-001') || encuestas.value[0]
+    if (!encMaster) {
+      mostrarError('Error al inyectar datos', 'No existe una encuesta máster activa.')
+      return false
+    }
+
+    const departamentos = ['Operaciones', 'Tecnología', 'Ventas', 'Recursos Humanos', 'Administración', 'Finanzas', 'Logística', 'Marketing']
+    const sedes = [
+      { ciudad: 'Bogotá', pais: 'Colombia', sede: 'Sede Calle 26', lat: 4.6534, lng: -74.0836, ipAprox: '190.157.34.112' },
+      { ciudad: 'Medellín', pais: 'Colombia', sede: 'Sede Poblado', lat: 6.2442, lng: -75.5812, ipAprox: '181.135.22.45' },
+      { ciudad: 'Cali', pais: 'Colombia', sede: 'Sede Chipichape', lat: 3.4516, lng: -76.5320, ipAprox: '190.24.180.12' },
+      { ciudad: 'Barranquilla', pais: 'Colombia', sede: 'Sede Norte', lat: 10.9685, lng: -74.7813, ipAprox: '186.115.99.30' }
+    ]
+
+    const comentariosPositivos = [
+      'Excelente ambiente de trabajo y colaboración entre áreas.',
+      'Me siento valorado y con oportunidades claras de desarrollo.',
+      'Buena comunicación por parte del equipo directivo.',
+      'El balance entre trabajo y vida personal ha mejorado bastante.',
+      'Gran trabajo en equipo y respeto profesional continuo.'
+    ]
+
+    const comentariosCriticos = [
+      'Excesiva sobrecarga de trabajo al final de cada mes.',
+      'Siento poca claridad en las prioridades semanales por parte del jefe directo.',
+      'Falta mejorar las herramientas tecnológicas de soporte.',
+      'Siento falta de reconocimiento por las horas extras dedicadas.',
+      'Hay roces entre los departamentos de Operaciones y Ventas.'
+    ]
+
+    const comentariosAlertaAcoso = [
+      'El jefe de mi área utiliza un tono sarcástico e intimidante en reuniones grupales.',
+      'Existen descalificaciones personales constantes cuando no se llega a la meta.',
+      'Siento trato preferencial desigual y comentarios fuera de lugar por parte de la jefatura.'
+    ]
+
+    const comentariosAlertaBurnout = [
+      'Llevo 3 semanas saliendo después de las 9 PM sin descanso adecuado.',
+      'El nivel de agotamiento físico y mental en mi equipo es inmanejable.',
+      'Siento altos niveles de ansiedad al iniciar la jornada laboral.'
+    ]
+
+    const nuevasRespuestas: RegistroRespuesta[] = []
+    const nuevosPayloadsSupabase: any[] = []
+    const nuevasNotificacionesAlertas: any[] = []
+
+    const preguntas = encMaster.preguntas || []
+    const ahora = new Date()
+
+    for (let i = 0; i < cantidad; i++) {
+      const depto = departamentos[i % departamentos.length] || 'General'
+      const sede = sedes[i % sedes.length] || sedes[0]!
+      const uuidPrueba = `UUID-DEMO-TEST-${String(i + 1).padStart(3, '0')}`
+
+      const fechaObj = new Date(ahora.getTime() - Math.floor(Math.random() * 7 * 24 * 60 * 60 * 1000))
+      const fechaStr = fechaObj.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
+      const horaStr = fechaObj.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+      const timestampISO = fechaObj.toISOString()
+
+      const esRespuestaAlertaAcoso = i === 5 || i === 18
+      const esRespuestaAlertaBurnout = i === 12 || i === 25
+
+      const itemsRespuesta: RespuestaItem[] = []
+      let sumaValores = 0
+      let countValores = 0
+      const alertasEnRespuesta: string[] = []
+      const categoriasEnRespuesta: CategoriaAlertaPsicosocial[] = []
+
+      preguntas.forEach((preg, idx) => {
+        if (preg.tipo === 'texto') {
+          let textoResp = comentariosPositivos[i % comentariosPositivos.length]
+          if (esRespuestaAlertaAcoso && idx === 0) {
+            textoResp = comentariosAlertaAcoso[0]
+          } else if (esRespuestaAlertaBurnout && idx === 0) {
+            textoResp = comentariosAlertaBurnout[0]
+          } else if (i % 3 === 0) {
+            textoResp = comentariosCriticos[i % comentariosCriticos.length]
+          }
+          itemsRespuesta.push({
+            idPregunta: preg.id,
+            textoPregunta: preg.texto,
+            categoria: preg.categoria || 'General',
+            respuesta: textoResp
+          })
+        } else if (preg.opciones && preg.opciones.length > 0) {
+          let opcElegida: OpcionPregunta = preg.opciones[preg.opciones.length - 1] || preg.opciones[0]!
+
+          if (esRespuestaAlertaAcoso && (preg.id.includes('jefatura') || preg.id.includes('convivencia') || idx === 2)) {
+            opcElegida = preg.opciones[0] || opcElegida
+          } else if (esRespuestaAlertaBurnout && (preg.id.includes('carga') || preg.id.includes('salud') || idx === 4)) {
+            opcElegida = preg.opciones[0] || opcElegida
+          } else {
+            const rnd = Math.random()
+            if (rnd > 0.4) {
+              opcElegida = preg.opciones[preg.opciones.length - 1] || preg.opciones[0]!
+            } else if (rnd > 0.15 && preg.opciones.length >= 3) {
+              opcElegida = preg.opciones[Math.floor(preg.opciones.length / 2)] || preg.opciones[0]!
+            } else {
+              opcElegida = preg.opciones[0]!
+            }
+          }
+
+          const val = opcElegida.valor || 4
+          sumaValores += val
+          countValores++
+
+          itemsRespuesta.push({
+            idPregunta: preg.id,
+            textoPregunta: preg.texto,
+            categoria: preg.categoria || 'General',
+            respuesta: opcElegida.texto,
+            valor: val,
+            esAlerta: opcElegida.esAlerta || false
+          })
+        }
+      })
+
+      if (esRespuestaAlertaAcoso) {
+        alertasEnRespuesta.push('Jefatura Intimidante o Trato Hostil')
+        categoriasEnRespuesta.push('acoso')
+      } else if (esRespuestaAlertaBurnout) {
+        alertasEnRespuesta.push('Sobrecarga Laboral y Síndrome de Burnout')
+        categoriasEnRespuesta.push('burnout')
+      }
+
+      const puntajeG = countValores > 0 ? Number((sumaValores / countValores).toFixed(1)) : 4.2
+
+      const reg: RegistroRespuesta = {
+        idRespuesta: `resp-test-${Date.now().toString(36)}-${i}`,
+        idEncuesta: encMaster.id,
+        tituloEncuesta: encMaster.titulo,
+        dispositivoUUID: uuidPrueba,
+        nombreEquipoPC: `PC-TEST-${depto.substring(0, 3).toUpperCase()}-${10 + i}`,
+        cuentaUsuarioPC: `usuario.prueba.${i + 1}`,
+        ubicacion: {
+          ciudad: sede.ciudad,
+          pais: sede.pais,
+          sede: `${sede.sede} - Dpto ${depto}`,
+          direccionAprox: `Sede Corporativa ${sede.ciudad}`,
+          lat: sede.lat,
+          lng: sede.lng,
+          ipAprox: sede.ipAprox,
+          proveedorRed: 'Red Corporativa Demo'
+        },
+        fecha: fechaStr,
+        hora: horaStr,
+        duracionSegundos: Math.floor(Math.random() * 120 + 30),
+        timestampISO,
+        respuestas: itemsRespuesta,
+        alertasDetectadas: alertasEnRespuesta,
+        categoriasAlerta: categoriasEnRespuesta,
+        puntajeGeneral: puntajeG
+      }
+
+      nuevasRespuestas.push(reg)
+      nuevosPayloadsSupabase.push({
+        id_respuesta: reg.idRespuesta,
+        id_encuesta: reg.idEncuesta,
+        titulo_encuesta: reg.tituloEncuesta,
+        dispositivo_uuid: reg.dispositivoUUID,
+        nombre_equipo_pc: reg.nombreEquipoPC,
+        cuenta_usuario_pc: reg.cuentaUsuarioPC,
+        ubicacion: reg.ubicacion,
+        fecha: reg.fecha,
+        hora: reg.hora,
+        timestamp_iso: reg.timestampISO,
+        respuestas: reg.respuestas,
+        alertas_detectadas: reg.alertasDetectadas,
+        categorias_alerta: reg.categoriasAlerta,
+        puntaje_general: reg.puntajeGeneral
+      })
+
+      if (alertasEnRespuesta.length > 0) {
+        const tipoA = esRespuestaAlertaAcoso ? 'acoso' : 'burnout'
+        const tituloA = esRespuestaAlertaAcoso ? 'Jefatura Intimidante o Trato Hostil' : 'Sobrecarga y Riesgo de Burnout'
+        const descA = esRespuestaAlertaAcoso ? comentariosAlertaAcoso[0] : comentariosAlertaBurnout[0]
+        nuevasNotificacionesAlertas.push({
+          id: `alt-test-${Date.now().toString(36)}-${i}`,
+          tipo: tipoA,
+          titulo: tituloA,
+          descripcion: `Prueba de Alerta Psicosocial en ${depto}`,
+          mensaje: descA,
+          departamento: depto,
+          tipo_alerta: tituloA,
+          severidad: 'Crítica',
+          estado: 'Detectada',
+          detalle_respuesta: descA,
+          dispositivo_uuid: reg.dispositivoUUID,
+          nombre_equipo_pc: reg.nombreEquipoPC,
+          cuenta_usuario_pc: reg.cuentaUsuarioPC,
+          ubicacion_sede: reg.ubicacion.sede,
+          fecha: reg.fecha,
+          hora: reg.hora,
+          leida: false,
+          ruta_destino: '/dashboard?seccion=alertas',
+          id_elemento: 'seccion-alertas-detalle'
+        })
+      }
+    }
+
+    try {
+      // 1. Inyectar respuestas en Supabase
+      const { error: errResp } = await supabase.from('respuestas_anonimas').insert(nuevosPayloadsSupabase)
+      if (errResp) throw new Error(errResp.message)
+
+      // 2. Inyectar alertas si aplican
+      if (nuevasNotificacionesAlertas.length > 0) {
+        try {
+          await supabase.from('notificaciones_alertas').insert(nuevasNotificacionesAlertas)
+        } catch {}
+      }
+
+      // 3. Actualizar encuestas
+      const totalR = respuestasAnonimas.value.length + cantidad
+      const totalAlt = nuevasNotificacionesAlertas.length + (encMaster.alertasRegistradas || 0)
+      const sumaProm = [...respuestasAnonimas.value, ...nuevasRespuestas].reduce((acc, r) => acc + r.puntajeGeneral, 0)
+      const promGen = Number((sumaProm / totalR).toFixed(1))
+
+      await supabase.from('encuestas').update({
+        total_respuestas: totalR,
+        alertas_registradas: totalAlt,
+        puntaje_promedio: promGen
+      }).eq('id', encMaster.id)
+
+      // 4. Actualizar estado local
+      respuestasAnonimas.value.unshift(...nuevasRespuestas)
+      encMaster.totalRespuestas = totalR
+      encMaster.alertasRegistradas = totalAlt
+      encMaster.puntajePromedio = promGen
+
+      mostrarExito('¡Datos de prueba inyectados!', `Se han generado e inyectado ${cantidad} respuestas de prueba con alertas y métricas diversas en Supabase.`)
+      return true
+    } catch (e: any) {
+      mostrarError('Fallo al inyectar datos', `No se pudieron guardar las respuestas de prueba en Supabase. ${e.message || ''}`)
       return false
     }
   }
@@ -897,6 +1140,7 @@ export function useEncuestas() {
     obtenerRespuestasDeEncuesta,
     vaciarEstadisticasEncuesta,
     eliminarRespuestaIndividual,
-    vaciarTodasLasEstadisticas
+    vaciarTodasLasEstadisticas,
+    inyectarDatosDePrueba
   }
 }

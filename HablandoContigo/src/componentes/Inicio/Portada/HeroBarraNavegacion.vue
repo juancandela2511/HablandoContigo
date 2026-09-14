@@ -58,8 +58,8 @@ const { estaAutenticado } = useAuth()
       <!-- Administrador con sesión -->
       <template v-else>
         <router-link to="/proyectos" class="hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-1">
-          <Bot class="w-3.5 h-3.5 text-sky-500" />
-          Crear Encuesta
+          <Edit3 class="w-3.5 h-3.5 text-sky-500" />
+          Editar Encuesta Única
         </router-link>
         <router-link to="/dashboard" class="hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-1">
           <LayoutDashboard class="w-3.5 h-3.5 text-sky-500" />

@@ -10,6 +10,7 @@
 import { ref, computed } from 'vue'
 import { supabase } from '@/supabase'
 import { useToast } from '@/Almacenes/useToast'
+import { useEncuestas } from '@/Almacenes/useEncuestas'
 
 const { mostrarError, mostrarExito } = useToast()
 
@@ -99,9 +100,10 @@ export function useNotificaciones() {
         idElemento: item.id_elemento || ''
       }))
 
-      // Sembrar actividades iniciales de sistema si no existen en Supabase
+      // Sembrar actividades iniciales de sistema si no existen en Supabase y el usuario no las purgó a propósito
+      const fuePurgaProposito = localStorage.getItem('hablandocontigo_datos_purged') === 'true'
       const tieneActividades = notificaciones.value.some(n => esNotificacionActividad(n.tipo))
-      if (!tieneActividades) {
+      if (!tieneActividades && !fuePurgaProposito) {
         await sembrarActividadesIniciales()
       }
     } catch (e: any) {
@@ -169,7 +171,50 @@ export function useNotificaciones() {
   // ─────────────────────────────────────────────
 
   // Alertas psicosociales y de convivencia (destinadas a la pestaña Alertas de Convivencia del Dashboard)
-  const alertasConvivencia = computed(() => notificaciones.value.filter(n => esAlertaConvivencia(n.tipo)))
+  const alertasConvivencia = computed(() => {
+    const directas = notificaciones.value.filter(n => esAlertaConvivencia(n.tipo))
+    const idsDirectas = new Set(directas.map(d => d.id))
+
+    // Derivar alertas automáticamente desde las respuestas anónimas reales registradas
+    const { respuestasAnonimas } = useEncuestas()
+    const dinamicas: NotificacionItem[] = []
+
+    respuestasAnonimas.value.forEach(r => {
+      (r.respuestas || []).forEach(item => {
+        if (item.esAlerta || (typeof item.valor === 'number' && item.valor <= 2)) {
+          const idDinamica = `alerta-resp-${r.idRespuesta}-${item.idPregunta}`
+          if (!idsDirectas.has(idDinamica)) {
+            let nombreAlerta = item.nombreAlerta || item.tipoAlertaId || item.categoria || 'Alerta de Clima Laboral'
+            let severidadText: NotificacionItem['severidad'] = item.valor === 1 ? 'Crítica' : 'Alta'
+
+            dinamicas.push({
+              id: idDinamica,
+              tipo: 'alerta_clima',
+              titulo: item.textoPregunta ? `Alerta en: ${item.textoPregunta}` : `Alerta: ${nombreAlerta}`,
+              descripcion: item.respuesta ? `Respuesta: "${item.respuesta}"` : `Alerta detectada en la evaluación.`,
+              mensaje: item.comentario || `Respuesta en rango de atención/alerta (${item.valor || 1} pts).`,
+              departamento: r.ubicacion?.sede || 'General',
+              tipoAlerta: nombreAlerta,
+              severidad: (item.severidadAlerta as any) || severidadText,
+              estado: 'Detectada',
+              detalleRespuesta: item.comentario || item.respuesta,
+              dispositivoUUID: r.dispositivoUUID,
+              nombreEquipoPC: r.nombreEquipoPC,
+              cuentaUsuarioPC: r.cuentaUsuarioPC,
+              ubicacionSede: r.ubicacion?.sede || 'Sede Principal',
+              fecha: r.fecha || 'Hoy',
+              hora: r.hora || '12:00 PM',
+              leida: false,
+              rutaDestino: '/dashboard',
+              idElemento: 'seccion-alertas-detalle'
+            })
+          }
+        }
+      })
+    })
+
+    return [...directas, ...dinamicas]
+  })
 
   // Notificaciones operativas y de actividad (destinadas exclusivamente al Panel Flotante / Campanita)
   const notificacionesActividad = computed(() => notificaciones.value.filter(n => esNotificacionActividad(n.tipo)))
@@ -304,6 +349,7 @@ export function useNotificaciones() {
   const limpiarTodasNotificaciones = async () => {
     const copia = [...notificaciones.value]
     notificaciones.value = [] // optimista
+    localStorage.setItem('hablandocontigo_datos_purged', 'true')
 
     try {
       const { error } = await supabase
@@ -313,10 +359,11 @@ export function useNotificaciones() {
 
       if (error) throw new Error(error.message)
 
-      mostrarExito('Notificaciones limpiadas', 'Todas las alertas fueron eliminadas de Supabase.')
+      mostrarExito('Notificaciones y casos limpiados', 'Todas las alertas y casos fueron eliminados de Supabase.')
     } catch (e: any) {
       // 🔄 Revertir
       notificaciones.value = copia
+      localStorage.removeItem('hablandocontigo_datos_purged')
       mostrarError('Fallo al limpiar notificaciones', `Las alertas no pudieron eliminarse de Supabase. ${e.message || ''}`)
     }
   }
@@ -361,15 +408,14 @@ export function useNotificaciones() {
    * tanto en Supabase como en el estado reactivo local.
    */
   const limpiarAlertasConvivencia = async () => {
-    const tiposAlerta = ['alerta_clima', 'acoso', 'burnout', 'depresion', 'renuncia', 'social', 'alerta']
     const copia = [...notificaciones.value]
-    notificaciones.value = notificaciones.value.filter(n => !esAlertaConvivencia(n.tipo))
+    notificaciones.value = notificaciones.value.filter(n => esNotificacionActividad(n.tipo))
 
     try {
       const { error } = await supabase
         .from('notificaciones_alertas')
         .delete()
-        .in('tipo', tiposAlerta)
+        .neq('id', 'dummy_no_match')
 
       if (error) throw new Error(error.message)
     } catch (e: any) {

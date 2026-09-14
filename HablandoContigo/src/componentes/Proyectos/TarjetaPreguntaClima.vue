@@ -20,7 +20,10 @@ import {
   Info,
   CheckCircle2,
   Sparkles,
-  GitBranch
+  GitBranch,
+  ShieldAlert,
+  MessageSquarePlus,
+  GripVertical
 } from 'lucide-vue-next'
 import type { PreguntaEncuesta, OpcionPregunta } from '@/Servicios/iaEncuestasService'
 import { useEncuestas } from '@/Almacenes/useEncuestas'
@@ -31,11 +34,17 @@ const props = defineProps<{
   indice: number
   puedeEditar: boolean
   idEncuesta?: string
+  esArrastrando?: boolean
+  esSobrevolando?: boolean
 }>()
 
 const emit = defineEmits<{
   (e: 'abrirEditor', indice: number): void
   (e: 'eliminar', indice: number): void
+  (e: 'dragstart', ev: DragEvent): void
+  (e: 'dragover', ev: DragEvent): void
+  (e: 'drop', ev: DragEvent): void
+  (e: 'dragend', ev: DragEvent): void
 }>()
 
 const { respuestasAnonimas } = useEncuestas()
@@ -43,6 +52,15 @@ const { tiposAlertas, tiposActivos } = useTiposAlertas()
 
 // Estado para mostrar/ocultar panel de estadísticas detalladas
 const mostrarStats = ref(false)
+
+// ─── Toggle Rápido de Profundizar en el Tema (Pregunta Interactiva) ───────────
+const toggleProfundizarTema = () => {
+  if (!props.puedeEditar) return
+  const estadoActual = Boolean(props.pregunta.deteccionQuejas || props.pregunta.solicitarPorQueSiNegativo)
+  const nuevoEstado = !estadoActual
+  props.pregunta.deteccionQuejas = nuevoEstado
+  props.pregunta.solicitarPorQueSiNegativo = nuevoEstado
+}
 
 // ─── Toggle Rápido de Alerta en Cualquier Opción ─────────────────────────────
 const toggleAlertaOpcion = (opc: OpcionPregunta) => {
@@ -122,28 +140,45 @@ const handleDblClick = () => {
 <template>
   <div
     :id="`pregunta-${pregunta.id}`"
+    :draggable="puedeEditar"
+    @dragstart="emit('dragstart', $event)"
+    @dragover.prevent="emit('dragover', $event)"
+    @drop="emit('drop', $event)"
+    @dragend="emit('dragend', $event)"
     :class="[
-      'group relative p-4 sm:p-5 rounded-3xl bg-white dark:bg-slate-900 border transition-all shadow-sm',
+      'group relative p-4 sm:p-5 rounded-3xl bg-white dark:bg-slate-900 border transition-all shadow-sm select-none',
+      esArrastrando ? 'opacity-40 scale-95 border-dashed border-sky-500 shadow-2xl' : '',
+      esSobrevolando ? 'border-2 border-sky-500 ring-4 ring-sky-500/20 bg-sky-50/50 dark:bg-sky-950/40' : '',
       puedeEditar
         ? 'cursor-pointer hover:border-sky-300 dark:hover:border-sky-700 hover:shadow-md'
         : 'cursor-default border-slate-200 dark:border-slate-800'
     ]"
     @dblclick="handleDblClick"
-    :title="puedeEditar ? 'Doble clic para editar texto/opciones de la pregunta' : 'Modo solo lectura'"
+    :title="puedeEditar ? 'Doble clic para editar. Arrastra para reordenar la pregunta.' : 'Modo solo lectura'"
   >
-    <!-- Hint de doble clic en hover (si puede editar) -->
+    <!-- Hint de doble clic y arrastre en hover -->
     <div
       v-if="puedeEditar"
-      class="hidden group-hover:flex items-center gap-1 text-[10px] text-sky-500 dark:text-sky-400 font-semibold absolute top-3.5 right-4 pointer-events-none z-10 bg-white/95 dark:bg-slate-900/95 px-2.5 py-0.5 rounded-full shadow-sm border border-sky-200 dark:border-sky-800"
+      class="hidden group-hover:flex items-center gap-1.5 text-[10px] text-sky-500 dark:text-sky-400 font-semibold absolute top-3.5 right-4 pointer-events-none z-10 bg-white/95 dark:bg-slate-900/95 px-2.5 py-0.5 rounded-full shadow-sm border border-sky-200 dark:border-sky-800"
     >
-      <MousePointerClick class="w-3 h-3" />
-      Doble clic para editar opciones
+      <GripVertical class="w-3 h-3 text-sky-500" />
+      <span>Arrastra para reordenar · Doble clic para editar</span>
     </div>
 
     <!-- ── Header de la Tarjeta ── -->
     <div class="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800/80 pb-2.5">
       <div class="flex items-center gap-2 flex-1 min-w-0">
-        <span class="w-6 h-6 rounded-full bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 font-mono text-xs font-black flex items-center justify-center flex-shrink-0">
+        <!-- Arrastrar / Drag Handle Icon -->
+        <div
+          v-if="puedeEditar"
+          class="cursor-grab active:cursor-grabbing p-1 text-slate-400 hover:text-sky-500 transition-colors shrink-0"
+          title="Arrastra para cambiar el orden de la pregunta"
+        >
+          <GripVertical class="w-4 h-4" />
+        </div>
+
+        <!-- Número de pregunta consecutivo global -->
+        <span class="w-7 h-7 rounded-full bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 font-mono text-xs font-black flex items-center justify-center flex-shrink-0 border border-sky-200 dark:border-sky-800 shadow-2xs">
           {{ indice + 1 }}
         </span>
         <input
@@ -168,15 +203,21 @@ const handleDblClick = () => {
           {{ pregunta.tipo }}
         </span>
 
-        <!-- Badge Condicional (Salto de Pregunta) -->
-        <span
-          v-if="pregunta.esCondicional"
-          class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 flex items-center gap-1 border border-indigo-200 dark:border-indigo-900/50"
-          :title="`Condición: ${pregunta.accionCondicion === 'omitir_si' ? 'Omitir si responde' : 'Mostrar si responde'} ${(pregunta.valoresDisparo || []).join(', ') || 'Sí'}`"
+        <!-- Botón / Badge Toggle Profundizar en el Tema (Pregunta Interactiva) -->
+        <button
+          type="button"
+          @click.stop="toggleProfundizarTema"
+          :class="[
+            'text-[9px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 border transition-all cursor-pointer select-none',
+            (pregunta.deteccionQuejas || pregunta.solicitarPorQueSiNegativo)
+              ? 'bg-sky-500 text-white border-sky-600 shadow-xs'
+              : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:text-sky-500 hover:border-sky-300'
+          ]"
+          :title="puedeEditar ? 'Haz clic para activar/desactivar profundización inteligente en respuestas de menor puntaje' : 'Profundización activa en respuestas de menor puntaje'"
         >
-          <GitBranch class="w-2.5 h-2.5" />
-          {{ pregunta.accionCondicion === 'omitir_si' ? 'Omitir si' : 'Si' }} "{{ (pregunta.valoresDisparo || []).join(', ') || 'Sí' }}"
-        </span>
+          <MessageSquarePlus class="w-2.5 h-2.5" />
+          <span>{{ (pregunta.deteccionQuejas || pregunta.solicitarPorQueSiNegativo) ? 'Interactiva (Profundizar)' : '+ Hacer Interactiva' }}</span>
+        </button>
 
         <!-- Badge de total de alertas activas en esta pregunta -->
         <span

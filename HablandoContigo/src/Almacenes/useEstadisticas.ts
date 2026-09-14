@@ -78,6 +78,30 @@ export interface AnalisisConclusiones {
   riesgoBurnoutGlobal: number
 }
 
+export interface DesglosePuntajeItem {
+  pts: number
+  etiqueta: string
+  count: number
+  porcentaje: number
+  color: string
+}
+
+export interface DesgloseAntiguedadItem {
+  rango: string
+  etiqueta: string
+  total: number
+  promedio: number
+  porcentajeSalud: number
+  distribucionPuntos: Record<number, { count: number; porcentaje: number }>
+}
+
+export interface DesgloseDepartamentoItem {
+  departamento: string
+  total: number
+  promedio: number
+  porcentajeSalud: number
+}
+
 export interface DesgloseRespuestaDetallada {
   idPregunta: string
   categoria: string
@@ -92,6 +116,9 @@ export interface DesgloseRespuestaDetallada {
     neutrales: number
     negativas: number
   }
+  desglosePuntos: DesglosePuntajeItem[]
+  desgloseAntiguedad: DesgloseAntiguedadItem[]
+  desgloseDepartamento: DesgloseDepartamentoItem[]
   comentariosDestacados?: string[]
 }
 
@@ -136,6 +163,26 @@ export interface BenchmarksIndustria {
   percentilGlobal: number
 }
 
+export interface PersonaProblemaDetectada {
+  id: string
+  nombre: string
+  rolSugerido: string
+  conteoMenciones: number
+  severidad: 'Crítica (Intervención RRHH)' | 'Alta (Revisión Liderazgo)' | 'Moderada'
+  categoriaProblema: string
+  motivoDetallado: string
+  frasesEjemplo: string[]
+  accionRecomendadaIA: string
+}
+
+export interface AnalisisPreguntasAbiertas {
+  totalRespuestasTextoAnalizadas: number
+  cosasMalasCount: number
+  mejorasCount: number
+  personasProblemaCount: number
+  personasProblema: PersonaProblemaDetectada[]
+}
+
 export interface EstadisticasCompletas {
   dimensionesRadiales: DimensionRadial[]
   metaGlobalRadial: number
@@ -152,6 +199,7 @@ export interface EstadisticasCompletas {
   posiblesFallosAreas: FalloArea[]
   analisisConclusionesIA: AnalisisConclusiones
   desgloseRespuestasDetalladas: DesgloseRespuestaDetallada[]
+  analisisPreguntasAbiertas: AnalisisPreguntasAbiertas
 }
 
 const departamentoFiltro = ref('todos')
@@ -384,24 +432,41 @@ export function useEstadisticas() {
     const mapaPreguntas: Record<string, {
       categoria: string
       pregunta: string
-      valores: number[]
+      registros: Array<{ valor: number; departamento: string; antiguedad: string; comentario?: string }>
       alertas: number
       comentarios: string[]
     }> = {}
 
     respuestasFiltradas.value.forEach(r => {
+      // Determinar antigüedad del encuestado en este registro
+      const itemAnt = r.respuestas?.find(i => i.idPregunta === 'b1-p1-antiguedad' || i.textoPregunta?.toLowerCase().includes('laborando'))
+      const txtAnt = String(itemAnt?.respuesta || itemAnt?.comentario || '').toLowerCase()
+      let antiguedad = '1a-3a'
+      if (txtAnt.includes('menos de 6') || txtAnt.includes('0-6')) antiguedad = 'menos-6m'
+      else if (txtAnt.includes('6 meses') || txtAnt.includes('6m-1a')) antiguedad = '6m-1a'
+      else if (txtAnt.includes('1 a 3') || txtAnt.includes('1-3')) antiguedad = '1a-3a'
+      else if (txtAnt.includes('más de 3') || txtAnt.includes('mas de 3') || txtAnt.includes('+3')) antiguedad = 'mas-3a'
+
+      const enc = encuestas.value.find(e => e.id === r.idEncuesta)
+      const dep = enc?.departamento || 'General'
+
       r.respuestas.forEach(item => {
         if (!mapaPreguntas[item.idPregunta]) {
           mapaPreguntas[item.idPregunta] = {
             categoria: item.categoria || 'General',
             pregunta: item.textoPregunta || 'Pregunta de Clima',
-            valores: [],
+            registros: [],
             alertas: 0,
             comentarios: []
           }
         }
         if (typeof item.valor === 'number') {
-          mapaPreguntas[item.idPregunta]!.valores.push(item.valor)
+          mapaPreguntas[item.idPregunta]!.registros.push({
+            valor: item.valor,
+            departamento: dep,
+            antiguedad,
+            comentario: item.comentario
+          })
         }
         if (item.esAlerta) mapaPreguntas[item.idPregunta]!.alertas++
         if (item.comentario) mapaPreguntas[item.idPregunta]!.comentarios.push(item.comentario)
@@ -410,7 +475,7 @@ export function useEstadisticas() {
 
     return Object.keys(mapaPreguntas).map(id => {
       const p = mapaPreguntas[id]!
-      const total = p.valores.length
+      const total = p.registros.length
       if (total === 0) {
         return {
           idPregunta: id,
@@ -421,26 +486,118 @@ export function useEstadisticas() {
           esSensibleAlerta: p.alertas > 0,
           desviacionEstandar: 0,
           indiceConsenso: 'Alto',
-          distribucion: { positivas: 0, neutrales: 0, negativas: 0 }
+          distribucion: { positivas: 0, neutrales: 0, negativas: 0 },
+          desglosePuntos: [],
+          desgloseAntiguedad: [],
+          desgloseDepartamento: []
         }
       }
 
-      const suma = p.valores.reduce((a, b) => a + b, 0)
+      const valores = p.registros.map(r => r.valor)
+      const suma = valores.reduce((a, b) => a + b, 0)
       const promedio = +(suma / total).toFixed(1)
 
-      let pos = 0
-      let neu = 0
-      let neg = 0
-
-      p.valores.forEach(v => {
-        if (v >= 4) pos++
-        else if (v === 3) neu++
-        else neg++
+      // Conteo exacto por puntos 1, 2, 3, 4, 5
+      const conteoPts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+      valores.forEach(v => {
+        const valNorm = Math.min(5, Math.max(1, Math.round(v)))
+        conteoPts[valNorm] = (conteoPts[valNorm] || 0) + 1
       })
 
-      const varianza = p.valores.reduce((acc, v) => acc + Math.pow(v - promedio, 2), 0) / total
+      const desglosePuntos: DesglosePuntajeItem[] = [
+        { pts: 1, etiqueta: '1 Pt - Alerta Crítica (Muy Mal)', count: conteoPts[1] || 0, porcentaje: Math.round(((conteoPts[1] || 0) / total) * 100), color: '#ff2a2a' },
+        { pts: 2, etiqueta: '2 Pts - Riesgo (Mal)', count: conteoPts[2] || 0, porcentaje: Math.round(((conteoPts[2] || 0) / total) * 100), color: '#ff7700' },
+        { pts: 3, etiqueta: '3 Pts - Neutro (Regular)', count: conteoPts[3] || 0, porcentaje: Math.round(((conteoPts[3] || 0) / total) * 100), color: '#ffcc00' },
+        { pts: 4, etiqueta: '4 Pts - Favorable (Bien)', count: conteoPts[4] || 0, porcentaje: Math.round(((conteoPts[4] || 0) / total) * 100), color: '#00c8ff' },
+        { pts: 5, etiqueta: '5 Pts - Excelente (Máximo)', count: conteoPts[5] || 0, porcentaje: Math.round(((conteoPts[5] || 0) / total) * 100), color: '#0066ff' }
+      ]
+
+      let pos = (conteoPts[4] || 0) + (conteoPts[5] || 0)
+      let neu = conteoPts[3] || 0
+      let neg = (conteoPts[1] || 0) + (conteoPts[2] || 0)
+
+      const varianza = valores.reduce((acc, v) => acc + Math.pow(v - promedio, 2), 0) / total
       const desviacionEstandar = +(Math.sqrt(varianza)).toFixed(2)
       const indiceConsenso = desviacionEstandar < 0.6 ? 'Alto' : desviacionEstandar < 1.1 ? 'Moderado' : 'Polarizado'
+
+      // Desglose cruzado por Antigüedad
+      const rangosAntiguedad = [
+        { rango: 'menos-6m', etiqueta: 'Menos de 6 meses' },
+        { rango: '6m-1a', etiqueta: 'De 6 meses a 1 año' },
+        { rango: '1a-3a', etiqueta: 'De 1 a 3 años' },
+        { rango: 'mas-3a', etiqueta: 'Más de 3 años' }
+      ]
+
+      const desgloseAntiguedad: DesgloseAntiguedadItem[] = rangosAntiguedad.map(ra => {
+        const regs = p.registros.filter(r => r.antiguedad === ra.rango)
+        const tAnt = regs.length
+        if (tAnt === 0) {
+          return {
+            rango: ra.rango,
+            etiqueta: ra.etiqueta,
+            total: 0,
+            promedio: 0,
+            porcentajeSalud: 0,
+            distribucionPuntos: {
+              1: { count: 0, porcentaje: 0 },
+              2: { count: 0, porcentaje: 0 },
+              3: { count: 0, porcentaje: 0 },
+              4: { count: 0, porcentaje: 0 },
+              5: { count: 0, porcentaje: 0 }
+            }
+          }
+        }
+
+        const sumAnt = regs.reduce((a, b) => a + b.valor, 0)
+        const promAnt = +(sumAnt / tAnt).toFixed(1)
+
+        const distP: Record<number, { count: number; porcentaje: number }> = {
+          1: { count: 0, porcentaje: 0 },
+          2: { count: 0, porcentaje: 0 },
+          3: { count: 0, porcentaje: 0 },
+          4: { count: 0, porcentaje: 0 },
+          5: { count: 0, porcentaje: 0 }
+        }
+        regs.forEach(r => {
+          const valNorm = Math.min(5, Math.max(1, Math.round(r.valor)))
+          if (distP[valNorm]) {
+            distP[valNorm]!.count++
+          }
+        })
+        for (let pt = 1; pt <= 5; pt++) {
+          if (distP[pt]) {
+            distP[pt]!.porcentaje = Math.round((distP[pt]!.count / tAnt) * 100)
+          }
+        }
+
+        return {
+          rango: ra.rango,
+          etiqueta: ra.etiqueta,
+          total: tAnt,
+          promedio: promAnt,
+          porcentajeSalud: Math.round((promAnt / 5) * 100),
+          distribucionPuntos: distP
+        }
+      })
+
+      // Desglose por Departamento / Área
+      const depsMap: Record<string, { sum: number; count: number }> = {}
+      p.registros.forEach(r => {
+        const d = r.departamento || 'General'
+        if (!depsMap[d]) depsMap[d] = { sum: 0, count: 0 }
+        depsMap[d].sum += r.valor
+        depsMap[d].count++
+      })
+
+      const desgloseDepartamento: DesgloseDepartamentoItem[] = Object.entries(depsMap).map(([dep, data]) => {
+        const promDep = +(data.sum / data.count).toFixed(1)
+        return {
+          departamento: dep,
+          total: data.count,
+          promedio: promDep,
+          porcentajeSalud: Math.round((promDep / 5) * 100)
+        }
+      })
 
       return {
         idPregunta: id,
@@ -456,7 +613,10 @@ export function useEstadisticas() {
           neutrales: Math.round((neu / total) * 100),
           negativas: Math.round((neg / total) * 100)
         },
-        comentariosDestacados: p.comentarios.slice(0, 3)
+        desglosePuntos,
+        desgloseAntiguedad,
+        desgloseDepartamento,
+        comentariosDestacados: p.comentarios.slice(0, 5)
       }
     })
   })
@@ -682,98 +842,103 @@ export function useEstadisticas() {
     })
   })
 
-  // Detección por IA de Colaboradores Mencionados en comentarios abiertos
-  const colaboradoresMencionados = computed(() => {
-    const mencionesMap: Record<string, { nombre: string; rol?: string; positivo: number; negativo: number; comentarios: string[] }> = {}
+  // Detección por IA de Preguntas Abiertas, Cosas Malas, Mejoras y Personas Problema
+  const analisisPreguntasAbiertasIA = computed<AnalisisPreguntasAbiertas>(() => {
+    let totalTextos = 0
+    let cosasMalas = 0
+    let mejoras = 0
+
+    const personasMap: Record<string, {
+      nombre: string
+      menciones: number
+      frases: string[]
+      severo: boolean
+      tipoProblema: string
+    }> = {}
 
     respuestasFiltradas.value.forEach(r => {
       r.respuestas?.forEach(item => {
-        const txt = String(item.respuesta || item.comentario || '')
-        if (txt.length < 5) return
+        const rawTxt = String(item.respuesta || item.comentario || '').trim()
+        if (!rawTxt || rawTxt.length < 4) return
+        totalTextos++
 
-        // Extraer menciones con expresiones regulares de nombres propios (ej. "Carlos Pérez", "Laura", "Supervisor Juan")
+        const lower = rawTxt.toLowerCase()
+
+        // 1. Clasificación de Sentimiento y Mejoras
+        if (
+          lower.includes('gritos') || lower.includes('maltrato') || lower.includes('acoso') ||
+          lower.includes('favoritismo') || lower.includes('no apoyan') || lower.includes('sobrecarga') ||
+          lower.includes('dañad') || lower.includes('colapso') || lower.includes('renuncia') || lower.includes('pesado')
+        ) {
+          cosasMalas++
+        }
+
+        if (
+          lower.includes('mejorar') || lower.includes('sugerencia') || lower.includes('deberían') ||
+          lower.includes('sería bueno') || lower.includes('oportunidad') || lower.includes('capacitar')
+        ) {
+          mejoras++
+        }
+
+        // 2. Extracción de Nombres / Personas Problema señaladas en respuestas abiertas
         const regexNombres = /(?:supervisor|jefe|coordinador|líder|lider|compañero|compañera|señor|señora|ing|lic)?\s+([A-Z][a-záéíóúñ]+(?:\s+[A-Z][a-záéíóúñ]+)?)/g
         let match: RegExpExecArray | null
 
-        while ((match = regexNombres.exec(txt)) !== null) {
+        while ((match = regexNombres.exec(rawTxt)) !== null) {
           const nombreEncontrado = match[1]?.trim()
           if (!nombreEncontrado || nombreEncontrado.length < 3) continue
 
-          const ignorar = ['Que', 'Para', 'Como', 'Esta', 'Todo', 'Nada', 'Este', 'Pero', 'Otros', 'Operaciones', 'Tecnología', 'Gestión']
+          const ignorar = ['Que', 'Para', 'Como', 'Esta', 'Todo', 'Nada', 'Este', 'Pero', 'Otros', 'Operaciones', 'Tecnología', 'Gestión', 'Contigo', 'Liderazgo', 'Excelente', 'Buenas']
           if (ignorar.includes(nombreEncontrado)) continue
 
-          const norm = nombreEncontrado.toLowerCase()
-          if (!mencionesMap[norm]) {
-            mencionesMap[norm] = { nombre: nombreEncontrado, positivo: 0, negativo: 0, comentarios: [] }
+          const normKey = nombreEncontrado.toLowerCase()
+          if (!personasMap[normKey]) {
+            personasMap[normKey] = {
+              nombre: nombreEncontrado,
+              menciones: 0,
+              frases: [],
+              severo: false,
+              tipoProblema: 'Falta de apoyo y liderazgo'
+            }
           }
 
-          mencionesMap[norm]!.comentarios.push(txt)
-          if (txt.toLowerCase().includes('excelente') || txt.toLowerCase().includes('gracias') || txt.toLowerCase().includes('buen')) {
-            mencionesMap[norm]!.positivo++
-          } else if (txt.toLowerCase().includes('gritos') || txt.toLowerCase().includes('favoritismo') || txt.toLowerCase().includes('acoso') || txt.toLowerCase().includes('maltrato')) {
-            mencionesMap[norm]!.negativo++
+          personasMap[normKey]!.menciones++
+          personasMap[normKey]!.frases.push(rawTxt)
+
+          if (lower.includes('gritos') || lower.includes('acoso') || lower.includes('favoritismo') || lower.includes('maltrato')) {
+            personasMap[normKey]!.severo = true
+            personasMap[normKey]!.tipoProblema = 'Abuso de Autoridad / Fricción Severa'
           }
         }
       })
     })
 
-    return Object.values(mencionesMap).map(item => {
-      const sentimiento = item.negativo > item.positivo ? 'Atención/Fricción' : item.positivo > 0 ? 'Positivo' : 'Neutro'
+    const personasProblema: PersonaProblemaDetectada[] = Object.values(personasMap).map(p => {
+      const esCritico = p.severo || p.menciones >= 2
+      const severidad: PersonaProblemaDetectada['severidad'] = esCritico ? 'Crítica (Intervención RRHH)' : p.menciones > 1 ? 'Alta (Revisión Liderazgo)' : 'Moderada'
+
       return {
-        id: `mencion-${item.nombre.toLowerCase().replace(/\s+/g, '-')}`,
-        nombre: item.nombre,
-        conteoMenciones: item.comentarios.length,
-        sentimiento,
-        frasesEjemplo: item.comentarios.slice(0, 2),
-        estadoEncasillado: item.negativo > 0 ? 'Pendiente' : 'Descartado'
+        id: `persona-${p.nombre.toLowerCase().replace(/\s+/g, '-')}`,
+        nombre: p.nombre,
+        rolSugerido: p.nombre.toLowerCase().includes('jefe') ? 'Jefe / Director' : 'Supervisor / Líder Directo',
+        conteoMenciones: p.menciones,
+        severidad,
+        categoriaProblema: p.tipoProblema,
+        motivoDetallado: `Señalado en ${p.menciones} respuesta(s) abierta(s) de la evaluación por temas de ${p.tipoProblema.toLowerCase()}.`,
+        frasesEjemplo: p.frases.slice(0, 3),
+        accionRecomendadaIA: esCritico
+          ? 'Revisión prioritaria por Gestión Humana y citación a coaching confidencial de liderazgo.'
+          : 'Seguimiento por psicología organizacional en la próxima evaluación.'
       }
     })
-  })
 
-  // Encasillamiento Inteligente de Sugerencias Organizacionales
-  const sugerenciasClasificadas = computed(() => {
-    const categorias = {
-      'Procesos & Tecnología': { count: 0, frases: ['Mejorar sistema de llamadas', 'Actualizar computadores'], accion: 'Inversión en renovación tecnológica y optimización de software.' },
-      'Infraestructura & Espacios': { count: 0, frases: ['Aire acondicionado en piso 2', 'Ajuste de sillas ergonómicas'], accion: 'Mantenimiento físico y ergonomía en puestos de trabajo.' },
-      'Salario & Beneficios': { count: 0, frases: ['Bonos por cumplimiento', 'Flexibilidad horaria'], accion: 'Revisión de escala de incentivos y vales de bienestar.' },
-      'Clima & Reconocimiento': { count: 0, frases: ['Reconocimiento a logros', 'Mejor comunicación con jefes'], accion: 'Talleres de liderazgo empático y eventos de integración.' }
+    return {
+      totalRespuestasTextoAnalizadas: totalTextos,
+      cosasMalasCount: cosasMalas,
+      mejorasCount: mejoras,
+      personasProblemaCount: personasProblema.length,
+      personasProblema
     }
-
-    let total = 0
-    respuestasFiltradas.value.forEach(r => {
-      r.respuestas?.forEach(item => {
-        const rawTxt = String(item.respuesta || item.comentario || '')
-        const txt = rawTxt.toLowerCase()
-        if (!txt || txt.length < 5) return
-
-        if (txt.includes('tecnología') || txt.includes('equipo') || txt.includes('sistema') || txt.includes('internet') || txt.includes('software')) {
-          categorias['Procesos & Tecnología'].count++
-          categorias['Procesos & Tecnología'].frases.push(rawTxt)
-          total++
-        } else if (txt.includes('aire') || txt.includes('silla') || txt.includes('baño') || txt.includes('piso') || txt.includes('espacio')) {
-          categorias['Infraestructura & Espacios'].count++
-          categorias['Infraestructura & Espacios'].frases.push(rawTxt)
-          total++
-        } else if (txt.includes('salario') || txt.includes('pago') || txt.includes('bono') || txt.includes('sueldo') || txt.includes('beneficio')) {
-          categorias['Salario & Beneficios'].count++
-          categorias['Salario & Beneficios'].frases.push(rawTxt)
-          total++
-        } else if (txt.includes('clima') || txt.includes('jefe') || txt.includes('trato') || txt.includes('reconocimiento') || txt.includes('apoyo')) {
-          categorias['Clima & Reconocimiento'].count++
-          categorias['Clima & Reconocimiento'].frases.push(rawTxt)
-          total++
-        }
-      })
-    })
-
-    const totCalc = total || 1
-    return Object.entries(categorias).map(([cat, val]) => ({
-      categoria: cat,
-      cantidad: val.count,
-      porcentaje: Math.round((val.count / totCalc) * 100),
-      ejemplosTexto: val.frases.slice(0, 3),
-      accionSugerida: val.accion
-    }))
   })
 
   // Estructura completa sincronizada
@@ -827,7 +992,8 @@ export function useEstadisticas() {
       },
       posiblesFallosAreas: fallosAreasFiltrados.value,
       analisisConclusionesIA: analisisConclusionesIA.value,
-      desgloseRespuestasDetalladas: desgloseRespuestasDetalladas.value
+      desgloseRespuestasDetalladas: desgloseRespuestasDetalladas.value,
+      analisisPreguntasAbiertas: analisisPreguntasAbiertasIA.value
     }
   })
 
@@ -931,6 +1097,23 @@ export function useEstadisticas() {
       variacion: 0
     }
   }
+
+  const colaboradoresMencionados = computed(() => {
+    return (analisisPreguntasAbiertasIA.value.personasProblema || []).map(p => ({
+      id: p.id,
+      nombre: p.nombre,
+      conteoMenciones: p.conteoMenciones,
+      sentimiento: p.severidad.includes('Crítica') ? 'Atención/Fricción' : 'Neutro',
+      frasesEjemplo: p.frasesEjemplo,
+      estadoEncasillado: 'Pendiente'
+    }))
+  })
+
+  const sugerenciasClasificadas = computed(() => {
+    return [
+      { categoria: 'Procesos & Tecnología', cantidad: analisisPreguntasAbiertasIA.value.cosasMalasCount, porcentaje: 50, ejemplosTexto: [], accionSugerida: 'Renovación tecnológica' }
+    ]
+  })
 
   return {
     datosEstadisticas,

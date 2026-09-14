@@ -96,18 +96,6 @@ const emit = defineEmits<{
       </div>
     </div>
 
-    <!-- Fila 2: Gráfico Radial + Gráfico de Barras -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-      <div class="lg:col-span-6 p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md">
-        <GraficoRadial 
-          :dimensiones="dimensionesRadiales" 
-          :anguloInclinacion="anguloInclinacion"
-          @abrirConfiguracion="emit('configurarRadial')"
-          @configurar="emit('configurarRadial')"
-        />
-      </div>
-
-     
-    </div>
+   
   </div>
 </template>

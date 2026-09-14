@@ -107,15 +107,6 @@ function reiniciarTimerInactividad(): void {
   }, TIEMPO_INACTIVIDAD_MS)
 }
 
-function manejarCierrePestana(): void {
-  limpiarSesionLocal()
-  try {
-    supabase.auth.signOut()
-  } catch (_) {
-    // best-effort al cerrar pestaña
-  }
-}
-
 // ─── Composable público ────────────────────────────────────────────────────────
 
 export function useSesionSegura() {
@@ -125,7 +116,6 @@ export function useSesionSegura() {
     EVENTOS_ACTIVIDAD.forEach(evento => {
       window.addEventListener(evento, reiniciarTimerInactividad, { passive: true })
     })
-    window.addEventListener('beforeunload', manejarCierrePestana)
     reiniciarTimerInactividad()
   }
 
@@ -135,7 +125,6 @@ export function useSesionSegura() {
     EVENTOS_ACTIVIDAD.forEach(evento => {
       window.removeEventListener(evento, reiniciarTimerInactividad)
     })
-    window.removeEventListener('beforeunload', manejarCierrePestana)
     limpiarTimers()
     mostrarModalInactividad.value = false
   }
