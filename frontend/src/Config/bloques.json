@@ -1,0 +1,74 @@
+[
+  {
+    "id": "bloque-1",
+    "numero": 1,
+    "titulo": "Datos de Contexto y Segmentación",
+    "descripcion": "Información general para identificar tendencias por área sin comprometer la identidad.",
+    "icono": "Users",
+    "colorClase": "from-slate-600 to-slate-800",
+    "textColorClase": "text-slate-100"
+  },
+  {
+    "id": "bloque-2",
+    "numero": 2,
+    "titulo": "Bienestar Emocional, Estrés y Condiciones de Trabajo",
+    "descripcion": "Evalúa cómo te sientes en tu entorno de trabajo, niveles de fatiga y condiciones del puesto.",
+    "icono": "Heart",
+    "colorClase": "from-violet-600 to-purple-700",
+    "textColorClase": "text-violet-50"
+  },
+  {
+    "id": "bloque-3",
+    "numero": 3,
+    "titulo": "Convivencia, Compañerismo y Trabajo en Equipo",
+    "descripcion": "Mide la calidad de las relaciones interpersonales, respeto y colaboración.",
+    "icono": "Handshake",
+    "colorClase": "from-sky-600 to-blue-700",
+    "textColorClase": "text-sky-50"
+  },
+  {
+    "id": "bloque-4",
+    "numero": 4,
+    "titulo": "Liderazgo, Instrucciones y Feedback del Jefe Inmediato",
+    "descripcion": "Evalúa la claridad, accesibilidad, reconocimiento y retroalimentación de tu líder directo.",
+    "icono": "Star",
+    "colorClase": "from-amber-500 to-orange-600",
+    "textColorClase": "text-amber-50"
+  },
+  {
+    "id": "bloque-5",
+    "numero": 5,
+    "titulo": "Capacitación, Plan Carrera, Beneficios y Gestión Humana",
+    "descripcion": "Percepción sobre oportunidades de crecimiento, compensaciones y el área de RRHH.",
+    "icono": "TrendingUp",
+    "colorClase": "from-emerald-600 to-teal-700",
+    "textColorClase": "text-emerald-50"
+  },
+  {
+    "id": "bloque-6",
+    "numero": 6,
+    "titulo": "Nivel Académico, Estudios y Talento Humano",
+    "descripcion": "Identifica el potencial académico del equipo y si sus estudios son aprovechados.",
+    "icono": "GraduationCap",
+    "colorClase": "from-indigo-600 to-violet-700",
+    "textColorClase": "text-indigo-50"
+  },
+  {
+    "id": "bloque-7",
+    "numero": 7,
+    "titulo": "Proyección a Futuro y Visión en la Empresa",
+    "descripcion": "Conoce las aspiraciones y el nivel de compromiso a largo plazo del colaborador.",
+    "icono": "Telescope",
+    "colorClase": "from-rose-500 to-pink-700",
+    "textColorClase": "text-rose-50"
+  },
+  {
+    "id": "bloque-8",
+    "numero": 8,
+    "titulo": "Propuestas de Mejora y Diagnóstico Abierto",
+    "descripcion": "Espacio libre para sugerencias, mejoras de infraestructura, procesos y bienestar.",
+    "icono": "MessageSquareText",
+    "colorClase": "from-cyan-600 to-sky-700",
+    "textColorClase": "text-cyan-50"
+  }
+]

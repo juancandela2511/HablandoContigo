@@ -1,0 +1,101 @@
+[
+  {
+    "id": "tipo-acoso-sexual",
+    "nombre": "Alerta de Acoso Sexual",
+    "descripcion": "Insinuaciones, propuestas indebidas, contacto físico no consentido o comentarios sexuales inapropiados.",
+    "nivel": 1,
+    "severidad": "Crítica",
+    "icono": "ShieldAlert",
+    "colorHex": "#e11d48"
+  },
+  {
+    "id": "tipo-molestias-cotidianas",
+    "nombre": "Alerta de Molestias y Fastidio Cotidiano",
+    "descripcion": "Presión canzona o sobreexigencia del jefe en comparación con los demás, interrupciones continuas, comentarios incómodos o pesadez por parte de compañeros.",
+    "nivel": 1,
+    "severidad": "Crítica",
+    "icono": "AlertTriangle",
+    "colorHex": "#ef4444"
+  },
+  {
+    "id": "tipo-sobrecarga-burnout",
+    "nombre": "Alerta de Sobrecarga / Agotamiento Extremo (Burnout)",
+    "descripcion": "Identifica fatiga física o mental severa por jornadas excesivas, falta de descansos o metas imposibles de cumplir antes de que termine en incapacidad médica.",
+    "nivel": 1,
+    "severidad": "Crítica",
+    "icono": "Flame",
+    "colorHex": "#f97316"
+  },
+  {
+    "id": "tipo-riesgo-fuga",
+    "nombre": "Alerta de Riesgo de Fuga",
+    "descripcion": "Intención directa de renunciar, desmotivación crítica o búsqueda activa de otro empleo.",
+    "nivel": 1,
+    "severidad": "Crítica",
+    "icono": "LogOut",
+    "colorHex": "#dc2626"
+  },
+  {
+    "id": "tipo-invasion-vida-personal",
+    "nombre": "Alerta de Invasión de Vida Personal / Desconexión Laboral",
+    "descripcion": "Mensajes, llamadas o exigencias de trabajo fuera del horario laboral, en días de descanso o vacaciones.",
+    "nivel": 2,
+    "severidad": "Alta",
+    "icono": "Clock",
+    "colorHex": "#f43f5e"
+  },
+  {
+    "id": "tipo-retribucion-monetaria",
+    "nombre": "Alerta de Retribución Monetaria",
+    "descripcion": "Inconformidad con el salario frente a la carga laboral, responsabilidades y esfuerzo realizado.",
+    "nivel": 2,
+    "severidad": "Alta",
+    "icono": "DollarSign",
+    "colorHex": "#eab308"
+  },
+  {
+    "id": "tipo-falta-capacitacion",
+    "nombre": "Alerta de Falta de Capacitación",
+    "descripcion": "Procesos mal explicados, ausencia de inducción, falta de herramientas y desconocimiento de cómo realizar las funciones.",
+    "nivel": 2,
+    "severidad": "Alta",
+    "icono": "BookOpen",
+    "colorHex": "#f59e0b"
+  },
+  {
+    "id": "tipo-falta-claridad-rol",
+    "nombre": "Alerta de Falta de Claridad en el Rol",
+    "descripcion": "Detecta cuando el empleado no tiene claro qué se espera de su trabajo, recibe órdenes contradictorias de varios jefes o cambia de funciones sin previo aviso.",
+    "nivel": 2,
+    "severidad": "Alta",
+    "icono": "Compass",
+    "colorHex": "#fb923c"
+  },
+  {
+    "id": "tipo-falta-recursos",
+    "nombre": "Alerta de Falta de Recursos / Condiciones Físicas",
+    "descripcion": "Alerta si faltan insumos básicos para operar (computador lento, sillas incómodas, mala iluminación, internet inestable o herramientas defectuosas).",
+    "nivel": 3,
+    "severidad": "Moderada",
+    "icono": "Laptop",
+    "colorHex": "#d97706"
+  },
+  {
+    "id": "tipo-falta-crecimiento",
+    "nombre": "Alerta de Falta de Crecimiento",
+    "descripcion": "Sensación de estancamiento profesional, falta de ascensos o ausencia de un plan de carrera claro.",
+    "nivel": 3,
+    "severidad": "Moderada",
+    "icono": "TrendingUp",
+    "colorHex": "#0284c7"
+  },
+  {
+    "id": "tipo-reconocimiento-valoracion",
+    "nombre": "Alerta de Reconocimiento y Valoración",
+    "descripcion": "Detecta desmotivación porque los logros y el esfuerzo nunca son felicitados o tenidos en cuenta por la jefatura.",
+    "nivel": 3,
+    "severidad": "Moderada",
+    "icono": "Award",
+    "colorHex": "#0ea5e9"
+  }
+]

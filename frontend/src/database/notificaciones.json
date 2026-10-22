@@ -1,0 +1,10 @@
+[
+  {
+    "id": "notif-001",
+    "tipo": "encuesta",
+    "titulo": "📢 Encuesta Troncal Activa",
+    "descripcion": "Se encuentra activa la evaluación de clima laboral oficial con 44 preguntas atómicas.",
+    "fecha": "15 Sep 2026",
+    "leida": true
+  }
+]

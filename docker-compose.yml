@@ -1,0 +1,98 @@
+# ============================================================================
+# HABLANDO CONTIGO - ORQUESTACIÓN UNIFICADA DE DOCKER COMPOSE
+# Stack completo: PostgreSQL 16 + Ollama LLM + Backend Node.js + Frontend Nginx
+# ============================================================================
+
+services:
+  # ─── 1. BASE DE DATOS POSTGRESQL 16 ─────────────────────────────────────────
+  postgres-db:
+    image: postgres:16-alpine
+    container_name: hablandocontigo_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-mi_base_datos}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-1012332747jS.}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-mi_base_datos}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  # ─── 2. SERVIDOR DE INTELIGENCIA ARTIFICIAL (OLLAMA) ──────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: hablandocontigo_ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - app-network
+
+  # ─── 3. SERVIDOR BACKEND REST API (NODE.JS + TYPESCRIPT + EXPRESS) ─────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ../docker/Dockerfile.backend
+    container_name: hablandocontigo_backend
+    restart: unless-stopped
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+    environment:
+      PORT: 3000
+      NODE_ENV: production
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      DB_HOST: postgres-db
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-1012332747jS.}
+      DB_NAME: ${POSTGRES_DB:-mi_base_datos}
+      OLLAMA_HOST: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3}
+      JWT_SECRET: ${JWT_SECRET:-hablandocontigo_super_secret_jwt_key_2026_enterprise_998877}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+    ports:
+      - "3000:3000"
+    networks:
+      - app-network
+
+  # ─── 4. CLIENTE FRONTEND (VUE 3 + VITE SERVIDO POR NGINX PROXY) ───────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../docker/Dockerfile.frontend
+    container_name: hablandocontigo_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+      - "5173:80"
+    networks:
+      - app-network
+
+# ─── RED INTERNA AISLADA ─────────────────────────────────────────────────────
+networks:
+  app-network:
+    name: app-network
+    driver: bridge
+
+# ─── VOLÚMENES PERSISTENTES ──────────────────────────────────────────────────
+volumes:
+  pgdata:
+    name: pgdata
+  ollama_data:
+    name: ollama_data
