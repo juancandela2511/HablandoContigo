@@ -1,10 +1,4 @@
-# ============================================================================
-# HABLANDO CONTIGO - ORQUESTACIÓN UNIFICADA DE DOCKER COMPOSE
-# Stack completo: PostgreSQL 16 + Ollama LLM + Backend Node.js + Frontend Nginx
-# ============================================================================
-
 services:
-  # ─── 1. BASE DE DATOS POSTGRESQL 16 ─────────────────────────────────────────
   postgres-db:
     image: postgres:16-alpine
     container_name: hablandocontigo_postgres
@@ -12,13 +6,13 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-mi_base_datos}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-1012332747jS.}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-1012332747Js}
       PGDATA: /var/lib/postgresql/data/pgdata
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./docker/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-mi_base_datos}"]
       interval: 10s
@@ -27,7 +21,6 @@ services:
     networks:
       - app-network
 
-  # ─── 2. SERVIDOR DE INTELIGENCIA ARTIFICIAL (OLLAMA) ──────────────────────
   ollama:
     image: ollama/ollama:latest
     container_name: hablandocontigo_ollama
@@ -39,7 +32,6 @@ services:
     networks:
       - app-network
 
-  # ─── 3. SERVIDOR BACKEND REST API (NODE.JS + TYPESCRIPT + EXPRESS) ─────────
   backend:
     build:
       context: ./backend
@@ -58,18 +50,17 @@ services:
       DB_HOST: postgres-db
       DB_PORT: 5432
       DB_USER: ${POSTGRES_USER:-postgres}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-1012332747jS.}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-1012332747Js}
       DB_NAME: ${POSTGRES_DB:-mi_base_datos}
       OLLAMA_HOST: http://ollama:11434
       OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3}
       JWT_SECRET: ${JWT_SECRET:-hablandocontigo_super_secret_jwt_key_2026_enterprise_998877}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
     ports:
-      - "3000:3000"
+      - "3001:3000"
     networks:
       - app-network
 
-  # ─── 4. CLIENTE FRONTEND (VUE 3 + VITE SERVIDO POR NGINX PROXY) ───────────
   frontend:
     build:
       context: ./frontend
@@ -79,18 +70,15 @@ services:
     depends_on:
       - backend
     ports:
-      - "80:80"
-      - "5173:80"
+      - "8085:80"
     networks:
       - app-network
 
-# ─── RED INTERNA AISLADA ─────────────────────────────────────────────────────
 networks:
   app-network:
     name: app-network
     driver: bridge
 
-# ─── VOLÚMENES PERSISTENTES ──────────────────────────────────────────────────
 volumes:
   pgdata:
     name: pgdata
