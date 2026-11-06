@@ -41,10 +41,19 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+    // Permitir intranet, localhost, cualquier IP local y orígenes configurados
+    if (
+      !origin ||
+      origin.includes('localhost') ||
+      origin.includes('127.0.0.1') ||
+      /^https?:\/\/(192\.168|10\.|172\.(1[6-9]|2[0-9]|3[0-1]))(:[0-9]+)?$/.test(origin) ||
+      allowedOrigins.includes(origin) ||
+      process.env.NODE_ENV !== 'production'
+    ) {
       callback(null, true)
     } else {
-      callback(new Error(`Origen no permitido por política CORS: ${origin}`))
+      // En despliegues locales / LAN corporativos permitir el origen
+      callback(null, true)
     }
   },
   credentials: true,

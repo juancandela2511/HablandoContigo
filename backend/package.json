@@ -1,6 +1,6 @@
 {
   "name": "hablandocontigo-server",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Backend Server REST API for HablandoContigo - Express, Node.js, TypeScript & PostgreSQL",
   "main": "dist/index.js",
   "type": "module",

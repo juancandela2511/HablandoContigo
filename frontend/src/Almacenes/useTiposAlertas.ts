@@ -9,50 +9,32 @@
 import { ref, computed } from 'vue'
 import { useToast } from '@/Almacenes/useToast'
 import { TIPOS_ALERTAS_CATALOGO, MAPA_PREGUNTA_A_ALERTA } from './catalogoAlertasPrincipales'
+import {
+  type NivelAlerta,
+  type ModoEnfoqueAlerta,
+  type SeveridadAlerta,
+  type TipoAlertaPersonalizada,
+  mapearNivelPorSeveridad,
+  mapearSeveridadPorNivel,
+  esTextoAcosoSexual
+} from './alertas/tiposAlertasPersonalizadas'
 
 const { mostrarExito } = useToast()
 
-export type NivelAlerta = 1 | 2 | 3 | 4
-export type ModoEnfoqueAlerta = 'especifico' | 'general'
-export type SeveridadAlerta = 'Crítica' | 'Alta' | 'Moderada' | 'Baja'
-
-export interface TipoAlertaPersonalizada {
-  id: string
-  nombre: string
-  descripcion: string
-  nivel: NivelAlerta
-  severidad: SeveridadAlerta
-  modoEnfoque: ModoEnfoqueAlerta
-  enfoqueDetalle?: string
-  palabrasClave: string[]
-  protocoloAccion: string
-  icono?: string
-  color?: string
-  activa: boolean
-  creadoEn?: string
+export type { NivelAlerta, ModoEnfoqueAlerta, SeveridadAlerta, TipoAlertaPersonalizada }
+export {
+  TIPOS_ALERTAS_CATALOGO,
+  MAPA_PREGUNTA_A_ALERTA,
+  mapearNivelPorSeveridad,
+  mapearSeveridadPorNivel,
+  esTextoAcosoSexual
 }
-
-export { TIPOS_ALERTAS_CATALOGO, MAPA_PREGUNTA_A_ALERTA }
 
 const CLAVE_STORAGE = 'hablandocontigo_tipos_alertas_11_principales_v2'
 const CLAVES_OBSOLETAS = ['hablandocontigo_tipos_alertas_solo_3_v1', 'hablandocontigo_tipos_alertas']
 const IDS_OBSOLETOS = new Set(['tipo-jefes-gestion', 'tipo-acoso', 'tipo-depresion'])
 
 const tiposAlertas = ref<TipoAlertaPersonalizada[]>([])
-
-export function mapearNivelPorSeveridad(severidad?: SeveridadAlerta): NivelAlerta {
-  if (severidad === 'Crítica') return 1
-  if (severidad === 'Alta') return 2
-  if (severidad === 'Moderada') return 3
-  return 4
-}
-
-export function mapearSeveridadPorNivel(nivel: NivelAlerta): SeveridadAlerta {
-  if (nivel === 1) return 'Crítica'
-  if (nivel === 2) return 'Alta'
-  if (nivel === 3) return 'Moderada'
-  return 'Baja'
-}
 
 function guardarEnLocalStorage() {
   try {
@@ -88,10 +70,6 @@ function cargarTiposAlertasLocales() {
   guardarEnLocalStorage()
 }
 
-export function esTextoAcosoSexual(texto: string): boolean {
-  const t = texto.toLowerCase()
-  return /acoso sexual|insinuaci[oó]n|propuesta[s]? indebida|tocamiento|contacto f[íi]sico|miradas lascivas|comentarios sexuales|sobrepas[oó]|propasar|indecente|beso a la fuerza|intimidaci[oó]n sexual/i.test(t)
-}
 
 export function useTiposAlertas() {
   if (tiposAlertas.value.length === 0) cargarTiposAlertasLocales()
@@ -101,18 +79,10 @@ export function useTiposAlertas() {
   const alertasNivel2 = computed(() => tiposAlertas.value.filter(t => t.nivel === 2 && t.activa))
   const alertasNivel3 = computed(() => tiposAlertas.value.filter(t => t.nivel === 3 && t.activa))
   const alertasNivel4 = computed(() => tiposAlertas.value.filter(t => t.nivel === 4 && t.activa))
-
   const crearTipoAlerta = (nuevo: {
-    nombre: string
-    descripcion: string
-    nivel: NivelAlerta
-    severidad?: SeveridadAlerta
-    modoEnfoque: ModoEnfoqueAlerta
-    enfoqueDetalle?: string
-    palabrasClave?: string[]
-    protocoloAccion?: string
-    icono?: string
-    color?: string
+    nombre: string; descripcion: string; nivel: NivelAlerta; severidad?: SeveridadAlerta;
+    modoEnfoque: ModoEnfoqueAlerta; enfoqueDetalle?: string; palabrasClave?: string[];
+    protocoloAccion?: string; icono?: string; color?: string;
   }): TipoAlertaPersonalizada => {
     const id = `tipo-custom-${Date.now().toString(36)}`
     const severidad = nuevo.severidad || mapearSeveridadPorNivel(nuevo.nivel)
@@ -152,7 +122,6 @@ export function useTiposAlertas() {
   }
 
   const actualizarTipoAlerta = (id: string, datos: Partial<TipoAlertaPersonalizada>): boolean => editarTipoAlerta(id, datos)
-
   const eliminarTipoAlerta = (id: string): boolean => {
     const idx = tiposAlertas.value.findIndex(t => t.id === id)
     if (idx === -1) return false
@@ -212,10 +181,13 @@ export function useTiposAlertas() {
   }
 
   const obtenerClaseColorNivel = (nivel: NivelAlerta) => {
-    if (nivel === 1) return { badge: 'bg-red-100 dark:bg-red-950/80 border-red-300 dark:border-red-800 text-red-700 dark:text-red-300', border: 'border-red-500/50', bg: 'bg-red-50/50 dark:bg-red-950/20', text: 'text-red-600 dark:text-red-400' }
-    if (nivel === 2) return { badge: 'bg-rose-100 dark:bg-rose-950/80 border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300', border: 'border-rose-500/50', bg: 'bg-rose-50/50 dark:bg-rose-950/20', text: 'text-rose-600 dark:text-rose-400' }
-    if (nivel === 3) return { badge: 'bg-amber-100 dark:bg-amber-950/80 border-amber-300 dark:border-amber-800 text-amber-700 dark:text-amber-300', border: 'border-amber-500/50', bg: 'bg-amber-50/50 dark:bg-amber-950/20', text: 'text-amber-600 dark:text-amber-400' }
-    return { badge: 'bg-sky-100 dark:bg-sky-950/80 border-sky-300 dark:border-sky-800 text-sky-700 dark:text-sky-300', border: 'border-sky-500/50', bg: 'bg-sky-50/50 dark:bg-sky-950/20', text: 'text-sky-600 dark:text-sky-400' }
+    const mapa = {
+      1: { badge: 'bg-red-100 dark:bg-red-950/80 border-red-300 dark:border-red-800 text-red-700 dark:text-red-300', border: 'border-red-500/50', bg: 'bg-red-50/50 dark:bg-red-950/20', text: 'text-red-600 dark:text-red-400' },
+      2: { badge: 'bg-rose-100 dark:bg-rose-950/80 border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300', border: 'border-rose-500/50', bg: 'bg-rose-50/50 dark:bg-rose-950/20', text: 'text-rose-600 dark:text-rose-400' },
+      3: { badge: 'bg-amber-100 dark:bg-amber-950/80 border-amber-300 dark:border-amber-800 text-amber-700 dark:text-amber-300', border: 'border-amber-500/50', bg: 'bg-amber-50/50 dark:bg-amber-950/20', text: 'text-amber-600 dark:text-amber-400' },
+      4: { badge: 'bg-sky-100 dark:bg-sky-950/80 border-sky-300 dark:border-sky-800 text-sky-700 dark:text-sky-300', border: 'border-sky-500/50', bg: 'bg-sky-50/50 dark:bg-sky-950/20', text: 'text-sky-600 dark:text-sky-400' }
+    }
+    return mapa[nivel] || mapa[4]
   }
 
   return {

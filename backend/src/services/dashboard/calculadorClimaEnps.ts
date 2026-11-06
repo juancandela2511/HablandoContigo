@@ -65,27 +65,21 @@ export function procesarClimaYEnps(registros: any[]): ResultadoClimaEnps {
         if (item.esAlerta && nivel > 2) nivel = valor <= 15 ? 1 : 2
 
         if (item.esAlerta || nivel <= 2) {
-          sumaNeta -= (nivel <= 1 || item.severidadAlerta === 'Crítica') ? 5.0 : 4.5
-        } else if (nivel === 3) {
-          sumaNeta += 2.5
-        } else if (nivel === 4) {
+          // Detectada alerta o calificación baja
+        } else if (nivel >= 4) {
           buenas++
-          sumaNeta += 4.0
-        } else {
-          buenas++
-          sumaNeta += 5.0
         }
+
+        const puntosPregunta = item.esAlerta
+          ? (item.severidadAlerta === 'Crítica' ? 1.0 : Math.min(nivel, 2.0))
+          : nivel
+
+        sumaNeta += puntosPregunta
       })
 
       let puntajeNeto = 0
       if (evaluadas > 0) {
-        const promedioBruto = sumaNeta / evaluadas
-        if (promedioBruto > 0) {
-          puntajeNeto = Math.max(0, Math.min(5, promedioBruto))
-        } else {
-          const pctFallback = buenas > 0 ? Math.max(5, Math.min(30, Math.round((buenas / evaluadas) * 32))) : 0
-          puntajeNeto = Number(((pctFallback / 100) * 5).toFixed(2))
-        }
+        puntajeNeto = Number(Math.max(1, Math.min(5, sumaNeta / evaluadas)).toFixed(2))
       }
 
       r.puntajeGeneral = puntajeNeto

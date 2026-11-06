@@ -3,10 +3,10 @@
  * ALMACÉN PRINCIPAL DE ENCUESTAS Y RESPUESTAS (useEncuestas.ts)
  * ============================================================================
  * Módulo orquestador desacoplado en servicios especializados bajo @/Almacenes/encuestas.
- * Mantiene compatibilidad total con todas las vistas y componentes.
+ * Mantiene compatibilidad total con todas las vistas y componentes en español.
  */
 
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import { useToast } from '@/Almacenes/useToast'
 import { depurarRastrosLocales } from '@/services/cryptoService'
 import type { AlertaGeminiEstricta } from '@/ia'
@@ -23,12 +23,13 @@ export type {
 
 import type { Encuesta, RegistroRespuesta, RespuestaItem, UbicacionAuditoria } from './encuestas/tiposEncuestas'
 import {
-  encuestasBaseDefault,
-  obtenerEncuestasLocalesGuardadas,
-  obtenerRespuestasLocalesGuardadas,
-  cargarEncuestasUnificadas,
-  cargarRespuestasUnificadas
-} from './encuestas/persistenciaEncuestas'
+  encuestas,
+  respuestasAnonimas,
+  cargandoEncuestas,
+  cargandoRespuestas,
+  cargarEncuestasDesdeLocal,
+  cargarRespuestasDesdeLocal
+} from './encuestas/estadoEncuestas'
 import {
   registrarNuevaRespuestaAnonima,
   vaciarEstadisticasDeEncuesta,
@@ -47,61 +48,10 @@ import {
   inyectarUnaRespuestaPersonalizada
 } from './encuestas/servicioDatosPrueba'
 
-// Depurar credenciales legacy
 depurarRastrosLocales()
-
-// Estado reactivo global singleton
-const encuestasIniciales = obtenerEncuestasLocalesGuardadas()
-const encuestas = ref<Encuesta[]>(encuestasIniciales.length > 0 ? encuestasIniciales : [...encuestasBaseDefault])
-const respuestasAnonimas = ref<RegistroRespuesta[]>(obtenerRespuestasLocalesGuardadas())
-const cargandoEncuestas = ref(false)
-const cargandoRespuestas = ref(false)
-
-let cargadoInicialEncuestas = false
-let cargadoInicialRespuestas = false
-let promesaCargaEncuestas: Promise<void> | null = null
-let promesaCargaRespuestas: Promise<void> | null = null
 
 export function useEncuestas() {
   const { mostrarExito, mostrarError } = useToast()
-
-  const cargarEncuestasDesdeLocal = async (forzar: boolean = false) => {
-    if (cargadoInicialEncuestas && !forzar) return
-    if (promesaCargaEncuestas && !forzar) return promesaCargaEncuestas
-
-    promesaCargaEncuestas = (async () => {
-      cargandoEncuestas.value = true
-      try {
-        const resultado = await cargarEncuestasUnificadas(encuestas.value)
-        encuestas.value = resultado
-        cargadoInicialEncuestas = true
-      } finally {
-        cargandoEncuestas.value = false
-        promesaCargaEncuestas = null
-      }
-    })()
-
-    return promesaCargaEncuestas
-  }
-
-  const cargarRespuestasDesdeLocal = async (forzar: boolean = false) => {
-    if (cargadoInicialRespuestas && !forzar) return
-    if (promesaCargaRespuestas && !forzar) return promesaCargaRespuestas
-
-    promesaCargaRespuestas = (async () => {
-      cargandoRespuestas.value = true
-      try {
-        const resultado = await cargarRespuestasUnificadas(respuestasAnonimas.value)
-        respuestasAnonimas.value = resultado
-        cargadoInicialRespuestas = true
-      } finally {
-        cargandoRespuestas.value = false
-        promesaCargaRespuestas = null
-      }
-    })()
-
-    return promesaCargaRespuestas
-  }
 
   // Métricas computadas
   const totalEncuestas = computed(() => encuestas.value.length)
@@ -123,17 +73,13 @@ export function useEncuestas() {
 
   const editarEncuesta = async (id: string, datos: Partial<Encuesta>): Promise<boolean> => {
     const ok = await editarProyectoExistente(id, datos, encuestas)
-    if (ok) {
-      mostrarExito('Cambios Guardados', 'Los ajustes del proyecto fueron persistidos.')
-    }
+    if (ok) mostrarExito('Cambios Guardados', 'Los ajustes del proyecto fueron persistidos.')
     return ok
   }
 
   const eliminarEncuesta = async (id: string): Promise<boolean> => {
     const ok = await eliminarProyectoExistente(id, encuestas, respuestasAnonimas)
-    if (ok) {
-      mostrarExito('Proyecto Eliminado', 'El proyecto y sus datos asociados fueron removidos.')
-    }
+    if (ok) mostrarExito('Proyecto Eliminado', 'El proyecto y sus datos asociados fueron removidos.')
     return ok
   }
 
@@ -164,9 +110,7 @@ export function useEncuestas() {
       identificacionVoluntaria,
       alertasGemini
     )
-    if (res) {
-      mostrarExito('Respuesta Registrada', 'Tu respuesta fue enviada de forma segura y anónima.')
-    }
+    if (res) mostrarExito('Respuesta Registrada', 'Tu respuesta fue enviada de forma segura y anónima.')
     return res
   }
 
@@ -178,17 +122,13 @@ export function useEncuestas() {
 
   const eliminarRespuestaIndividual = async (idRespuesta: string): Promise<boolean> => {
     const ok = eliminarRespuestaPorId(idRespuesta, encuestas, respuestasAnonimas)
-    if (ok) {
-      mostrarExito('Registro Eliminado', 'La respuesta fue eliminada exitosamente.')
-    }
+    if (ok) mostrarExito('Registro Eliminado', 'La respuesta fue eliminada exitosamente.')
     return ok
   }
 
   const vaciarTodasLasEstadisticas = async (): Promise<boolean> => {
     const ok = await limpiarTodasLasRespuestasEnBD(encuestas, respuestasAnonimas)
-    if (ok) {
-      mostrarExito('Estadísticas Limpiadas', 'Todas las respuestas fueron reiniciadas a cero.')
-    }
+    if (ok) mostrarExito('Estadísticas Limpiadas', 'Todas las respuestas fueron reiniciadas a cero.')
     return ok
   }
 
@@ -196,36 +136,27 @@ export function useEncuestas() {
   const finalizarYArchivarProyecto = async (idEncuesta: string): Promise<Encuesta | null> => {
     const res = await finalizarProyectoConReversion(idEncuesta, encuestas, respuestasAnonimas)
     if (res) {
-      mostrarExito(
-        'Proyecto Finalizado',
-        `Proyecto finalizado (${res.totalRespuestas || 0} respuestas). Cuentas con 3 días hábiles para revertirlo.`
-      )
+      mostrarExito('Proyecto Finalizado', `Proyecto finalizado (${res.totalRespuestas || 0} respuestas). Cuentas con 3 días hábiles para revertirlo.`)
     }
     return res
   }
 
   const revertirFinalizacionProyecto = async (idEncuesta: string): Promise<boolean> => {
     const { ok, mensaje } = await revertirProyectoFinalizado(idEncuesta, encuestas, respuestasAnonimas)
-    if (ok) {
-      mostrarExito('Proyecto Revertido', mensaje)
-    } else {
-      mostrarError('No se pudo revertir', mensaje)
-    }
+    if (ok) mostrarExito('Proyecto Revertido', mensaje)
+    else mostrarError('No se pudo revertir', mensaje)
     return ok
   }
 
   // Inyección de pruebas
   const inyectarDatosDePrueba = async (cantidad: number = 10, idEncuestaTarget?: string): Promise<boolean> => {
     const ok = await inyectarRespuestasDePrueba(cantidad, encuestas, respuestasAnonimas, idEncuestaTarget)
-    if (ok) {
-      mostrarExito('Datos Inyectados', `Se generaron ${cantidad} respuestas de calibración.`)
-    }
+    if (ok) mostrarExito('Datos Inyectados', `Se generaron ${cantidad} respuestas de calibración.`)
     return ok
   }
 
   const inyectarRespuestaPersonalizada = async (datos: any): Promise<boolean> => {
-    const ok = await inyectarUnaRespuestaPersonalizada(datos, encuestas, respuestasAnonimas)
-    return ok
+    return inyectarUnaRespuestaPersonalizada(datos, encuestas, respuestasAnonimas)
   }
 
   // Carga inicial no bloqueante

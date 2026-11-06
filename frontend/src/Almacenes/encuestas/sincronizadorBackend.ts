@@ -27,9 +27,13 @@ const API_URL = obtenerApiBaseUrl()
 
 export async function sincronizarProyectoEnBackend(encuesta: Encuesta): Promise<boolean> {
   try {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('hablandocontigo_auth_token_jwt') : null
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+    if (token) headers['Authorization'] = `Bearer ${token}`
+
     const res = await fetch(`${API_URL}/encuestas/${encuesta.id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({
         titulo: encuesta.titulo,
         descripcion: encuesta.descripcion,
