@@ -286,6 +286,30 @@ export const TIPOS_ALERTAS_CATALOGO: TipoAlertaPersonalizada[] = [
     icono: 'Target',
     color: '#10b981',
     activa: true
+  },
+  {
+    id: 'tipo-fallas-procesos',
+    nombre: 'Alerta Fallas en Procesos de la Empresa',
+    descripcion: 'Identifica lentitud o burocracia en procesos internos, falta de respuesta oportuna de RRHH, canales de comunicación inefectivos o falta de apertura organizacional.',
+    nivel: 3,
+    severidad: 'Moderada',
+    modoEnfoque: 'especifico',
+    enfoqueDetalle: 'Monitorea la agilidad de los procesos internos, la efectividad de los canales de comunicación y la capacidad de respuesta de Gestión Humana.',
+    palabrasClave: [
+      'procesos lentos',
+      'burocracia',
+      'no responden',
+      'rrhh no responde',
+      'gestión humana',
+      'comunicación interna',
+      'canales inefectivos',
+      'trámites',
+      'demora'
+    ],
+    protocoloAccion: 'Optimización de flujos internos, revisión de SLA de respuesta en Gestión Humana y fortalecimiento de canales de comunicación.',
+    icono: 'Scale',
+    color: '#06b6d4',
+    activa: true
   }
 ]
 
@@ -333,3 +357,20 @@ export const MAPA_PREGUNTA_A_ALERTA: Record<string, string> = {
   'b8-p40-sugerencias-rrhh': 'tipo-retribucion-monetaria',
   'b8-p41-comentarios-libres': 'tipo-molestias-cotidianas'
 }
+
+/**
+ * Obtiene la definición y configuración de una alerta del catálogo por su ID.
+ */
+export function obtenerTipoAlertaPorId(id?: string | number) {
+  if (!id) return undefined
+  const idStr = String(id)
+  const item = TIPOS_ALERTAS_CATALOGO.find(a => a.id === idStr)
+  if (!item) return undefined
+  return {
+    ...item,
+    severidadPorDefecto: item.severidad,
+    colorHex: item.color
+  }
+}
+
+export const obtenerAlertaPorId = obtenerTipoAlertaPorId

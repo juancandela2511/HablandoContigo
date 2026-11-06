@@ -107,11 +107,11 @@ export function inicializarEscenaPlaneta(
     grupoGlobo.add(new THREE.Line(geometriaMeridiano, materialLineas))
   }
 
-  // 5. Matriz de Puntos Continentales
+  // 5. Matriz de Puntos Continentales (Optimizada para arranque instantáneo)
   const posicionesPuntos: number[] = []
   const coloresPuntos: number[] = []
-  const pasoLat = 1.35
-  const pasoLon = 1.35
+  const pasoLat = 1.85
+  const pasoLon = 1.85
 
   for (let lat = -82; lat <= 82; lat += pasoLat) {
     const latRad = (lat * Math.PI) / 180

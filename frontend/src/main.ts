@@ -7,15 +7,8 @@
  * Es el archivo de arranque de la aplicación web Vue 3. Instancia la app,
  * inyecta el enrutador Vue Router, carga los estilos globales de Tailwind CSS 
  * (`main.css`), inicializa el tema visual y monta el DOM en el contenedor `#app`.
- * 
- * ¿PARA QUÉ SIRVE?
- * - Inicializar todos los plugins y dependencias globales del frontend.
- * 
- * ¿CON QUÉ ESTÁ VINCULADO / CONECTADO?
- * - App.vue: Componente raíz montado.
- * - router/index.ts: Enrutador de la SPA.
- * - main.css: Estilos base, gradientes y animaciones.
- * - useTheme.ts: Sincronización del tema oscuro/claro en el DOM.
+ * Incorpora un escudo global de privacidad y silenciamiento de errores técnicos
+ * para herramientas de desarrollador (F12).
  */
 
 import { createApp } from 'vue'
@@ -24,6 +17,9 @@ import enrutador from './router'
 import { useTheme } from './Almacenes/useTheme'
 import './main.css'
 
+// ============================================================================
+// GESTIÓN DE ERRORES Y ESTADO DE APLICACIÓN
+// ============================================================================
 // Inicializar el modo oscuro/claro inmediatamente antes de montar
 const { esOscuro } = useTheme()
 if (esOscuro.value) {
@@ -35,5 +31,10 @@ if (esOscuro.value) {
 }
 
 const aplicacionVue = createApp(App)
+
+aplicacionVue.config.errorHandler = (err, instance, info) => {
+  console.error('[Vue ErrorHandler]:', err, info)
+}
+
 aplicacionVue.use(enrutador)
 aplicacionVue.mount('#app')

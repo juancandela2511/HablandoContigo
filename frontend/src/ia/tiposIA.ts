@@ -29,10 +29,13 @@ export interface PreguntaAncladaConfig {
 
 export interface PreguntaEncuesta {
   id: string
+  bloqueId?: string
   categoria: string
   texto: string
   tipo: 'escala' | 'multiple' | 'texto' | 'si_no'
+  tipoGrafico?: 'barras' | 'pastel'
   opciones: OpcionPregunta[]
+  obligatoria?: boolean
   esRelleno?: boolean
   esSensibleAcoso?: boolean
   condicionDisparo?: string
@@ -47,7 +50,8 @@ export interface PreguntaEncuesta {
   preguntaAnclada?: PreguntaAncladaConfig
   solicitarPorQueSiNegativo?: boolean
   deteccionQuejas?: boolean
-  modoPresentacion?: 'click' | 'rompecabezas' | 'deslizador_emocional' | 'deslizador_tiempo' | 'juego_gusanito' | 'semaforo' | 'termometro' | 'palanca_sino'
+  comentariosHabilitados?: boolean
+  modoPresentacion?: 'click' | 'rompecabezas' | 'deslizador_emocional' | 'deslizador_tiempo' | 'juego_gusanito' | 'semaforo' | 'termometro' | 'palanca_sino' | 'tarjetas'
   imagenRompecabezas?: string
   imagen?: string
   maxAnos?: number

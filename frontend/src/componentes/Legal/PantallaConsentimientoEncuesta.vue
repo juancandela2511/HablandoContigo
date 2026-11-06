@@ -5,20 +5,25 @@
 -->
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import {
   ShieldCheck,
   Lock,
   HeartHandshake,
   CheckCircle2,
-  FileText,
   AlertTriangle,
-  ArrowRight
+  MapPin,
+  RefreshCw
 } from 'lucide-vue-next'
-import { BotonBase, BotonRevelacionFlecha } from '@/componentes/ElementosBase'
+import { BotonRevelacionFlecha } from '@/componentes/ElementosBase'
 import { useLegal } from '@/Almacenes/useLegal'
+import {
+  solicitarUbicacionGpsObligatoria,
+  obtenerUbicacionGpsVerificada,
+  type UbicacionExacta
+} from '@/services/ubicacionService'
 
-const props = defineProps<{
+defineProps<{
   tituloEncuesta: string
   departamento?: string
   duracionEstimadaMinutos?: number
@@ -33,12 +38,42 @@ const aceptaAnonimato = ref(false)
 const aceptaTratamiento = ref(false)
 const comprendeVoluntariedad = ref(false)
 
-const todoAceptado = ref(false)
+const ubicacionGps = ref<UbicacionExacta | null>(obtenerUbicacionGpsVerificada())
+const cargandoGps = ref(false)
+const errorGps = ref('')
 
-const validarYContinuar = () => {
-  if (aceptaAnonimato.value && aceptaTratamiento.value && comprendeVoluntariedad.value) {
-    emit('consentimientoOtorgado')
+const solicitarGpsExacto = async (): Promise<boolean> => {
+  cargandoGps.value = true
+  errorGps.value = ''
+  try {
+    const u = await solicitarUbicacionGpsObligatoria()
+    ubicacionGps.value = u
+    return true
+  } catch (err: any) {
+    errorGps.value =
+      err?.message ||
+      'Debes permitir el acceso a la ubicación exacta del navegador para responder la encuesta.'
+    return false
+  } finally {
+    cargandoGps.value = false
   }
+}
+
+onMounted(() => {
+  if (!ubicacionGps.value) {
+    solicitarGpsExacto()
+  }
+})
+
+const validarYContinuar = async () => {
+  if (!aceptaAnonimato.value || !aceptaTratamiento.value || !comprendeVoluntariedad.value) {
+    return
+  }
+  if (!ubicacionGps.value?.esGpsReal) {
+    const ok = await solicitarGpsExacto()
+    if (!ok) return
+  }
+  emit('consentimientoOtorgado')
 }
 </script>
 
@@ -92,6 +127,52 @@ const validarYContinuar = () => {
       </div>
     </div>
 
+    <!-- Verificación Obligatoria de Ubicación GPS Exacta -->
+    <div
+      :class="[
+        'p-4 rounded-2xl border transition-all space-y-2',
+        ubicacionGps?.esGpsReal
+          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
+          : errorGps
+            ? 'bg-rose-500/10 border-rose-500/40 text-rose-800 dark:text-rose-200'
+            : 'bg-sky-500/10 border-sky-500/30 text-sky-800 dark:text-sky-200'
+      ]"
+    >
+      <div class="flex items-center justify-between gap-3 flex-wrap">
+        <div class="flex items-center gap-2 text-xs font-extrabold">
+          <CheckCircle2 v-if="ubicacionGps?.esGpsReal" class="w-4 h-4 text-emerald-500 shrink-0" />
+          <AlertTriangle v-else-if="errorGps" class="w-4 h-4 text-rose-500 shrink-0" />
+          <RefreshCw v-else-if="cargandoGps" class="w-4 h-4 text-sky-500 animate-spin shrink-0" />
+          <MapPin v-else class="w-4 h-4 text-sky-500 shrink-0" />
+
+          <span v-if="ubicacionGps?.esGpsReal">
+            Ubicación GPS Exacta Verificada: {{ ubicacionGps.ciudad }} ({{ ubicacionGps.lat.toFixed(5) }}, {{ ubicacionGps.lng.toFixed(5) }} &bull; &plusmn;{{ ubicacionGps.precisionMetros }}m)
+          </span>
+          <span v-else-if="cargandoGps">
+            Solicitando ubicación GPS exacta al navegador... Por favor haz clic en "Permitir".
+          </span>
+          <span v-else>
+            Permiso de Ubicación GPS Exacta Requerido (Obligatorio)
+          </span>
+        </div>
+
+        <button
+          v-if="!ubicacionGps?.esGpsReal"
+          type="button"
+          :disabled="cargandoGps"
+          @click="solicitarGpsExacto"
+          class="px-3.5 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white text-xs font-extrabold flex items-center gap-1.5 cursor-pointer shadow-sm transition-all shrink-0"
+        >
+          <MapPin class="w-3.5 h-3.5" />
+          <span>{{ cargandoGps ? 'Verificando GPS...' : 'Activar Ubicación Exacta' }}</span>
+        </button>
+      </div>
+
+      <p v-if="errorGps" class="text-[11px] leading-relaxed font-medium text-rose-600 dark:text-rose-300">
+        {{ errorGps }} Haz clic en el icono de ubicación o candado en la barra superior del navegador, selecciona <strong>"Permitir"</strong> y presiona <strong>"Activar Ubicación Exacta"</strong>.
+      </p>
+    </div>
+
     <!-- Checkboxes de Consentimiento Obligatorio -->
     <div class="space-y-3 pt-2">
       <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">
@@ -139,7 +220,7 @@ const validarYContinuar = () => {
     <!-- Botón de Continuar -->
     <div class="pt-4 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
       <span class="text-[11px] text-slate-400">
-        Debes marcar los 3 consentimientos para iniciar
+        Debes marcar los 3 consentimientos y permitir la ubicación GPS exacta para iniciar
       </span>
 
       <BotonRevelacionFlecha
@@ -148,7 +229,7 @@ const validarYContinuar = () => {
         colorTexto="#FFFFFF"
         colorInsignia="#3600FF"
         colorIcono="#FFFFFF"
-        :deshabilitado="!aceptaAnonimato || !aceptaTratamiento || !comprendeVoluntariedad"
+        :deshabilitado="!aceptaAnonimato || !aceptaTratamiento || !comprendeVoluntariedad || cargandoGps"
         @click="validarYContinuar"
       />
     </div>

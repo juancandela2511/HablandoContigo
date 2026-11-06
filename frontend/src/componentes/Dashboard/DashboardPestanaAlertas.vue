@@ -70,13 +70,18 @@ const analisisAlertasIA = computed(() => {
 })
 
 const actualizarTarjetasPersonas = async () => {
-  tarjetasPersonasMencionadas.value = await generarTarjetasPersonasMencionadasIA(
-    respuestasParaAnalisis.value,
-    estadosCasos.value
-  )
+  try {
+    tarjetasPersonasMencionadas.value = await generarTarjetasPersonasMencionadasIA(
+      respuestasParaAnalisis.value,
+      estadosCasos.value
+    )
+  } catch (err) {
+    console.error('[DashboardPestanaAlertas] Error al generar tarjetas de personas mencionadas:', err)
+    tarjetasPersonasMencionadas.value = []
+  }
 }
 
-watch(() => [respuestasParaAnalisis.value.length, estadosCasos.value], actualizarTarjetasPersonas, { immediate: true, deep: true })
+watch([respuestasParaAnalisis, estadosCasos], actualizarTarjetasPersonas, { immediate: true, deep: true })
 
 const bloquesAlertas = computed<BloqueAlertaItem[]>(() => {
   return analisisAlertasIA.value.bloquesAlertasPrincipales.filter(b => {

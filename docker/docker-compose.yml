@@ -11,7 +11,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-mi_base_datos}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-1012332747jS.}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:1012332747Js}
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
@@ -57,7 +57,7 @@ services:
       DB_HOST: postgres-db
       DB_PORT: 5432
       DB_USER: ${POSTGRES_USER:-postgres}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-1012332747jS.}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:1012332747Js}
       DB_NAME: ${POSTGRES_DB:-mi_base_datos}
       OLLAMA_HOST: http://ollama:11434
       OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3}

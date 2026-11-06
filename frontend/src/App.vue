@@ -29,6 +29,7 @@ import ToastNotificaciones from './componentes/Comunes/ToastNotificaciones.vue'
 import ModalInactividad from './componentes/Comunes/ModalInactividad.vue'
 import ContenedorError from './componentes/Errores/ContenedorError.vue'
 import CopilotoAdminFlotante from './componentes/AsistenteOllama/CopilotoAdminFlotante.vue'
+import InsigniaVersionApp from './componentes/Comunes/InsigniaVersionApp.vue'
 
 const rutaActual = useRoute()
 const { estaAutenticado } = useAutenticacion()
@@ -83,6 +84,9 @@ const ocultarMenuLateral = computed(() => {
     <main class="w-full min-h-screen">
       <router-view />
     </main>
+
+    <!-- Indicador de Versión Flotante en la Esquina Inferior Derecha -->
+    <InsigniaVersionApp />
   </div>
 </template>
 

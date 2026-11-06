@@ -10,7 +10,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { Lightbulb, CheckCircle2 } from 'lucide-vue-next'
-import type { OpcionPregunta } from '@/ia'
+import { resolverColorExactoOpcion, type OpcionPregunta } from '@/ia'
 
 const props = defineProps<{
   opciones?: OpcionPregunta[]
@@ -27,7 +27,7 @@ const opcionesOrdenadas = computed<OpcionPregunta[]>(() => {
   if (ops.length === 0) {
     return [
       { id: 'op-no', texto: 'No', valor: 1, esAlerta: true, color: '#ef4444' },
-      { id: 'op-si', texto: 'Sí', valor: 5, esAlerta: false, color: '#10b981' }
+      { id: 'op-si', texto: 'Sí', valor: 5, esAlerta: false, color: '#2563eb' }
     ]
   }
   return [...ops].sort((a, b) => {
@@ -38,14 +38,8 @@ const opcionesOrdenadas = computed<OpcionPregunta[]>(() => {
 })
 
 const obtenerColorOpcion = (opc: OpcionPregunta | null | undefined, idx: number, total: number): string => {
-  if (opc?.color && opc.color.trim().length > 0) return opc.color
-  const r = total > 1 ? idx / (total - 1) : 0.5
-  const val = typeof opc?.valor === 'number' ? opc.valor : Math.round(1 + r * 4)
-  if (val <= 1 || r <= 0.2) return '#ef4444' // Rojo menor puntaje
-  if (val === 2 || r <= 0.4) return '#f97316' // Naranja
-  if (val === 3 || r <= 0.6) return '#f59e0b' // Ámbar / Amarillo
-  if (val === 4 || r <= 0.8) return '#22c55e' // Verde claro
-  return '#10b981' // Verde mayor puntaje
+  if (!opc) return '#2563eb'
+  return resolverColorExactoOpcion(opc, idx, total)
 }
 
 const indiceSeleccionado = computed(() => {

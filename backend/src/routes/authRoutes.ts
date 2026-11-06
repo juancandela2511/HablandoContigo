@@ -6,7 +6,7 @@ import {
   actualizarPerfil,
   logout
 } from '../controllers/authController.js'
-import { verificarToken } from '../middlewares/authMiddleware.js'
+import { verificarToken, verificarTokenFlexible } from '../middlewares/authMiddleware.js'
 
 const router = Router()
 
@@ -18,6 +18,6 @@ router.post('/logout', logout)
 router.get('/me', verificarToken, me)
 router.get('/perfil', verificarToken, me)
 router.post('/cambiar-contrasena', verificarToken, cambiarContrasena)
-router.put('/perfil', verificarToken, actualizarPerfil)
+router.put('/perfil', verificarTokenFlexible, actualizarPerfil)
 
 export default router

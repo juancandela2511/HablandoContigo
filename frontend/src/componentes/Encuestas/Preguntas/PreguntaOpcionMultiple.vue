@@ -7,7 +7,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted } from 'vue'
 import { Check, CheckCircle2, Puzzle, Sparkles, GripVertical, SlidersHorizontal, Frown, Meh, Smile, Gamepad2, RotateCcw } from 'lucide-vue-next'
-import type { OpcionPregunta } from '@/ia'
+import { resolverColorExactoOpcion, type OpcionPregunta } from '@/ia'
 import SliderAntiguedadDinamico from './SliderAntiguedadDinamico.vue'
 import SliderEmocionDinamico from './SliderEmocionDinamico.vue'
 import SemaforoInteractivo from './SemaforoInteractivo.vue'
@@ -151,14 +151,14 @@ const alCambiarAntiguedadSlider = (payload: {
   emit('seleccionar', respuestaObjeto as OpcionPregunta)
 }
 
-// Color del Graduador de Felicidad según puntaje (1 Pt Enojado -> 5 Pts Muy Feliz en Tonalidades Cálidas/Amarillas)
+// Color del Graduador de Felicidad según puntaje (1 Pt Enojado -> 5 Pts Muy Feliz)
 const colorEmocionalDinamico = computed(() => {
   const p = porcentajeSlider.value
-  if (p <= 0.2) return '#ef4444' // Rojo (Enojado / 1 Pt)
-  if (p <= 0.4) return '#f97316' // Naranja (Descontento / 2 Pts)
-  if (p <= 0.6) return '#f59e0b' // Ámbar (Neutral / 3 Pts)
-  if (p <= 0.8) return '#eab308' // Amarillo Dorado (Feliz / 4 Pts)
-  return '#facc15'              // Amarillo Sol Brillante (Muy Feliz / 5 Pts)
+  if (p <= 0.2) return '#ef4444' // Rojo
+  if (p <= 0.4) return '#f97316' // Naranja
+  if (p <= 0.6) return '#f59e0b' // Ámbar
+  if (p <= 0.8) return '#38bdf8' // Azul cielo
+  return '#2563eb'              // Azul intenso
 })
 
 const idGradienteEmocional = computed(() => {
@@ -263,26 +263,29 @@ const opcionesDerecha = computed(() => {
 })
 
 const obtenerHexSentimiento = (opcion: OpcionPregunta) => {
-  if (!opcion) return '#10b981'
-  if (opcion.color && opcion.color.trim().length > 0) return opcion.color
+  if (!opcion) return '#2563eb'
   const ops = opcionesOrdenadasPorValor.value
-  if (ops.length > 1) {
-    const idx = ops.findIndex(o => o.id === opcion.id || o.texto === opcion.texto)
-    if (idx !== -1) {
-      const r = idx / (ops.length - 1)
-      if (r <= 0.2) return '#ef4444' // Rojo menor puntaje
-      if (r <= 0.4) return '#f97316' // Naranja
-      if (r <= 0.6) return '#f59e0b' // Ámbar / Amarillo
-      if (r <= 0.8) return '#22c55e' // Verde claro
-      return '#10b981'               // Verde mayor puntaje
-    }
+  const total = Math.max(ops.length, 1)
+  const idx = ops.findIndex(o => o.id === opcion.id || o.texto === opcion.texto)
+  return resolverColorExactoOpcion(opcion, idx !== -1 ? idx : 0, total)
+}
+
+const esOpcionSeleccionada = (opc: OpcionPregunta): boolean => {
+  if (!props.respuestaSeleccionada) return false
+  if (typeof props.respuestaSeleccionada === 'object') {
+    if (props.respuestaSeleccionada.id && opc.id && props.respuestaSeleccionada.id === opc.id) return true
+    if (props.respuestaSeleccionada.texto && opc.texto && props.respuestaSeleccionada.texto.trim().toLowerCase() === opc.texto.trim().toLowerCase()) return true
   }
-  if (opcion.valor === 1 || opcion.esAlerta) return '#ef4444'
-  if (opcion.valor === 2) return '#f97316'
-  if (opcion.valor === 3) return '#f59e0b'
-  if (opcion.valor === 4) return '#22c55e'
-  if (opcion.valor && opcion.valor >= 5) return '#10b981'
-  return '#10b981'
+  const str = String(props.respuestaSeleccionada).trim().toLowerCase()
+  return (opc.texto || '').trim().toLowerCase() === str || opc.id === str
+}
+
+const obtenerColorTextoSeleccionado = (opc: OpcionPregunta): string => {
+  const val = typeof opc.valor === 'number' ? opc.valor : 0
+  if (val === 3 || val === 4 || (val > 40 && val <= 85)) {
+    return '#090d16'
+  }
+  return '#ffffff'
 }
 
 const getPuzzlePiecePathFull = (idx: number) => {
@@ -719,16 +722,6 @@ onUnmounted(() => {
                       />
                     </svg>
                   </template>
-
-                  <!-- TEXTO BADGE DE LA RESPUESTA AL COMPLETAR -->
-                  <!-- <div v-if="respuestaSeleccionada" class="w-full h-full flex flex-col items-center justify-center text-center p-1 animate-in zoom-in-75 duration-500 z-30">
-                    <div
-                      class="px-3 py-1.5 rounded-xl text-white font-extrabold text-xs sm:text-sm leading-tight shadow-2xl border border-white/40 truncate text-center backdrop-blur-md bg-slate-950/85 max-w-[95%]"
-                      :style="{ borderColor: obtenerHexSentimiento(respuestaSeleccionada) }"
-                    >
-                      {{ typeof respuestaSeleccionada === 'object' ? respuestaSeleccionada.texto : respuestaSeleccionada }}
-                    </div>
-                  </div> -->
                 </div>
               </template>
             </div>
@@ -822,7 +815,7 @@ onUnmounted(() => {
             }"
             @click="seleccionarOpcion(item.opcion)"
           >
-            <!-- BADGE CON EL TEXTO COMPLETO DE LA RESPUESTA ARRIBA DE LA MANZANA (VISIBLE 100% SIN CORTAR) -->
+            <!-- BADGE CON EL TEXTO COMPLETO DE LA RESPUESTA ARRIBA DE LA MANZANA -->
             <span
               class="absolute -top-9 sm:-top-10 px-2.5 py-1.5 rounded-xl text-[10px] sm:text-xs font-black text-slate-950 shadow-2xl border border-white/90 whitespace-normal text-center leading-tight min-w-[110px] max-w-[180px] sm:max-w-[220px] z-40 transition-transform group-hover:scale-105 pointer-events-none"
               :style="{ backgroundColor: obtenerHexSentimiento(item.opcion) }"
@@ -830,7 +823,7 @@ onUnmounted(() => {
               {{ item.opcion.texto }}
             </span>
 
-            <!-- MANZANA EMOJI / SHAPE SOBRIO SIN NEÓN -->
+            <!-- MANZANA EMOJI / SHAPE SOBRIO -->
             <div
               class="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center border border-white/40 shadow-sm relative"
               :style="{ backgroundColor: obtenerHexSentimiento(item.opcion) }"
@@ -839,7 +832,7 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <!-- GUSANITO / SERPIENTE SIMPLE (2 TONOS SOBRIOS SIN NEÓN) -->
+          <!-- GUSANITO / SERPIENTE SIMPLE -->
           <template v-for="(seg, idx) in snake" :key="idx">
             <div
               class="absolute transition-all duration-150 ease-linear flex items-center justify-center z-30 p-0.5"
@@ -891,35 +884,55 @@ onUnmounted(() => {
       />
     </div>
 
-    <!-- MODO 5: DAR CLIC (TARJETAS INTERACTIVAS ESTÁNDAR CON PROGRESIÓN ROJO A VERDE) -->
-    <div v-else class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-left font-['Poppins',sans-serif]">
+    <!-- MODO 7: DAR CLIC (TARJETAS INTERACTIVAS ESTÁNDAR CON PROGRESIÓN ROJO A AZUL) -->
+    <div
+      v-else
+      :class="[
+        'grid gap-3 pt-2 text-left font-[\'Poppins\',sans-serif]',
+        opcionesOrdenadasPorValor.length <= 1
+          ? 'grid-cols-1'
+          : (opcionesOrdenadasPorValor.length === 2 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 md:grid-cols-2')
+      ]"
+    >
       <button
         v-for="(opc, idx) in opcionesOrdenadasPorValor"
         :key="opc.id || idx"
         type="button"
         @click="emit('seleccionar', opc)"
         :class="[
-          'p-4 rounded-2xl border-2 text-left transition-all duration-300 cursor-pointer flex items-center justify-between group relative overflow-hidden',
-          respuestaSeleccionada?.texto === opc.texto
-            ? 'text-white shadow-xl scale-[1.03] font-black'
-            : 'bg-slate-100 dark:bg-neutral-900/80 text-slate-700 dark:text-neutral-300 hover:scale-[1.01] font-semibold'
+          'p-4 sm:p-4.5 rounded-2xl border-2 text-left transition-all duration-200 cursor-pointer flex items-center justify-between gap-3 group relative overflow-visible min-h-[64px]',
+          esOpcionSeleccionada(opc)
+            ? 'shadow-xl scale-[1.01] ring-2 ring-white/50 font-black'
+            : 'bg-slate-900/90 hover:bg-slate-800/90 text-slate-100 hover:scale-[1.005] font-semibold border-slate-800'
         ]"
-        :style="respuestaSeleccionada?.texto === opc.texto
-          ? { backgroundColor: obtenerHexSentimiento(opc), borderColor: '#ffffff', boxShadow: `0 0 25px ${obtenerHexSentimiento(opc)}55` }
+        :style="esOpcionSeleccionada(opc)
+          ? { backgroundColor: obtenerHexSentimiento(opc), borderColor: '#ffffff', color: obtenerColorTextoSeleccionado(opc), boxShadow: `0 0 25px ${obtenerHexSentimiento(opc)}55` }
           : { borderColor: obtenerHexSentimiento(opc) + '66', borderLeftColor: obtenerHexSentimiento(opc), borderLeftWidth: '5px' }
         "
       >
-        <div class="flex items-center gap-3 min-w-0">
+        <div class="flex items-center gap-3.5 min-w-0 flex-1">
+          <!-- Insignia Numérica con degradado Rojo (menor puntaje) -> Azul (mayor puntaje) -->
           <span 
-            class="w-3.5 h-3.5 rounded-full shrink-0 shadow-sm transition-transform duration-200 group-hover:scale-125"
-            :style="{ backgroundColor: respuestaSeleccionada?.texto === opc.texto ? '#ffffff' : obtenerHexSentimiento(opc) }"
-          />
-          <div class="min-w-0">
-            <span class="text-sm leading-snug block truncate">{{ opc.texto }}</span>
-            <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
+            class="w-7 h-7 rounded-xl flex items-center justify-center font-mono font-bold text-xs shrink-0 shadow-sm border transition-transform duration-200 group-hover:scale-110"
+            :style="esOpcionSeleccionada(opc)
+              ? { backgroundColor: '#ffffff', color: '#090d16', borderColor: '#ffffff' }
+              : { backgroundColor: obtenerHexSentimiento(opc) + '22', color: obtenerHexSentimiento(opc), borderColor: obtenerHexSentimiento(opc) + '88' }
+            "
+          >
+           
+          </span>
+
+          <div class="min-w-0 flex-1">
+            <span 
+              class="text-sm sm:text-base leading-snug block whitespace-normal break-words"
+              :class="esOpcionSeleccionada(opc) ? 'font-bold' : 'text-slate-100'"
+            >
+              {{ opc.texto }}
+            </span>
+            <div v-if="opc.preguntaAnclada" class="flex items-center gap-1.5 mt-1 flex-wrap">
               <span 
-                v-if="opc.preguntaAnclada" 
-                class="text-[9px] font-mono font-bold text-sky-500 dark:text-sky-400 flex items-center gap-0.5"
+                class="text-[10px] font-mono font-bold flex items-center gap-1 px-2 py-0.5 rounded-md"
+                :class="esOpcionSeleccionada(opc) ? 'bg-black/20 text-white' : 'bg-sky-500/20 text-sky-400 border border-sky-500/30'"
               >
                 ⚡ Desglosa motivo
               </span>
@@ -928,17 +941,13 @@ onUnmounted(() => {
         </div>
 
         <span 
-          class="w-6 h-6 rounded-full border flex items-center justify-center shrink-0 text-xs ml-2 transition-all duration-200"
-          :class="respuestaSeleccionada?.texto === opc.texto ? 'border-white bg-white text-slate-950 shadow-md scale-110' : 'border-slate-400 dark:border-neutral-600 text-slate-500 dark:text-neutral-500'"
+          class="w-7 h-7 rounded-full border-2 flex items-center justify-center shrink-0 text-xs ml-2 transition-all duration-200"
+          :class="esOpcionSeleccionada(opc) ? 'border-white bg-white text-slate-950 shadow-md scale-110' : 'border-slate-500 dark:border-neutral-600 text-slate-500 dark:text-neutral-500'"
         >
-          <Check v-if="respuestaSeleccionada?.texto === opc.texto" class="w-3.5 h-3.5 stroke-[3]" />
+          <Check v-if="esOpcionSeleccionada(opc)" class="w-4 h-4 stroke-[3]" />
           <span v-else class="text-[10px] font-mono"></span>
         </span>
       </button>
     </div>
   </div>
 </template>
-
-
-
-

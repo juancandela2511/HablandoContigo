@@ -106,7 +106,7 @@ const datosEstudioDetallados = computed(() => {
     !preguntaVinculada.value ||
     preguntaVinculada.value.id === 'b6-p33b-que-estudia' ||
     preguntaVinculada.value.texto.toLowerCase().includes('estudi') ||
-    preguntaVinculada.value.texto.toLowerCase().includes('carrera') ||
+    preguntaVinculada.value.texto.toLowerCase().includes('qué área o programa') ||
     preguntaVinculada.value.texto.toLowerCase().includes('respuesta abierta')
 
   if (!usaEncasillamientoEstudios && preguntaVinculada.value) {
@@ -131,8 +131,10 @@ const datosEstudioDetallados = computed(() => {
               txtP.includes('programa de estudios') ||
               txtP.includes('qué área o programa') ||
               txtP.includes('que estudias') ||
-              txtP.includes('carrera') ||
-              txtP.includes('profesion')
+              txtP.includes('qué estudias') ||
+              txtP.includes('carrera que estudias') ||
+              txtP.includes('cual es tu profesion') ||
+              txtP.includes('cuál es tu profesión')
             )
 
         if (esItemObjetivo) {

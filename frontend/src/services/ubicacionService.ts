@@ -129,49 +129,87 @@ async function obtenerUbicacionPorIP(): Promise<UbicacionExacta | null> {
 }
 
 /**
+ * Solicita de manera obligatoria el permiso y coordenadas GPS del navegador (sin caer silenciosamente en IP).
+ * Lanza un error descriptivo si el usuario deniega el permiso de ubicación en el navegador.
+ */
+export async function solicitarUbicacionGpsObligatoria(): Promise<UbicacionExacta> {
+  if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
+    throw new Error('Tu navegador no soporta geolocalización GPS.')
+  }
+
+  const obtenerPosicionNavegador = (altaPrecision: boolean, timeoutMs: number) =>
+    new Promise<GeolocationPosition>((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: altaPrecision,
+        timeout: timeoutMs,
+        maximumAge: 0
+      })
+    })
+
+  let posicion: GeolocationPosition
+  try {
+    posicion = await obtenerPosicionNavegador(true, 12000)
+  } catch (err: any) {
+    if (err && err.code === 1) {
+      throw new Error('PERMISO_DENEGADO: Debes permitir el acceso a tu ubicación exacta en la ventana emergente del navegador (icono de ubicación/candado junto a la URL).')
+    }
+    // Segundo intento usando triangulación Wi-Fi del navegador si el chip satelital tardó demasiado
+    try {
+      posicion = await obtenerPosicionNavegador(false, 10000)
+    } catch (err2: any) {
+      if (err2 && err2.code === 1) {
+        throw new Error('PERMISO_DENEGADO: Debes permitir el acceso a tu ubicación exacta en el navegador para continuar.')
+      }
+      throw new Error('No se pudo obtener la señal GPS exacta de tu dispositivo. Verifica que los servicios de ubicación estén activos e inténtalo de nuevo.')
+    }
+  }
+
+  const lat = posicion.coords.latitude
+  const lng = posicion.coords.longitude
+  const precision = Math.round(posicion.coords.accuracy || 10)
+
+  const ubicacionExacta = await geocodificarCoordenadasExactas(lat, lng, precision)
+  ubicacionPreviaCachada = ubicacionExacta
+  return ubicacionExacta
+}
+
+/**
+ * Obtiene la ubicación exacta ya verificada del navegador
+ */
+export function obtenerUbicacionGpsVerificada(): UbicacionExacta | null {
+  return ubicacionPreviaCachada?.esGpsReal ? ubicacionPreviaCachada : null
+}
+
+/**
  * Precalienta e inicia la captura de ubicación en segundo plano
  */
 export function iniciarCapturaUbicacion(): void {
   if (!promesaUbicacionEnCurso) {
-    promesaUbicacionEnCurso = obtenerUbicacionExactaDispositivo()
+    promesaUbicacionEnCurso = solicitarUbicacionGpsObligatoria().catch(() => {
+      promesaUbicacionEnCurso = null
+      return null as any
+    })
   }
 }
 
 /**
- * Obtiene la ubicación exacta (GPS real o IP con geocodificación)
+ * Obtiene la ubicación exacta (priorizando estrictamente el sensor GPS del navegador)
  */
 export async function obtenerUbicacionExactaDispositivo(): Promise<UbicacionExacta> {
   if (ubicacionPreviaCachada?.esGpsReal) {
     return ubicacionPreviaCachada
   }
 
-  // 1. Intentar GPS de alta precisión del navegador
-  if (typeof navigator !== 'undefined' && 'geolocation' in navigator) {
-    try {
-      const posicion = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 60000
-        })
-      })
-
-      const lat = posicion.coords.latitude
-      const lng = posicion.coords.longitude
-      const precision = Math.round(posicion.coords.accuracy || 10)
-
-      const ubicacionExacta = await geocodificarCoordenadasExactas(lat, lng, precision)
-      ubicacionPreviaCachada = ubicacionExacta
-      return ubicacionExacta
-    } catch {
-      // Continuar al respaldo IP
-    }
+  // 1. Intentar GPS obligatorio de alta precisión del navegador (maximumAge: 0)
+  try {
+    return await solicitarUbicacionGpsObligatoria()
+  } catch {
+    // Continuar solo si fue imposible en segundo plano
   }
 
-  // 2. Respaldo por IP
+  // 2. Respaldo por IP únicamente como último recurso si no hubo GPS
   const ubicacionIp = await obtenerUbicacionPorIP()
   if (ubicacionIp) {
-    ubicacionPreviaCachada = ubicacionIp
     return ubicacionIp
   }
 
@@ -190,6 +228,5 @@ export async function obtenerUbicacionExactaDispositivo(): Promise<UbicacionExac
     esGpsReal: false
   }
 
-  ubicacionPreviaCachada = fallback
   return fallback
 }

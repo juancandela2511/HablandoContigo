@@ -111,13 +111,13 @@ const obtenerIconoBloque = (idOTitulo: string) => {
                 Nivel {{ bloque.nivel }} — {{ bloque.severidad }}
               </span>
               <span
-                v-if="bloque.id === 'tipo-acoso-sexual'"
+                v-if="bloque.id === ''"
                 class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-pink-600 text-white uppercase"
               >
                 Índole Sexual
               </span>
               <span
-                v-else-if="bloque.id === 'tipo-molestias-cotidianas'"
+                v-else-if="bloque.id === ''"
                 class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-orange-600 text-white uppercase"
               >
                 Hostigamiento / Se la montan
@@ -146,7 +146,7 @@ const obtenerIconoBloque = (idOTitulo: string) => {
         <div class="flex items-center gap-2 text-amber-950 dark:text-amber-200">
           <Users class="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
           <span class="text-xs font-black">
-            {{ bloque.totalPersonas }} {{ bloque.totalPersonas === 1 ? 'persona en esta alerta (IA)' : 'personas en esta alerta (IA)' }}
+            {{ bloque.totalPersonas }} {{ bloque.totalPersonas === 1 ? 'persona en esta alerta' : 'personas en esta alerta (IA)' }}
           </span>
         </div>
         <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/80 dark:bg-slate-900/80 text-amber-800 dark:text-amber-300 border border-amber-400/30">
@@ -205,7 +205,7 @@ const obtenerIconoBloque = (idOTitulo: string) => {
       >
         <p class="text-[10px] font-extrabold uppercase tracking-wider text-sky-700 dark:text-sky-300 flex items-center gap-1">
           <Sparkles class="w-3.5 h-3.5 text-sky-500" />
-          <span>Análisis y Resumen Detallado IA:</span>
+          <span>Análisis</span>
         </p>
         <p class="text-xs text-slate-700 dark:text-slate-200 leading-relaxed">
           {{ bloque.analisisDetalladoIA }}

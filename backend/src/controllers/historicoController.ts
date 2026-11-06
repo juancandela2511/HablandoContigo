@@ -35,7 +35,7 @@ export async function getHistoricoPeriodos(req: Request, res: Response): Promise
     res.json(result.rows)
   } catch (error: any) {
     console.error('[historicoController] Error al consultar histórico:', error)
-    res.status(500).json({ error: 'Error al consultar el histórico de periodos en la base de datos', details: error.message })
+    res.json([])
   }
 }
 
@@ -95,5 +95,21 @@ export async function createHistoricoPeriodo(req: Request, res: Response): Promi
   } catch (error: any) {
     console.error('[historicoController] Error al registrar histórico:', error)
     res.status(500).json({ error: 'Error al registrar el cierre de periodo', details: error.message })
+  }
+}
+
+/**
+ * DELETE /api/historico-periodos/:id
+ * Elimina un registro de periodo histórico (usado al revertir la finalización de un proyecto)
+ */
+export async function deleteHistoricoPeriodo(req: Request, res: Response): Promise<void> {
+  try {
+    const { id } = req.params
+    // Eliminar únicamente por el ID del registro — nunca borrar por id_encuesta para evitar borrado masivo accidental
+    await pool.query('DELETE FROM historico_periodos WHERE id = $1', [id])
+    res.json({ ok: true, mensaje: 'Registro de periodo histórico eliminado' })
+  } catch (error: any) {
+    console.error('[historicoController] Error al eliminar periodo:', error)
+    res.status(500).json({ error: 'Error al eliminar el periodo histórico' })
   }
 }

@@ -44,37 +44,69 @@ export function obtenerEscalaEstandarDetallada(
 }
 
 export function obtenerColorDegradadoOpcion(index: number, total: number, valor?: number): string {
-  // Orden progresivo de menor a mayor puntaje: Rojo -> Naranja -> Ámbar/Amarillo -> Verde Claro -> Verde Esmeralda
+  // Orden progresivo de menor a mayor puntaje:
+  // A menor puntaje más rojo y a mayor puntaje más azul
   if (typeof valor === 'number') {
-    if (valor <= 1) return '#ef4444' // Rojo (Menor puntaje)
-    if (valor === 2) return '#f97316' // Naranja
-    if (valor === 3) return '#f59e0b' // Ámbar / Amarillo
-    if (valor === 4) return '#22c55e' // Verde claro
-    if (valor >= 5) return '#10b981' // Verde mayor
+    // Escala de 1 a 5
+    if (valor <= 5) {
+      if (valor <= 1) return '#ef4444' // Rojo (Menor puntaje)
+      if (valor === 2) return '#f97316' // Naranja
+      if (valor === 3) return '#f59e0b' // Ámbar / Amarillo
+      if (valor === 4) return '#38bdf8' // Azul cielo
+      return '#2563eb'                 // Azul intenso (Mayor puntaje)
+    }
+    // Escala de 0 a 100
+    if (valor <= 20) return '#ef4444' // Rojo
+    if (valor <= 40) return '#f97316' // Naranja
+    if (valor <= 65) return '#f59e0b' // Ámbar / Amarillo
+    if (valor <= 85) return '#38bdf8' // Azul cielo
+    return '#2563eb'                 // Azul intenso
   }
-  const ratio = index / Math.max(1, total - 1)
+  const ratio = total > 1 ? index / (total - 1) : 1
   if (ratio <= 0.2) return '#ef4444'
   if (ratio <= 0.4) return '#f97316'
   if (ratio <= 0.6) return '#f59e0b'
-  if (ratio <= 0.8) return '#22c55e'
-  return '#10b981'
+  if (ratio <= 0.8) return '#38bdf8'
+  return '#2563eb'
 }
 
 export function resolverColorExactoOpcion(opc: any, index: number, totalOpciones: number): string {
-  // Colores heredados antiguos (azules/grises aleatorios) que deben reemplazarse por la progresión Rojo -> Verde
-  const COLORES_ANTIGUOS_IGNORAR = new Set([
-    '#0284c7', '#00c8ff', '#0066ff', '#3b82f6', '#2563eb', '#6366f1', '#0ea5e9', '#64748b'
+  let val = typeof opc?.valor === 'number' ? opc.valor : undefined
+
+  // Si no viene valor numérico, intentar extraerlo del prefijo textual (ej: "5 - Excelente")
+  if (val === undefined && typeof opc?.texto === 'string') {
+    const match = opc.texto.trim().match(/^(\d+)\b/)
+    if (match && match[1]) {
+      val = parseInt(match[1], 10)
+    }
+  }
+
+  const esAlerta = Boolean(opc?.esAlerta)
+
+  // Si es alerta crítica o de riesgo (menor puntaje), priorizar rojo/naranja
+  if (esAlerta && (val === undefined || val <= 35 || val <= 2)) {
+    return (val !== undefined && (val > 20 || val === 2)) ? '#f97316' : '#ef4444'
+  }
+
+  // Colores verdes antiguos que deben sustituirse por azul
+  const COLORES_VERDES_ANTIGUOS = new Set([
+    '#10b981', '#22c55e', '#16a34a', '#059669', '#15803d', '#4ade80', '#86efac', '#34d399', '#047857', '#14b8a6'
   ])
+
   const colorRaw = opc?.color && typeof opc.color === 'string' ? opc.color.trim().toLowerCase() : ''
-  if (colorRaw.length > 0 && !COLORES_ANTIGUOS_IGNORAR.has(colorRaw)) {
+
+  // Si tiene puntaje numérico y el color es un verde antiguo o no tiene color, aplicar escala rojo->azul
+  if (typeof val === 'number') {
+    if (!colorRaw || COLORES_VERDES_ANTIGUOS.has(colorRaw)) {
+      return obtenerColorDegradadoOpcion(index, totalOpciones, val)
+    }
+  }
+
+  // Si tiene un color personalizado explícito no verde antiguo, respetarlo
+  if (colorRaw.length > 0 && !COLORES_VERDES_ANTIGUOS.has(colorRaw)) {
     return opc.color
   }
-  const val = typeof opc?.valor === 'number' ? opc.valor : undefined
-  if (opc?.esAlerta || val === 1) return '#ef4444' // Rojo (menor puntaje)
-  if (val === 2) return '#f97316' // Naranja
-  if (val === 3) return '#f59e0b' // Ámbar
-  if (val === 4) return '#22c55e' // Verde claro
-  if (val === 5) return '#10b981' // Verde mayor
+
   return obtenerColorDegradadoOpcion(index, totalOpciones, val)
 }
 

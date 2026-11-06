@@ -16,7 +16,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import type { OpcionPregunta } from '@/ia'
+import { resolverColorExactoOpcion, type OpcionPregunta } from '@/ia'
 
 const props = withDefaults(
   defineProps<{
@@ -65,7 +65,7 @@ const opcionesOrdenadas = computed<OpcionPregunta[]>(() => {
       { id: 'ant-1', texto: 'Menos de 6 meses', valor: 1, esAlerta: false, color: '#ef4444' },
       { id: 'ant-2', texto: 'De 6 meses a 1 año', valor: 2, esAlerta: false, color: '#f97316' },
       { id: 'ant-3', texto: 'De 1 a 3 años', valor: 3, esAlerta: false, color: '#f59e0b' },
-      { id: 'ant-4', texto: 'Más de 3 años', valor: 4, esAlerta: false, color: '#10b981' }
+      { id: 'ant-4', texto: 'Más de 3 años', valor: 4, esAlerta: false, color: '#2563eb' }
     ]
   }
   return [...ops].sort((a, b) => {
@@ -76,14 +76,8 @@ const opcionesOrdenadas = computed<OpcionPregunta[]>(() => {
 })
 
 const obtenerColorOpcion = (opc: OpcionPregunta | null | undefined, idx: number, total: number): string => {
-  if (opc?.color && opc.color.trim().length > 0) return opc.color
-  const r = total > 1 ? idx / (total - 1) : 0.5
-  const val = typeof opc?.valor === 'number' ? opc.valor : Math.round(1 + r * 4)
-  if (val <= 1 || r <= 0.2) return '#ef4444'
-  if (val === 2 || r <= 0.4) return '#f97316'
-  if (val === 3 || r <= 0.6) return '#f59e0b'
-  if (val === 4 && total > 4) return '#22c55e'
-  return '#10b981'
+  if (!opc) return '#2563eb'
+  return resolverColorExactoOpcion(opc, idx, total)
 }
 
 const calcularMesesDesdeFecha = (fechaStr?: string): number => {

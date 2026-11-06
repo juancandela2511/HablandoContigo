@@ -11,6 +11,7 @@
  */
 
 import type { Encuesta, RegistroRespuesta } from '@/Almacenes/useEncuestas'
+import { calcularPuntajeDeRegistro, esPreguntaDemograficaContexto, normalizarValorAEscalaCinco } from '@/services/calculadorClimaService'
 
 export interface PrediccionFugaArea {
   area: string
@@ -42,7 +43,7 @@ export function detectarRespuestaMecanica(registro: RegistroRespuesta): {
   motivo?: string
 } {
   const itemsCerrados = (registro.respuestas || []).filter(
-    i => typeof i.valor === 'number' && i.valor >= 1 && i.valor <= 5 && !i.idPregunta.startsWith('b1-')
+    i => typeof i.valor === 'number' && !isNaN(i.valor) && i.valor > 0 && !esPreguntaDemograficaContexto(i)
   )
 
   if (itemsCerrados.length < 4) {
@@ -52,7 +53,7 @@ export function detectarRespuestaMecanica(registro: RegistroRespuesta): {
   // 1. Verificar Straightlining (repetición idéntica de la misma opción en >= 88% de las preguntas)
   const conteoPorValor: Record<number, number> = {}
   itemsCerrados.forEach(item => {
-    const v = Math.round(item.valor || 3)
+    const v = normalizarValorAEscalaCinco(item.valor, item.esAlerta, String(item.respuesta || ''))
     conteoPorValor[v] = (conteoPorValor[v] || 0) + 1
   })
 
@@ -107,7 +108,8 @@ export function calcularAuditoriaAntiStraightlining(
   const motivosSet = new Set<string>()
 
   respuestas.forEach(r => {
-    const saludIndividual = Math.min(100, Math.max(0, (r.puntajeGeneral || 0) * 20))
+    const evalReg = calcularPuntajeDeRegistro(r.respuestas, r.puntajeGeneral)
+    const saludIndividual = evalReg.porcentajeClima
     sumaBruta += saludIndividual
 
     const auditoria = detectarRespuestaMecanica(r)
@@ -169,14 +171,16 @@ export function calcularPrediccionRiesgoFugaPorArea(
     }
     const grupo = mapaAreas[areaNombre]!
     grupo.evaluados++
-    grupo.generalVals.push((r.puntajeGeneral || 3) * 20)
+    const evalReg = calcularPuntajeDeRegistro(r.respuestas, r.puntajeGeneral)
+    grupo.generalVals.push(evalReg.porcentajeClima)
     grupo.alertas += (r.alertasDetectadas?.length || 0)
 
     ;(r.respuestas || []).forEach(item => {
-      if (typeof item.valor !== 'number') return
+      if (typeof item.valor !== 'number' || esPreguntaDemograficaContexto(item)) return
       const id = (item.idPregunta || '').toLowerCase()
       const cat = (item.categoria || '').toLowerCase()
-      const valPct = item.valor * 20
+      const nivel = normalizarValorAEscalaCinco(item.valor, item.esAlerta, String(item.respuesta || ''))
+      const valPct = nivel * 20
 
       if (id.startsWith('b4-') || cat.includes('liderazgo') || cat.includes('jefe')) {
         grupo.liderazgoVals.push(valPct)

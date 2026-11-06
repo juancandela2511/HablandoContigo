@@ -1,6 +1,10 @@
 .originkit/
+# Archivos de entorno — NUNCA subir al repositorio
+.env
+.env.*
+!.env.example
 Backend/.env
-Backend/.env
+backend/.env
 
 # Logs
 logs

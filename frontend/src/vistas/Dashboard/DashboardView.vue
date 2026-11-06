@@ -5,6 +5,7 @@ import { useDashboardStats, calcularDimensionesProporcionales } from '@/Almacene
 import { useAnclajeGraficos as useGraficosAnclados } from '@/Almacenes/useAnclajeGraficos'
 import { useNotificaciones, type NotificacionItem } from '@/Almacenes/useNotificaciones'
 import { useEncuestas } from '@/Almacenes/useEncuestas'
+import { calcularClimaGlobalDeRespuestas } from '@/services/calculadorClimaService'
 import { useHighlight } from '@/Almacenes/useHighlight'
 import { useAutenticacion } from '@/Almacenes/useAutenticacion'
 import { 
@@ -116,19 +117,7 @@ const promedioSaludDinamico = computed(() => {
   if (!respuestasValidasAlcance.value || respuestasValidasAlcance.value.length === 0) {
     return 0
   }
-  let suma = 0
-  let count = 0
-  respuestasValidasAlcance.value.forEach(r => {
-    const val = Number(r.puntajeGeneral)
-    if (!isNaN(val) && val > 0) {
-      suma += val
-      count++
-    }
-  })
-  if (count === 0) return 0
-  const prom = suma / count
-  const res = Math.round((prom / 5) * 100)
-  return isNaN(res) ? 0 : res
+  return calcularClimaGlobalDeRespuestas(respuestasValidasAlcance.value).porcentajeClima
 })
 
 const inspeccionarAlerta = (alerta: NotificacionItem) => {
@@ -230,7 +219,7 @@ const seleccionarProyecto = (id: string) => {
                 <!-- Insignia Destacada -->
                 <div v-if="idx === 0" class="flex items-center justify-between">
                   <span class="px-2.5 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
-                    <Sparkles class="w-3 h-3 text-amber-300" />
+                
                     <span>Proyecto Principal — Clima Laboral</span>
                   </span>
                   <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -247,9 +236,7 @@ const seleccionarProyecto = (id: string) => {
                   <h4 class="text-lg font-black text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-snug">
                     {{ idx === 0 ? 'Proyecto Clima Laboral' : enc.titulo }}
                   </h4>
-                  <p class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
-                    {{ enc.descripcion || 'Diagnóstico organizacional y evaluación estadística.' }}
-                  </p>
+                 
                 </div>
 
                 <!-- Métricas Rápidas -->
@@ -267,7 +254,7 @@ const seleccionarProyecto = (id: string) => {
                 <!-- Botón de Selección -->
                 <div class="pt-2">
                   <div class="w-full py-2.5 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 group-hover:bg-blue-600 text-slate-700 dark:text-slate-300 group-hover:text-white font-bold text-xs flex items-center justify-between transition-all">
-                    <span>Abrir Dashboard de Este Proyecto</span>
+                    <span>Dashboard</span>
                     <ChevronRight class="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </div>
                 </div>

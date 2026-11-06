@@ -17,6 +17,11 @@ defineProps<{
 const emit = defineEmits<{
   (e: 'cerrarSesion'): void
 }>()
+
+const esImagenValida = (url?: string) => {
+  if (!url) return false
+  return url.startsWith('data:image') || url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/')
+}
 </script>
 
 <template>
@@ -29,7 +34,7 @@ const emit = defineEmits<{
       >
         <div class="w-11 min-w-11 flex items-center justify-center shrink-0 relative">
           <img
-            v-if="fotoPerfil"
+            v-if="esImagenValida(fotoPerfil)"
             :src="fotoPerfil"
             :alt="usuarioActual.nombre"
             class="w-7 h-7 rounded-xl object-cover ring-2 ring-sky-500/40"
@@ -38,7 +43,7 @@ const emit = defineEmits<{
             v-else
             class="w-7 h-7 rounded-xl bg-gradient-to-tr from-sky-600 to-indigo-600 text-white font-bold text-xs flex items-center justify-center shadow-sm"
           >
-            {{ usuarioActual.nombre.charAt(0).toUpperCase() }}
+            {{ (usuarioActual.nombre || 'U').charAt(0).toUpperCase() }}
           </div>
           <span class="absolute bottom-1 right-1.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-slate-900 animate-pulse"></span>
         </div>
@@ -49,7 +54,6 @@ const emit = defineEmits<{
         </div>
       </router-link>
 
-      <!-- Botón de Cerrar Sesión -->
       <button
         type="button"
         @click="emit('cerrarSesion')"
@@ -65,7 +69,6 @@ const emit = defineEmits<{
       </button>
     </div>
 
-    <!-- No Autenticado: Botón Acceso -->
     <div v-else>
       <router-link
         to="/login"

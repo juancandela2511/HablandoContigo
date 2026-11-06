@@ -88,11 +88,68 @@ export class DashboardService {
       return this.generarEstadoVacio(idEncuesta)
     }
 
-    // 2. Cálculo del % de Clima Laboral con la fórmula oficial intacta:
-    // Fórmula: Math.round((puntajePromedio / 5) * 100)
+    // 2. Cálculo del % de Clima Laboral (Respuestas buenas suman y respuestas malas restan)
     let sumaPuntajeGeneral = 0
     registros.forEach(r => {
-      sumaPuntajeGeneral += Number(r.puntajeGeneral || 0)
+      const items = Array.isArray(r.respuestas)
+        ? r.respuestas
+        : (typeof r.respuestas === 'string' ? JSON.parse(r.respuestas || '[]') : [])
+
+      if (items.length > 0) {
+        let sumaNeta = 0
+        let evaluadas = 0
+        let buenas = 0
+        items.forEach((item: any) => {
+          const id = String(item.idPregunta || '').toLowerCase()
+          const cat = String(item.categoria || '').toLowerCase()
+          if (
+            id.includes('tiempo-empresa') ||
+            id.includes('antiguedad') ||
+            id.includes('area-departamento') ||
+            id.includes('b6-p33-estudia') ||
+            id.includes('b6-p33b-que-estudia') ||
+            cat.includes('datos de contexto')
+          ) {
+            return
+          }
+          const v = Number(item.valor)
+          if ((isNaN(v) || v <= 0) && !item.esAlerta) return
+          evaluadas++
+          let nivel = (v === 5 && item.esAlerta)
+            ? 1
+            : (v <= 5 ? Math.max(1, Math.min(5, Math.round(v))) : (v >= 90 ? 5 : v >= 70 ? 4 : v >= 50 ? 3 : v >= 25 ? 2 : 1))
+          if (item.esAlerta && nivel > 2) nivel = v <= 15 ? 1 : 2
+
+          if (item.esAlerta || nivel <= 2) {
+            sumaNeta -= (nivel <= 1 || item.severidadAlerta === 'Crítica') ? 5.0 : 4.5
+          } else if (nivel === 3) {
+            sumaNeta += 2.5
+          } else if (nivel === 4) {
+            buenas++
+            sumaNeta += 4.0
+          } else {
+            buenas++
+            sumaNeta += 5.0
+          }
+        })
+        let pNeto = 0
+        if (evaluadas > 0) {
+          const promBruto = sumaNeta / evaluadas
+          if (promBruto > 0) {
+            pNeto = Math.max(0, Math.min(5, promBruto))
+          } else {
+            const pctFallback = buenas > 0 ? Math.max(5, Math.min(30, Math.round((buenas / evaluadas) * 32))) : 0
+            pNeto = Number(((pctFallback / 100) * 5).toFixed(2))
+          }
+        }
+        r.puntajeGeneral = pNeto
+        sumaPuntajeGeneral += pNeto
+      } else {
+        const rawP = Number(r.puntajeGeneral || 0)
+        const pNorm = rawP <= 5 ? rawP : (rawP / 100) * 5
+        r.puntajeGeneral = pNorm
+        sumaPuntajeGeneral += pNorm
+      }
     })
     const puntajePromedio = Number((sumaPuntajeGeneral / total).toFixed(2))
     const porcentajeClimaLaboral = Math.min(100, Math.max(0, Math.round((puntajePromedio / 5) * 100)))

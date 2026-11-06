@@ -1,16 +1,29 @@
 /**
- * Análisis y Comprensión de Preguntas Abiertas con Ollama
+ * ============================================================================
+ * ANÁLISIS Y SÍNTESIS DE PREGUNTAS ABIERTAS CON OLLAMA (analisisAbiertas.ts)
+ * ============================================================================
+ * Analiza exclusivamente comentarios libres y respuestas abiertas, filtrando
+ * cualquier etiqueta de selección múltiple.
  */
 
 import { consultarOllama } from './clienteOllama'
-import type { AnalisisRespuestaAbierta, ResumenEstadisticaAbiertas } from './tiposIA'
+import type { AnalisisRespuestaAbierta } from './tiposIA'
+import { esOpcionMultipleCerrada } from './menciones/filtroComentariosReales'
+
+export interface ResumenComentariosPregunta {
+  totalComentarios: number
+  resumen: string
+  sentimientoPredominante: 'Favorable' | 'Constructivo' | 'Crítico' | 'Sin comentarios'
+  problemasPrincipales: string[]
+  citasDirectas?: string[]
+}
 
 export async function analizarRespuestaAbierta(
   pregunta: string,
   respuesta: string
 ): Promise<AnalisisRespuestaAbierta> {
   const texto = (respuesta || '').trim()
-  if (!texto || texto.length < 2) {
+  if (!texto || texto.length < 3 || esOpcionMultipleCerrada(texto)) {
     return {
       clasificacion: 'Neutra',
       puntaje: 3,
@@ -21,9 +34,9 @@ export async function analizarRespuestaAbierta(
     }
   }
 
-  const prompt = `Analiza como psicólogo organizacional esta respuesta abierta de clima laboral:
+  const prompt = `Analiza como psicólogo organizacional este comentario libre de clima laboral:
 PREGUNTA: "${pregunta}"
-RESPUESTA: "${texto}"
+COMENTARIO: "${texto}"
 Responde ÚNICAMENTE un JSON:
 {
   "clasificacion": "Buena" | "Mala" | "Neutra",
@@ -37,7 +50,7 @@ Responde ÚNICAMENTE un JSON:
   const raw = await consultarOllama(prompt)
   if (raw) {
     const match = raw.match(/\{[\s\S]*\}/)
-    if (match) {
+    if (match && match[0]) {
       try {
         const p = JSON.parse(match[0])
         return {
@@ -88,22 +101,14 @@ function fallbackLocalAbierta(texto: string): AnalisisRespuestaAbierta {
   }
 }
 
-export interface ResumenComentariosPregunta {
-  totalComentarios: number
-  resumen: string
-  sentimientoPredominante: 'Favorable' | 'Constructivo' | 'Crítico' | 'Sin comentarios'
-  problemasPrincipales: string[]
-  citasDirectas?: string[]
-}
-
 export async function resumirComentariosPreguntaConOllama(
   preguntaTexto: string,
   comentarios: string[]
 ): Promise<ResumenComentariosPregunta> {
   const limpios = comentarios
     .map(c => c.trim())
-    .filter(c => c.length > 1 && !c.startsWith('No (Pase') && !c.startsWith('Parcialmente'))
-    
+    .filter(c => c.length >= 3 && !esOpcionMultipleCerrada(c))
+
   if (limpios.length === 0) {
     return {
       totalComentarios: 0,
@@ -114,13 +119,12 @@ export async function resumirComentariosPreguntaConOllama(
     }
   }
 
-  const prompt = `Actúa como psicólogo y especialista en analítica de clima laboral.
-Analiza con total especificidad estos ${limpios.length} comentarios reales dejados por colaboradores en la encuesta para la pregunta:
+  const prompt = `Actúa como psicólogo especialista en clima laboral.
+Analiza estos ${limpios.length} comentarios escritos por colaboradores para la pregunta:
 PREGUNTA: "${preguntaTexto}"
-COMENTARIOS DE COLABORADORES:
+COMENTARIOS:
 ${limpios.slice(0, 25).map((c, i) => `${i + 1}. "${c}"`).join('\n')}
 
-Genera un resumen ejecutivo MUY ESPECÍFICO (no genérico). Detalla exactamente qué quejas, personas señaladas, herramientas o conductas mencionan los colaboradores y cuál es el impacto.
 Responde ÚNICAMENTE en JSON:
 {
   "resumen": "Resumen detallado y específico de lo que pasa en los comentarios...",
@@ -132,7 +136,7 @@ Responde ÚNICAMENTE en JSON:
     const raw = await consultarOllama(prompt)
     if (raw) {
       const match = raw.match(/\{[\s\S]*\}/)
-      if (match) {
+      if (match && match[0]) {
         const parsed = JSON.parse(match[0])
         return {
           totalComentarios: limpios.length,
@@ -143,19 +147,13 @@ Responde ÚNICAMENTE en JSON:
         }
       }
     }
-  } catch (err) {
-    console.warn('[resumirComentariosPreguntaConOllama] Fallback local:', err)
-  }
+  } catch {}
 
-  // Fallback local analítico avanzado y específico
   return sintetizarComentariosLocalmente(preguntaTexto, limpios)
 }
 
-export function sintetizarComentariosLocalmente(preguntaTexto: string, comentarios: string[]): ResumenComentariosPregunta {
-  const limpios = comentarios
-    .map(c => c.trim())
-    .filter(c => c.length > 1 && !c.startsWith('No (Pase') && !c.startsWith('Parcialmente'))
-
+export function sintetizarComentariosLocalmente(_preguntaTexto: string, comentarios: string[]): ResumenComentariosPregunta {
+  const limpios = comentarios.map(c => c.trim()).filter(c => c.length >= 3 && !esOpcionMultipleCerrada(c))
   const total = limpios.length
   if (total === 0) {
     return {
@@ -168,65 +166,40 @@ export function sintetizarComentariosLocalmente(preguntaTexto: string, comentari
   }
 
   const textoUnido = limpios.join(' ').toLowerCase()
-
   const problemas: string[] = []
-  const detallesEspecificos: string[] = []
+  const detalles: string[] = []
 
-  // 1. Detección de Acoso e Intimidación
   if (/acos|intimid|amenaz|miedo|toco|tocamiento/i.test(textoUnido)) {
     problemas.push('Señalamiento directo de acoso laboral e intimidación')
-    detallesEspecificos.push('Los colaboradores reportan conductas de acoso e intimidación directa por parte de líderes o compañeros, exigiendo intervención inmediata de Gestión Humana')
+    detalles.push('Se reportan conductas de acoso o intimidación que exigen intervención de RRHH')
   }
-
-  // 2. Fricciones interpersonales y conductas molestas
-  if (/habla mucho|no deja trabajar|fastidios|ruido|interrump/i.test(textoUnido)) {
-    problemas.push('Interrupciones y dificultades para concentrarse en la labor')
-    detallesEspecificos.push('Se reportan quejas sobre compañeros o supervisores que hablan en exceso durante el turno y no permiten operar adecuadamente')
-  }
-
-  // 3. Trato irrespetuoso y gritos
   if (/grito|grit[oó]|humill|groser|maltrato|alzar la voz/i.test(textoUnido)) {
     problemas.push('Trato irrespetuoso y comunicación agresiva')
-    detallesEspecificos.push('Colaboradores expresan haber recibido gritos o descalificaciones en el área operativa')
+    detalles.push('Colaboradores expresan haber recibido gritos o descalificaciones')
   }
-
-  // 4. Herramientas y Condiciones de Trabajo
-  if (/herramienta|equipo|sistema|computador|pc|pantalla|lent|diadema|auricular/i.test(textoUnido)) {
+  if (/herramienta|equipo|sistema|computador|pc|pantalla|lent|diadema/i.test(textoUnido)) {
     problemas.push('Fallas en herramientas, sistemas y equipos de trabajo')
-    detallesEspecificos.push('Dificultades técnicas y falta de adecuación en herramientas físicas y software que impactan la productividad')
+    detalles.push('Dificultades técnicas en equipos y software que impactan la operación')
   }
-
-  // 5. Carga de Trabajo y Turnos
   if (/carga|sobrecarga|tiempo|turno|horas extras|presi[oó]n|descanso/i.test(textoUnido)) {
     problemas.push('Sobrecarga operativa y presión horaria')
-    detallesEspecificos.push('Inconformidades por extensión de turnos, descansos insuficientes o presión excesiva')
+    detalles.push('Inconformidades por extensión de turnos o descansos insuficientes')
   }
-
-  // 6. Trato desigual o favoritismo
   if (/favoritis|desigual|preferen|rosca/i.test(textoUnido)) {
     problemas.push('Percepción de favoritismo en el área')
-    detallesEspecificos.push('Señalamientos sobre trato desigual en la asignación de turnos, permisos o metas')
+    detalles.push('Señalamientos sobre trato desigual en asignación de turnos o metas')
   }
 
-  // 7. Molestias generales expresadas
-  if (/molesta|fastidia|incomod|pesad|cae mal/i.test(textoUnido) && detallesEspecificos.length === 0) {
-    problemas.push('Incomodidades en el clima de convivencia diaria')
-    detallesEspecificos.push('Se reportan actitudes y roces personales que deterioran la armonía y concentración del puesto')
-  }
-
-  const esCritico = problemas.length > 0 || /mal|inconforme|p[eé]simo|terrible|odio|harto/i.test(textoUnido)
+  const esCritico = problemas.length > 0 || /mal|inconforme|p[eé]simo|terrible|harto/i.test(textoUnido)
   const esFavorable = /excelente|muy bien|positivo|content|buen|apoyo|gracias/i.test(textoUnido) && !esCritico
 
-  let resumen = ''
-  if (detallesEspecificos.length > 0) {
-    resumen = `${detallesEspecificos.join('. ')}. La retroalimentación recopilada refleja puntos críticos que demandan atención específica.`
-  } else if (esCritico) {
-    resumen = `Se registraron ${total} queja(s) donde los colaboradores expresan inconformidad explícita con las condiciones y relaciones en esta pregunta.`
-  } else if (esFavorable) {
-    resumen = `Los ${total} comentarios recibidos destacan una percepción positiva y constructiva frente a esta dimensión de la organización.`
-  } else {
-    resumen = `Se registraron ${total} comentario(s) de retroalimentación donde los colaboradores aportan sugerencias y observaciones operativas directas.`
-  }
+  const resumen = detalles.length > 0
+    ? `${detalles.join('. ')}.`
+    : esCritico
+      ? `Se registraron ${total} queja(s) con inconformidad explícita en esta pregunta.`
+      : esFavorable
+        ? `Los ${total} comentarios recibidos destacan una percepción positiva y constructiva.`
+        : `Se registraron ${total} comentario(s) con sugerencias y observaciones operativas.`
 
   return {
     totalComentarios: total,
@@ -236,4 +209,3 @@ export function sintetizarComentariosLocalmente(preguntaTexto: string, comentari
     citasDirectas: limpios
   }
 }
-

@@ -39,7 +39,7 @@ import { obtenerEscalaEstandarDetallada } from '@/ia'
 import {
   TITULO_ENCUESTA_CLIMA_INTEGRAL,
   DESCRIPCION_ENCUESTA_CLIMA_INTEGRAL,
-  BLOQUES_ENCUESTA_CLIMA,
+  BLOQUES_ENCUESTA_CLIMA, PLANTILLA_CLIMA_INTEGRAL_DETALLADA,
   type MetadataBloque
 } from '@/Config/preguntasCuestionario.ts'
 import { useAutenticacion } from '@/Almacenes/useAutenticacion'
@@ -265,7 +265,7 @@ const limpiarArrastreBloque = () => {
 const preguntas = ref<PreguntaEncuesta[]>(
   props.encuestaInicial?.preguntas && props.encuestaInicial.preguntas.length > 0
     ? JSON.parse(JSON.stringify(props.encuestaInicial.preguntas))
-    : []
+    : JSON.parse(JSON.stringify(PLANTILLA_CLIMA_INTEGRAL_DETALLADA))
 )
 
 onMounted(() => {
@@ -364,7 +364,7 @@ const restaurarPlantillaOficial = () => {
     titulo.value = TITULO_ENCUESTA_CLIMA_INTEGRAL
     descripcion.value = DESCRIPCION_ENCUESTA_CLIMA_INTEGRAL
     bloques.value = JSON.parse(JSON.stringify(BLOQUES_ENCUESTA_CLIMA))
-    preguntas.value = []
+    preguntas.value = JSON.parse(JSON.stringify(PLANTILLA_CLIMA_INTEGRAL_DETALLADA))
     bloquesColapsados.value = {}
     analizarYGenerarSugerencia(preguntas.value, false)
   }
@@ -684,7 +684,7 @@ const guardarEncuesta = (silencioso: boolean = false) => {
                 @drop="alSoltarArrastre($event, preguntas.findIndex(p => p.id === preg.id))"
                 @dragend="limpiarArrastre"
                 @abrirEditor="abrirEditorPorId(preg.id)"
-                @eliminar="eliminarPreguntaPorId(preg.id)"
+                @eliminar="eliminarPreguntaPorId(preg.id)" @cambio="guardarEncuesta(true)"
               />
             </div>
           </div>

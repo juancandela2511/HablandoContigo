@@ -47,13 +47,15 @@ const abrirEstadisticaPregunta = (pregunta: DesgloseRespuestaDetallada) => {
 }
 
 const categoriasUnicas = computed(() => {
-  const setCat = new Set(props.preguntas.map(p => p.categoria))
+  const lista = props.preguntas || []
+  const setCat = new Set(lista.map(p => p.categoria).filter(Boolean))
   return ['Todas', ...Array.from(setCat)]
 })
 
 const preguntasFiltradas = computed(() => {
-  if (categoriaFiltro.value === 'Todas') return props.preguntas
-  return props.preguntas.filter(p => p.categoria === categoriaFiltro.value)
+  const lista = props.preguntas || []
+  if (categoriaFiltro.value === 'Todas') return lista
+  return lista.filter(p => p.categoria === categoriaFiltro.value)
 })
 
 const toggleExpansion = (id: string) => {
@@ -162,21 +164,21 @@ const toggleExpansion = (id: string) => {
           <div class="w-full h-3.5 rounded-full overflow-hidden flex bg-slate-200 dark:bg-slate-800 shadow-inner">
             <!-- Positivo (Azul Vivo) -->
             <div
-              :style="{ width: `${item.distribucion.positivas}%` }"
+              :style="{ width: `${item.distribucion?.positivas || 0}%` }"
               class="h-full bg-blue-600 hover:bg-blue-500 transition-all"
-              :title="`Favorable: ${item.distribucion.positivas}%`"
+              :title="`Favorable: ${item.distribucion?.positivas || 0}%`"
             ></div>
             <!-- Neutral (Amarillo Vivo) -->
             <div
-              :style="{ width: `${item.distribucion.neutrales}%` }"
+              :style="{ width: `${item.distribucion?.neutrales || 0}%` }"
               class="h-full bg-amber-400 hover:bg-amber-300 transition-all"
-              :title="`Neutral: ${item.distribucion.neutrales}%`"
+              :title="`Neutral: ${item.distribucion?.neutrales || 0}%`"
             ></div>
             <!-- Negativo (Rojo Vivo) -->
             <div
-              :style="{ width: `${item.distribucion.negativas}%` }"
+              :style="{ width: `${item.distribucion?.negativas || 0}%` }"
               class="h-full bg-red-600 hover:bg-red-500 transition-all"
-              :title="`Alerta/Riesgo: ${item.distribucion.negativas}%`"
+              :title="`Alerta/Riesgo: ${item.distribucion?.negativas || 0}%`"
             ></div>
           </div>
 
@@ -184,15 +186,15 @@ const toggleExpansion = (id: string) => {
           <div class="flex items-center justify-between text-[11px] font-mono font-medium">
             <span class="text-blue-600 dark:text-blue-400 flex items-center gap-1">
               <span class="w-2 h-2 rounded-full bg-blue-600"></span>
-              Favorable (4-5): {{ item.distribucion.positivas }}%
+              Favorable (4-5): {{ item.distribucion?.positivas || 0 }}%
             </span>
             <span class="text-amber-600 dark:text-amber-400 flex items-center gap-1">
               <span class="w-2 h-2 rounded-full bg-amber-400"></span>
-              Neutral (3): {{ item.distribucion.neutrales }}%
+              Neutral (3): {{ item.distribucion?.neutrales || 0 }}%
             </span>
             <span class="text-red-600 dark:text-red-400 flex items-center gap-1">
               <span class="w-2 h-2 rounded-full bg-red-600"></span>
-              Alerta (1-2): {{ item.distribucion.negativas }}%
+              Alerta (1-2): {{ item.distribucion?.negativas || 0 }}%
             </span>
           </div>
         </div>

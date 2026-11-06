@@ -1,9 +1,9 @@
 /**
  * ============================================================================
- * CONTROLADOR DE AUTENTICACIÓN Y SESIÓN (server/src/controllers/authController.ts)
+ * CONTROLADOR DE AUTENTICACIÓN Y SESIÓN (Backend/src/controllers/authController.ts)
  * ============================================================================
- * Manejo de inicio de sesión con JWT y validación criptográfica (crypt() / bcrypt)
- * contra la tabla 'usuarios' en PostgreSQL.
+ * Manejo de inicio de sesión con JWT, validación criptográfica y persistencia
+ * atómica de perfiles y fotografías en PostgreSQL.
  */
 
 import { Request, Response } from 'express'
@@ -14,10 +14,6 @@ import { pool } from '../config/db.js'
 const JWT_SECRET = process.env.JWT_SECRET || 'hablandocontigo_super_secret_jwt_key_2026_enterprise_998877'
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'
 
-/**
- * POST /api/auth/login
- * Autentica al usuario contra PostgreSQL usando crypt() o bcryptjs
- */
 export async function login(req: Request, res: Response): Promise<void> {
   try {
     const { email, password } = req.body
@@ -28,8 +24,6 @@ export async function login(req: Request, res: Response): Promise<void> {
     }
 
     const emailNorm = email.trim().toLowerCase()
-
-    // 1. Consultar usuario en la base de datos
     const userResult = await pool.query(`
       SELECT id, nombre, email, password_hash, rol, departamento, avatar, foto_url, biografia, telefono, estado
       FROM usuarios
@@ -42,21 +36,17 @@ export async function login(req: Request, res: Response): Promise<void> {
     }
 
     const usuario = userResult.rows[0]
-
     if (usuario.estado !== 'Activo') {
       res.status(403).json({ ok: false, error: 'La cuenta se encuentra inactiva o suspendida.' })
       return
     }
 
-    // 2. Validación de contraseña con pgcrypto en PostgreSQL
     const cryptoCheck = await pool.query(
       `SELECT (password_hash = crypt($1, password_hash)) AS es_valida FROM usuarios WHERE id = $2`,
       [password, usuario.id]
     )
 
-    let esPasswordValida = cryptoCheck.rows[0]?.es_valida
-
-    // Fallback de validación con bcryptjs local por si el hash fue creado externamente
+    let esPasswordValida = Boolean(cryptoCheck.rows[0]?.es_valida)
     if (!esPasswordValida && usuario.password_hash) {
       try {
         esPasswordValida = await bcrypt.compare(password, usuario.password_hash)
@@ -65,17 +55,11 @@ export async function login(req: Request, res: Response): Promise<void> {
       }
     }
 
-    // Compatibilidad de contraseña directa en migración inicial
-    if (!esPasswordValida && usuario.password_hash === password) {
-      esPasswordValida = true
-    }
-
     if (!esPasswordValida) {
       res.status(401).json({ ok: false, error: 'Contraseña incorrecta. Por favor intente de nuevo.' })
       return
     }
 
-    // 3. Generar token JWT con claims
     const tokenPayload = {
       id: usuario.id,
       nombre: usuario.nombre,
@@ -86,34 +70,28 @@ export async function login(req: Request, res: Response): Promise<void> {
 
     const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: (JWT_EXPIRES_IN as any) || '7d' })
 
-    const perfil = {
-      id: usuario.id,
-      nombre: usuario.nombre,
-      email: usuario.email,
-      rol: usuario.rol,
-      departamento: usuario.departamento,
-      avatar: usuario.avatar || '',
-      fotoUrl: usuario.foto_url || usuario.avatar || '',
-      biografia: usuario.biografia || '',
-      telefono: usuario.telefono || ''
-    }
-
     res.json({
       ok: true,
       mensaje: 'Autenticación exitosa',
       token,
-      usuario: perfil
+      usuario: {
+        id: usuario.id,
+        nombre: usuario.nombre,
+        email: usuario.email,
+        rol: usuario.rol,
+        departamento: usuario.departamento,
+        avatar: usuario.avatar || '',
+        fotoUrl: usuario.foto_url || usuario.avatar || '',
+        biografia: usuario.biografia || '',
+        telefono: usuario.telefono || ''
+      }
     })
   } catch (error: any) {
     console.error('[authController.login] Error interno:', error)
-    res.status(500).json({ ok: false, error: 'Error interno en el servidor de autenticación.', details: error.message })
+    res.status(500).json({ ok: false, error: 'Error interno en el servidor de autenticación.' })
   }
 }
 
-/**
- * GET /api/auth/me (o /api/auth/perfil)
- * Valida el token del usuario actual y retorna sus datos completos desde PostgreSQL
- */
 export async function me(req: Request, res: Response): Promise<void> {
   try {
     const usuarioAuth = req.usuario
@@ -151,54 +129,71 @@ export async function me(req: Request, res: Response): Promise<void> {
     })
   } catch (error: any) {
     console.error('[authController.me] Error consultando perfil:', error)
-    res.status(500).json({ ok: false, error: 'Error al consultar datos del usuario.', details: error.message })
+    res.status(500).json({ ok: false, error: 'Error al consultar datos del usuario.' })
   }
 }
 
-/**
- * POST /api/auth/cambiar-contrasena
- * Actualiza la contraseña encriptándola mediante pgcrypto
- */
 export async function cambiarContrasena(req: Request, res: Response): Promise<void> {
   try {
     const { nuevaContrasena, email } = req.body
+    if (!req.usuario?.email) {
+      res.status(401).json({ ok: false, error: 'Sesión no autorizada.' })
+      return
+    }
 
     if (!nuevaContrasena || nuevaContrasena.length < 6) {
       res.status(400).json({ ok: false, error: 'La nueva contraseña debe tener mínimo 6 caracteres.' })
       return
     }
 
-    const emailTarget = (email || req.usuario?.email || 'jscandela@ontime.es').trim().toLowerCase()
+    const esSuperAdmin = req.usuario.rol === 'Super Administrador'
+    const emailSolicitado = typeof email === 'string' ? email.trim().toLowerCase() : ''
+    const emailAutenticado = req.usuario.email.trim().toLowerCase()
 
-    // El trigger en PostgreSQL 'trigger_hash_password' encripta automáticamente con crypt() / bf
+    if (emailSolicitado && emailSolicitado !== emailAutenticado && !esSuperAdmin) {
+      res.status(403).json({ ok: false, error: 'No tiene permisos para modificar la contraseña de otro usuario.' })
+      return
+    }
+
+    const emailTarget = esSuperAdmin && emailSolicitado ? emailSolicitado : emailAutenticado
+
+    // Hashear la contraseña con bcrypt antes de guardarla (NUNCA texto plano)
+    const saltRounds = 12
+    const hashSeguro = await bcrypt.hash(nuevaContrasena, saltRounds)
+
     const updateRes = await pool.query(`
       UPDATE usuarios
       SET password_hash = $1
       WHERE LOWER(email) = $2
       RETURNING id, nombre, email
-    `, [nuevaContrasena, emailTarget])
+    `, [hashSeguro, emailTarget])
 
     if (updateRes.rows.length === 0) {
       res.status(404).json({ ok: false, error: 'No se encontró el usuario para actualizar contraseña.' })
       return
     }
 
-    res.json({ ok: true, mensaje: 'Contraseña actualizada y encriptada exitosamente con pgcrypto.' })
+    res.json({ ok: true, mensaje: 'Contraseña actualizada y encriptada con bcrypt exitosamente.' })
   } catch (error: any) {
     console.error('[authController.cambiarContrasena] Error:', error)
-    res.status(500).json({ ok: false, error: 'Error al actualizar contraseña.', details: error.message })
+    res.status(500).json({ ok: false, error: 'Error al actualizar contraseña.' })
   }
 }
 
-/**
- * PUT /api/auth/perfil
- */
 export async function actualizarPerfil(req: Request, res: Response): Promise<void> {
   try {
-    const { nombre, departamento, biografia, avatar, fotoUrl, telefono } = req.body
+    const { nombre, departamento, biografia, avatar, fotoUrl, telefono, email } = req.body
     const idUsuario = req.usuario?.id
+    const emailUsuario = (req.usuario?.email || email || '').trim().toLowerCase()
 
-    const updateRes = await pool.query(`
+    if (!idUsuario && !emailUsuario) {
+      res.status(400).json({ ok: false, error: 'Identificador o correo del usuario no proporcionado.' })
+      return
+    }
+
+    const fotoFinal = fotoUrl || avatar || null
+
+    let updateRes = await pool.query(`
       UPDATE usuarios
       SET 
         nombre = COALESCE($1, nombre),
@@ -206,21 +201,50 @@ export async function actualizarPerfil(req: Request, res: Response): Promise<voi
         biografia = COALESCE($3, biografia),
         avatar = COALESCE($4, avatar),
         foto_url = COALESCE($5, foto_url),
-        telefono = COALESCE($6, telefono)
-      WHERE id = $7 OR email = 'jscandela@ontime.es'
+        telefono = COALESCE($6, telefono),
+        updated_at = CURRENT_TIMESTAMP
+      WHERE (id::text = $7 OR LOWER(email) = $8)
       RETURNING id, nombre, email, rol, departamento, avatar, foto_url, biografia, telefono
-    `, [nombre, departamento, biografia, avatar, fotoUrl, telefono, idUsuario])
+    `, [nombre, departamento, biografia, fotoFinal, fotoFinal, telefono, idUsuario || '', emailUsuario])
 
-    res.json({ ok: true, mensaje: 'Perfil actualizado exitosamente', usuario: updateRes.rows[0] })
+    if (updateRes.rows.length === 0 && emailUsuario) {
+      updateRes = await pool.query(`
+        UPDATE usuarios
+        SET 
+          nombre = COALESCE($1, nombre),
+          departamento = COALESCE($2, departamento),
+          biografia = COALESCE($3, biografia),
+          avatar = COALESCE($4, avatar),
+          foto_url = COALESCE($5, foto_url),
+          telefono = COALESCE($6, telefono),
+          updated_at = CURRENT_TIMESTAMP
+        WHERE LOWER(email) = $7
+        RETURNING id, nombre, email, rol, departamento, avatar, foto_url, biografia, telefono
+      `, [nombre, departamento, biografia, fotoFinal, fotoFinal, telefono, emailUsuario])
+    }
+
+    if (emailUsuario) {
+      await pool.query(`
+        UPDATE cuentas
+        SET 
+          avatar = COALESCE($1, avatar),
+          foto_url = COALESCE($2, foto_url)
+        WHERE LOWER(email) = $3
+      `, [fotoFinal, fotoFinal, emailUsuario]).catch(() => {})
+    }
+
+    if (updateRes.rows.length === 0) {
+      res.status(404).json({ ok: false, error: 'Perfil de usuario no encontrado en la base de datos.' })
+      return
+    }
+
+    res.json({ ok: true, mensaje: 'Perfil y fotografía guardados exitosamente.', usuario: updateRes.rows[0] })
   } catch (error: any) {
     console.error('[authController.actualizarPerfil] Error:', error)
     res.status(500).json({ ok: false, error: 'Error al actualizar perfil.', details: error.message })
   }
 }
 
-/**
- * POST /api/auth/logout
- */
-export async function logout(req: Request, res: Response): Promise<void> {
+export async function logout(_req: Request, res: Response): Promise<void> {
   res.json({ ok: true, mensaje: 'Sesión finalizada exitosamente.' })
 }

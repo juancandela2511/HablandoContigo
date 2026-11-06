@@ -112,7 +112,7 @@ const emit = defineEmits<{
           @click="emit('avanzar')"
           class="!px-6 !py-2.5"
         >
-          <span>Siguiente</span>
+          <span>{{ !tiempoMinimoCumplido ? `Espera (${segundosRestantes}s)` : 'Siguiente' }}</span>
           <template #iconoDerecha>
             <ArrowRight class="w-4 h-4" />
           </template>
@@ -120,7 +120,7 @@ const emit = defineEmits<{
 
         <BotonRevelacionFlecha
           v-else
-          :etiqueta="enviando ? 'Enviando...' : 'Finalizar y Enviar'"
+          :etiqueta="!tiempoMinimoCumplido ? `Espera (${segundosRestantes}s)` : (enviando ? 'Enviando...' : 'Finalizar y Enviar')"
           colorFondo="#FFFFFF"
           colorTexto="#000000"
           colorInsignia="#00c853"
@@ -128,7 +128,6 @@ const emit = defineEmits<{
           :deshabilitado="!puedeAvanzar || enviando"
           :cargando="enviando"
           @click="emit('avanzar')"
-          @clickDeshabilitado="emit('avanzar')"
         >
           <template #icono>
             <Check class="w-5 h-5 text-white" />

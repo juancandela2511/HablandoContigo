@@ -22,7 +22,7 @@ docker/
 1. **`postgres-db` (`hablandocontigo_postgres`)**:
    - PostgreSQL 16 Alpine optimizado para rendimiento empresarial (WAL replica, fsync activo, ACID).
    - Puerto expuesto: `5432`.
-   - Base de datos: `mi_base_datos` | Usuario: `postgres` | Contraseña: `1012332747jS.`.
+   - Base de datos: `mi_base_datos` | Usuario: `postgres` | Contraseña: `1012332747Js`.
 
 2. **`postgres-backup` (`hablandocontigo_backup`)**:
    - Generación programada de backups diarios comprimidos en `./backups`.

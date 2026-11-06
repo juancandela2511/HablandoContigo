@@ -36,6 +36,7 @@ import {
 import { useEncuestas } from '@/Almacenes/useEncuestas'
 import { useTiposAlertas } from '@/Almacenes/useTiposAlertas'
 import { useAnclajeGraficos as useGraficosAnclados } from '@/Almacenes/useAnclajeGraficos'
+import GraficosAncladosVisualizador from '@/componentes/Dashboard/Graficos/GraficosAncladosVisualizador.vue'
 
 const props = defineProps<{
   pregunta: PreguntaEncuesta
@@ -50,6 +51,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'abrirEditor', indice: number): void
   (e: 'eliminar', indice: number): void
+  (e: 'cambio'): void
   (e: 'dragstart', ev: DragEvent): void
   (e: 'dragover', ev: DragEvent): void
   (e: 'drop', ev: DragEvent): void
@@ -70,6 +72,8 @@ const tieneGraficaConfigurada = computed(() => {
 
 // Estado para mostrar/ocultar panel de estadísticas detalladas
 const mostrarStats = ref(false)
+const tipoGraficoEfectivo = computed<'barras' | 'pastel'>(() => { const g = graficosAnclados.value.find(item => item.idPregunta === props.pregunta.id || (item.textoPregunta && props.pregunta.texto && item.textoPregunta.trim().toLowerCase() === props.pregunta.texto.trim().toLowerCase())); return (props.pregunta.tipoGrafico === 'pastel' || g?.tipoGrafico === 'pastel') ? 'pastel' : 'barras' })
+const tieneComentariosActivos = computed(() => { const p = props.pregunta as any; if (p.comentariosHabilitados === false || p.deteccionQuejas === false || p.solicitarPorQueSiNegativo === false) return false; return Boolean(p.comentariosHabilitados ?? (p.deteccionQuejas || p.solicitarPorQueSiNegativo)) })
 
 // ─── Toggle Rápido de Comentarios (¿Qué pasó? en menor puntaje) ───────────
 const toggleProfundizarTema = () => {
@@ -78,10 +82,10 @@ const toggleProfundizarTema = () => {
     (props.pregunta as any).comentariosHabilitados ??
     (props.pregunta.deteccionQuejas || props.pregunta.solicitarPorQueSiNegativo)
   )
-  const nuevoEstado = !estadoActual
+  const nuevoEstado = !tieneComentariosActivos.value
   ;(props.pregunta as any).comentariosHabilitados = nuevoEstado
   props.pregunta.deteccionQuejas = nuevoEstado
-  props.pregunta.solicitarPorQueSiNegativo = nuevoEstado
+  props.pregunta.solicitarPorQueSiNegativo = nuevoEstado; emit('cambio')
 }
 
 // ─── Toggle Rápido de Alerta en Cualquier Opción ─────────────────────────────
@@ -113,8 +117,15 @@ const alCambiarTipoAlertaOpcion = (opc: OpcionPregunta) => {
   }
 }
 
-// ─── Cálculo de Estadísticas por Pregunta ─────────────────────────────────────
+// ─── Cálculo de Estadísticas por Pregunta (Evaluación Perezosa para Rendimiento) ───
 const estadisticas = computed(() => {
+  if (!mostrarStats.value) {
+    return {
+      total: 0,
+      desgloseOpciones: [],
+      tieneRespuestas: false
+    }
+  }
   const usarArchivadas = Array.isArray(props.respuestasPersonalizadas)
   const todasRespuestas = usarArchivadas ? props.respuestasPersonalizadas! : (respuestasAnonimas.value || [])
   const respuestasPregunta: { valorTexto: string; valorNum: number }[] = []
@@ -167,6 +178,7 @@ const estadisticas = computed(() => {
 const comentariosAbiertosVisibles = ref(false)
 
 const respuestasAbiertasPregunta = computed(() => {
+  if (!mostrarStats.value) return []
   const usarArchivadas = Array.isArray(props.respuestasPersonalizadas)
   const todasRespuestas = usarArchivadas ? props.respuestasPersonalizadas! : (respuestasAnonimas.value || [])
   const lista: string[] = []
@@ -187,6 +199,13 @@ const respuestasAbiertasPregunta = computed(() => {
 })
 
 const analisisPreguntaAbierta = computed(() => {
+  if (!mostrarStats.value) {
+    return {
+      sentimientoGeneral: 'Neutral',
+      temasDetectados: [],
+      resumenGeneral: 'Sin respuestas registradas todavía para esta pregunta.'
+    }
+  }
   return sintetizarComentariosLocalmente(props.pregunta.texto, respuestasAbiertasPregunta.value)
 })
 
@@ -273,11 +292,11 @@ const handleDblClick = () => {
           @click.stop="toggleProfundizarTema"
           :class="[
             'p-1.5 rounded-xl flex items-center justify-center border transition-all cursor-pointer select-none',
-            (pregunta.deteccionQuejas || pregunta.solicitarPorQueSiNegativo)
+            tieneComentariosActivos
               ? 'bg-sky-500 text-white border-sky-600 shadow-xs'
               : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:text-sky-500 hover:border-sky-300'
           ]"
-          :title="(pregunta.deteccionQuejas || pregunta.solicitarPorQueSiNegativo) ? 'Pregunta Interactiva Activa (Profundizar)' : 'Haz clic para hacer interactiva'"
+          :title="tieneComentariosActivos ? 'Pregunta Interactiva Activa (Profundizar)' : 'Haz clic para hacer interactiva'"
         >
           <MessageSquarePlus class="w-3.5 h-3.5" />
         </button>
@@ -524,9 +543,10 @@ const handleDblClick = () => {
         </div>
 
         <!-- Caso 1: Preguntas de Selección Múltiple con Barras de Distribución -->
-        <div v-if="estadisticas.tieneRespuestas && pregunta.tipo !== 'texto'" class="space-y-2">
+        <div v-if="estadisticas.tieneRespuestas && pregunta.tipo !== 'texto'" class="space-y-2"><GraficosAncladosVisualizador v-if="tipoGraficoEfectivo === 'pastel'" :idPregunta="pregunta.id" :textoPregunta="pregunta.texto" tipoGrafico="pastel" />
           <div
             v-for="opc in estadisticas.desgloseOpciones"
+            v-show="tipoGraficoEfectivo !== 'pastel'"
             :key="opc.id"
             class="space-y-1"
           >

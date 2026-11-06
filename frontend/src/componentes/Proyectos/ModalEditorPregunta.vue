@@ -80,7 +80,7 @@ watch(
       copia.value = JSON.parse(JSON.stringify(nueva))
       if (copia.value) {
         if (copia.value.esCondicional === undefined) copia.value.esCondicional = false
-        const comActivo = Boolean(copia.value.deteccionQuejas || copia.value.solicitarPorQueSiNegativo || (copia.value as any).comentariosHabilitados)
+        const comActivo = (copia.value as any).comentariosHabilitados === false || copia.value.deteccionQuejas === false || copia.value.solicitarPorQueSiNegativo === false ? false : ((copia.value as any).comentariosHabilitados !== undefined ? Boolean((copia.value as any).comentariosHabilitados) : Boolean(copia.value.deteccionQuejas ?? copia.value.solicitarPorQueSiNegativo ?? true))
         copia.value.deteccionQuejas = comActivo
         copia.value.solicitarPorQueSiNegativo = comActivo
         ;(copia.value as any).comentariosHabilitados = comActivo
@@ -91,7 +91,9 @@ watch(
         // Cargar parámetros del gráfico anclado si ya existe
         const grafico = graficosAnclados.value.find(g => g.idPregunta === nueva.id || (g.textoPregunta && g.textoPregunta.trim().toLowerCase() === nueva.texto.trim().toLowerCase()))
         if (grafico) {
-          tipoGraficoSeleccionado.value = grafico.tipoGrafico === 'pastel' ? 'pastel' : 'barras'
+          tipoGraficoSeleccionado.value = (copia.value.tipoGrafico === 'pastel' || grafico.tipoGrafico === 'pastel') ? 'pastel' : 'barras'
+        } else if (copia.value.tipoGrafico) {
+          tipoGraficoSeleccionado.value = copia.value.tipoGrafico === 'pastel' ? 'pastel' : 'barras'
         } else {
           tipoGraficoSeleccionado.value = 'barras'
         }
@@ -105,6 +107,7 @@ watch(
 
 const toggleDeteccionQuejas = () => {
   if (!copia.value) return
+  copia.value.tipoGrafico = tipoGraficoSeleccionado.value; const estadoCom = (copia.value as any).comentariosHabilitados === false || copia.value.deteccionQuejas === false || copia.value.solicitarPorQueSiNegativo === false ? false : Boolean((copia.value as any).comentariosHabilitados ?? copia.value.deteccionQuejas ?? true); ;(copia.value as any).comentariosHabilitados = estadoCom; copia.value.deteccionQuejas = estadoCom; copia.value.solicitarPorQueSiNegativo = estadoCom
   const estadoActual = Boolean(
     copia.value.deteccionQuejas ||
     copia.value.solicitarPorQueSiNegativo ||
@@ -156,6 +159,7 @@ const asignarPuntajePreseteado = (payload: { opc: OpcionPregunta; val: number })
 
 const agregarOpcion = () => {
   if (!copia.value) return
+  copia.value.tipoGrafico = tipoGraficoSeleccionado.value; const estadoCom = (copia.value as any).comentariosHabilitados === false || copia.value.deteccionQuejas === false || copia.value.solicitarPorQueSiNegativo === false ? false : Boolean((copia.value as any).comentariosHabilitados ?? copia.value.deteccionQuejas ?? true); ;(copia.value as any).comentariosHabilitados = estadoCom; copia.value.deteccionQuejas = estadoCom; copia.value.solicitarPorQueSiNegativo = estadoCom
   const nuevoId = `opc-custom-${Date.now()}`
   const total = copia.value.opciones.length + 1
 
@@ -186,6 +190,7 @@ const eliminarOpcion = (index: number) => {
 
 const guardar = () => {
   if (!copia.value) return
+  copia.value.tipoGrafico = tipoGraficoSeleccionado.value; const estadoCom = (copia.value as any).comentariosHabilitados === false || copia.value.deteccionQuejas === false || copia.value.solicitarPorQueSiNegativo === false ? false : Boolean((copia.value as any).comentariosHabilitados ?? copia.value.deteccionQuejas ?? true); ;(copia.value as any).comentariosHabilitados = estadoCom; copia.value.deteccionQuejas = estadoCom; copia.value.solicitarPorQueSiNegativo = estadoCom
   // Sincronizar / guardar la configuración de la gráfica de la pregunta
   actualizarOCrearGraficoParaPregunta(
     copia.value,

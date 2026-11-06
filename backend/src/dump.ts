@@ -14,7 +14,7 @@ const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
   port: Number(process.env.DB_PORT) || 5432,
   user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || '1012332747jS.',
+  password: process.env.DB_PASSWORD || '1012332747Js',
   database: process.env.DB_NAME || 'mi_base_datos'
 })
 

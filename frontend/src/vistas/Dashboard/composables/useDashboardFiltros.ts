@@ -10,6 +10,7 @@ import { ref, computed, watch, type Ref } from 'vue'
 import type { Encuesta, RegistroRespuesta } from '@/Almacenes/useEncuestas'
 import type { NotificacionItem } from '@/Almacenes/useNotificaciones'
 import { calcularDimensionesProporcionales } from '@/Almacenes/useDashboardStats'
+import { calcularClimaGlobalDeRespuestas } from '@/services/calculadorClimaService'
 
 export function useDashboardFiltros(
   encuestas: Ref<Encuesta[]>,
@@ -22,12 +23,13 @@ export function useDashboardFiltros(
 ) {
   // Filtro de Modalidad de Dashboard: Clima Laboral vs Encuestas Rápidas vs Consolidado
   const modoDashboard = ref<'clima' | 'rapida' | 'consolidado'>('clima')
-  const encuestaFiltro = ref('')
+  const encuestaFiltro = ref('enc-001')
   const filtroPeriodoTemporal = ref('mensual')
 
-  // Resetear encuestaFiltro cuando cambia la modalidad
+  // Resetear encuestaFiltro al cambiar de modalidad seleccionando el primer proyecto disponible
   watch(modoDashboard, () => {
-    encuestaFiltro.value = ''
+    const disponibles = encuestasDisponiblesSegunModo.value
+    encuestaFiltro.value = disponibles.length > 0 ? disponibles[0].id : ''
   })
 
   // Encuestas filtradas según la modalidad seleccionada
@@ -119,9 +121,9 @@ export function useDashboardFiltros(
         return enc?.departamento === dep
       })
       if (respsDep.length > 0) {
-        const suma = respsDep.reduce((a, b) => a + (b.puntajeGeneral || 0), 0)
-        const puntaje = +(suma / respsDep.length).toFixed(1)
-        const porcentaje = Math.round((puntaje / 5) * 100)
+        const evalDep = calcularClimaGlobalDeRespuestas(respsDep)
+        const puntaje = evalDep.puntajePromedio
+        const porcentaje = evalDep.porcentajeClima
         return {
           categoria: dep,
           puntaje,

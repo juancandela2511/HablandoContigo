@@ -1,50 +1,39 @@
 /**
  * ============================================================================
- * CONTROLADOR DE ENCUESTAS Y PREGUNTAS (backend/src/controllers/encuestasController.ts)
+ * CONTROLADOR DE ENCUESTAS Y PREGUNTAS (Backend/src/controllers/encuestasController.ts)
  * ============================================================================
  * Gestiona la lectura completa con preguntas asociadas y la persistencia
- * atómica de ediciones de encuestas en PostgreSQL.
+ * atómica de ediciones y nuevos proyectos en PostgreSQL.
  */
 
 import type { Request, Response } from 'express'
 import { pool } from '../config/db.js'
+import {
+  formatearFilaPregunta,
+  formatearFilaEncuesta,
+  construirParametrosInsercionPregunta,
+  sincronizarPreguntasJsonLocales
+} from '../services/encuestasMapperService.js'
 
-/**
- * GET /api/encuestas
- * Lista todas las encuestas disponibles incluyendo su arreglo completo de preguntas
- */
-export async function getEncuestas(req: Request, res: Response): Promise<void> {
+export async function getEncuestas(_req: Request, res: Response): Promise<void> {
   try {
     const result = await pool.query(`
       SELECT 
-        e.id,
-        e.titulo,
-        e.descripcion,
-        e.departamento,
-        e.creado_por AS "creadoPor",
-        e.fecha_creacion AS "fechaCreacion",
-        e.estado,
-        e.total_respuestas AS "totalRespuestas",
+        e.id, e.titulo, e.descripcion, e.departamento,
+        e.creado_por AS "creadoPor", e.fecha_creacion AS "fechaCreacion",
+        e.estado, e.total_respuestas AS "totalRespuestas",
         e.alertas_registradas AS "alertasRegistradas",
         e.puntaje_promedio AS "puntajePromedio",
         COALESCE(e.metadata, '{}'::jsonb) AS metadata,
         e.created_at AS "createdAt"
       FROM encuestas e
-      ORDER BY e.created_at DESC
+      ORDER BY CASE WHEN e.id = 'enc-001' THEN 0 ELSE 1 END ASC, e.created_at ASC
     `)
 
-    // Consultar preguntas de todas las encuestas ordenadas por secuencia
     const preguntasRes = await pool.query(`
       SELECT 
-        id,
-        id_encuesta AS "idEncuesta",
-        secuencia,
-        bloque_id AS "bloqueId",
-        categoria,
-        texto,
-        tipo,
-        opciones,
-        es_obligatoria AS "esObligatoria",
+        id, id_encuesta AS "idEncuesta", secuencia, bloque_id AS "bloqueId",
+        categoria, texto, tipo, opciones, es_obligatoria AS "esObligatoria",
         COALESCE(metadata, '{}'::jsonb) AS metadata
       FROM preguntas
       ORDER BY secuencia ASC, created_at ASC
@@ -53,62 +42,29 @@ export async function getEncuestas(req: Request, res: Response): Promise<void> {
     const mapaPreguntas: Record<string, any[]> = {}
     preguntasRes.rows.forEach(p => {
       const encId = p.idEncuesta || 'enc-001'
-      if (!mapaPreguntas[encId]) {
-        mapaPreguntas[encId] = []
-      }
-      const meta = typeof p.metadata === 'string' ? JSON.parse(p.metadata) : (p.metadata || {})
-      const tieneComentarios = Boolean(meta.comentariosHabilitados || meta.deteccionQuejas || meta.solicitarPorQueSiNegativo || false)
-      mapaPreguntas[encId].push({
-        ...meta,
-        id: p.id,
-        idEncuesta: p.idEncuesta,
-        secuencia: p.secuencia,
-        bloqueId: p.bloqueId,
-        categoria: p.categoria,
-        texto: p.texto,
-        tipo: p.tipo,
-        esObligatoria: p.esObligatoria,
-        opciones: typeof p.opciones === 'string' ? JSON.parse(p.opciones) : (p.opciones || []),
-        comentariosHabilitados: tieneComentarios,
-        deteccionQuejas: tieneComentarios,
-        solicitarPorQueSiNegativo: tieneComentarios
-      })
+      if (!mapaPreguntas[encId]) mapaPreguntas[encId] = []
+      mapaPreguntas[encId].push(formatearFilaPregunta(p, encId))
     })
 
-    const encuestasConPreguntas = result.rows.map(enc => {
-      const encMeta = typeof enc.metadata === 'string' ? JSON.parse(enc.metadata) : (enc.metadata || {})
-      return {
-        ...enc,
-        bloques: encMeta.bloques || [],
-        preguntas: mapaPreguntas[enc.id] || []
-      }
-    })
+    const encuestasConPreguntas = result.rows.map(enc =>
+      formatearFilaEncuesta(enc, mapaPreguntas[enc.id] || [])
+    )
 
     res.json(encuestasConPreguntas)
   } catch (error: any) {
     console.error('[encuestasController.getEncuestas] Error:', error)
-    res.status(500).json({ error: 'Error al consultar encuestas', details: error.message })
+    res.json([])
   }
 }
 
-/**
- * GET /api/encuestas/:id
- * Retorna la cabecera de la encuesta y su arreglo completo de preguntas
- */
 export async function getEncuestaById(req: Request, res: Response): Promise<void> {
   try {
     const { id } = req.params
-
     const encuestaRes = await pool.query(`
       SELECT 
-        id,
-        titulo,
-        descripcion,
-        departamento,
-        creado_por AS "creadoPor",
-        fecha_creacion AS "fechaCreacion",
-        estado,
-        total_respuestas AS "totalRespuestas",
+        id, titulo, descripcion, departamento,
+        creado_por AS "creadoPor", fecha_creacion AS "fechaCreacion",
+        estado, total_respuestas AS "totalRespuestas",
         alertas_registradas AS "alertasRegistradas",
         puntaje_promedio AS "puntajePromedio",
         COALESCE(metadata, '{}'::jsonb) AS metadata
@@ -121,85 +77,59 @@ export async function getEncuestaById(req: Request, res: Response): Promise<void
       return
     }
 
-    const encuesta = encuestaRes.rows[0]
-    const encMeta = typeof encuesta.metadata === 'string' ? JSON.parse(encuesta.metadata) : (encuesta.metadata || {})
-
     const preguntasRes = await pool.query(`
       SELECT 
-        id,
-        id_encuesta AS "idEncuesta",
-        secuencia,
-        bloque_id AS "bloqueId",
-        categoria,
-        texto,
-        tipo,
-        opciones,
-        es_obligatoria AS "esObligatoria",
+        id, id_encuesta AS "idEncuesta", secuencia, bloque_id AS "bloqueId",
+        categoria, texto, tipo, opciones, es_obligatoria AS "esObligatoria",
         COALESCE(metadata, '{}'::jsonb) AS metadata
       FROM preguntas
       WHERE id_encuesta = $1
       ORDER BY secuencia ASC, created_at ASC
     `, [id])
 
-    const preguntasFormateadas = preguntasRes.rows.map(p => {
-      const meta = typeof p.metadata === 'string' ? JSON.parse(p.metadata) : (p.metadata || {})
-      const tieneComentarios = Boolean(meta.comentariosHabilitados || meta.deteccionQuejas || meta.solicitarPorQueSiNegativo || false)
-      return {
-        ...meta,
-        id: p.id,
-        idEncuesta: p.idEncuesta,
-        secuencia: p.secuencia,
-        bloqueId: p.bloqueId,
-        categoria: p.categoria,
-        texto: p.texto,
-        tipo: p.tipo,
-        esObligatoria: p.esObligatoria,
-        opciones: typeof p.opciones === 'string' ? JSON.parse(p.opciones) : (p.opciones || []),
-        comentariosHabilitados: tieneComentarios,
-        deteccionQuejas: tieneComentarios,
-        solicitarPorQueSiNegativo: tieneComentarios
-      }
-    })
-
-    res.json({
-      ...encuesta,
-      bloques: encMeta.bloques || [],
-      totalPreguntas: preguntasFormateadas.length,
-      preguntas: preguntasFormateadas
-    })
+    const preguntasFormateadas = preguntasRes.rows.map(p => formatearFilaPregunta(p, String(id)))
+    res.json(formatearFilaEncuesta(encuestaRes.rows[0], preguntasFormateadas))
   } catch (error: any) {
     console.error('[encuestasController.getEncuestaById] Error:', error)
     res.status(500).json({ error: 'Error al consultar la encuesta', details: error.message })
   }
 }
 
-/**
- * PUT /api/encuestas/:id
- * Guarda y persiste las ediciones de la encuesta y sus preguntas atómicamente en PostgreSQL
- */
 export async function updateEncuesta(req: Request, res: Response): Promise<void> {
   const client = await pool.connect()
   try {
-    const { id } = req.params
+    const id = String(req.params.id || 'enc-001')
     const { titulo, descripcion, departamento, estado, bloques, metadata, preguntas } = req.body
 
     await client.query('BEGIN')
 
+    const estadoFrontend = estado || metadata?.estadoFrontend || 'Activa'
+    const estadoSql = estadoFrontend === 'Finalizada'
+      ? 'Cerrada'
+      : (['Activa', 'Borrador', 'Cerrada', 'Archivada'].includes(estadoFrontend) ? estadoFrontend : 'Activa')
+
     const encMetadata = {
       ...(typeof metadata === 'object' ? metadata : {}),
+      estadoFrontend,
       bloques: Array.isArray(bloques) ? bloques : (metadata?.bloques || [])
     }
 
-    // 1. Actualizar o insertar la cabecera de la encuesta
     await client.query(`
-      INSERT INTO encuestas (id, titulo, descripcion, departamento, estado, fecha_creacion, creado_por, metadata)
-      VALUES ($1, $2, $3, $4, $5, TO_CHAR(CURRENT_TIMESTAMP, 'DD Mon YYYY'), 'Super Administrador', $6)
+      INSERT INTO encuestas (
+        id, titulo, descripcion, departamento, estado,
+        total_respuestas, alertas_registradas, puntaje_promedio,
+        fecha_creacion, creado_por, metadata
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, COALESCE($9, TO_CHAR(CURRENT_TIMESTAMP, 'DD Mon YYYY')), 'Super Administrador', $10)
       ON CONFLICT (id) DO UPDATE
       SET 
         titulo = COALESCE(EXCLUDED.titulo, encuestas.titulo),
         descripcion = COALESCE(EXCLUDED.descripcion, encuestas.descripcion),
         departamento = COALESCE(EXCLUDED.departamento, encuestas.departamento),
-        estado = COALESCE(EXCLUDED.estado, encuestas.estado),
+        estado = EXCLUDED.estado,
+        total_respuestas = COALESCE(EXCLUDED.total_respuestas, encuestas.total_respuestas),
+        alertas_registradas = COALESCE(EXCLUDED.alertas_registradas, encuestas.alertas_registradas),
+        puntaje_promedio = COALESCE(EXCLUDED.puntaje_promedio, encuestas.puntaje_promedio),
         metadata = EXCLUDED.metadata,
         updated_at = CURRENT_TIMESTAMP
     `, [
@@ -207,50 +137,35 @@ export async function updateEncuesta(req: Request, res: Response): Promise<void>
       titulo || 'Proyecto Clima Laboral',
       descripcion || '',
       departamento || 'General',
-      estado || 'Activa',
+      estadoSql,
+      Number(encMetadata.totalRespuestas ?? 0),
+      Number(encMetadata.alertasRegistradas ?? 0),
+      Number(encMetadata.puntajePromedio ?? 5.0),
+      encMetadata.fechaCreacion || null,
       JSON.stringify(encMetadata)
     ])
 
-    // 2. Si se proporcionaron preguntas, actualizar la tabla de preguntas
     if (Array.isArray(preguntas) && preguntas.length > 0) {
       await client.query('DELETE FROM preguntas WHERE id_encuesta = $1', [id])
-
       for (let i = 0; i < preguntas.length; i++) {
-        const p = preguntas[i]
-        const tieneComentarios = Boolean(p.comentariosHabilitados || p.deteccionQuejas || p.solicitarPorQueSiNegativo || false)
-        const pregMeta = {
-          comentariosHabilitados: tieneComentarios,
-          deteccionQuejas: tieneComentarios,
-          solicitarPorQueSiNegativo: tieneComentarios,
-          modoPresentacion: p.modoPresentacion || undefined,
-          maxAnos: p.maxAnos || undefined,
-          imagen: p.imagen || undefined,
-          imagenRompecabezas: p.imagenRompecabezas || undefined,
-          esCondicional: Boolean(p.esCondicional ?? false),
-          disparadorPor: p.disparadorPor || undefined,
-          valoresDisparo: p.valoresDisparo || undefined,
-          accionCondicion: p.accionCondicion || undefined,
-          saltarHastaId: p.saltarHastaId || undefined,
-          activarSaltoCondicional: p.activarSaltoCondicional || undefined
-        }
-
+        const params = construirParametrosInsercionPregunta(id, preguntas[i], i)
         await client.query(`
           INSERT INTO preguntas (
             id, id_encuesta, secuencia, bloque_id, categoria, texto, tipo, opciones, es_obligatoria, metadata
           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-        `, [
-          p.id || `preg-${id}-${i + 1}`,
-          id,
-          i + 1,
-          p.bloqueId || `bloque-${Math.floor(i / 5) + 1}`,
-          p.categoria || 'General',
-          p.texto || '',
-          p.tipo || 'multiple',
-          JSON.stringify(p.opciones || []),
-          Boolean(p.esObligatoria ?? true),
-          JSON.stringify(pregMeta)
-        ])
+          ON CONFLICT (id) DO UPDATE SET
+            id_encuesta = EXCLUDED.id_encuesta,
+            secuencia = EXCLUDED.secuencia,
+            bloque_id = EXCLUDED.bloque_id,
+            categoria = EXCLUDED.categoria,
+            texto = EXCLUDED.texto,
+            tipo = EXCLUDED.tipo,
+            opciones = EXCLUDED.opciones,
+            es_obligatoria = EXCLUDED.es_obligatoria,
+            metadata = EXCLUDED.metadata
+        `, params)
       }
+      if (id === 'enc-001') await sincronizarPreguntasJsonLocales(preguntas)
     }
 
     await client.query('COMMIT')
@@ -264,20 +179,26 @@ export async function updateEncuesta(req: Request, res: Response): Promise<void>
   }
 }
 
-/**
- * GET /api/alertas-config
- */
-export async function getAlertasConfig(req: Request, res: Response): Promise<void> {
+export async function deleteEncuesta(req: Request, res: Response): Promise<void> {
+  try {
+    const { id } = req.params
+    if (id === 'enc-001') {
+      res.status(400).json({ error: 'No se puede eliminar la encuesta principal enc-001.' })
+      return
+    }
+    await pool.query('DELETE FROM preguntas WHERE id_encuesta = $1', [id])
+    await pool.query('DELETE FROM encuestas WHERE id = $1', [id])
+    res.json({ ok: true, mensaje: `Proyecto ${id} eliminado correctamente.` })
+  } catch (error: any) {
+    console.error('[encuestasController.deleteEncuesta] Error:', error)
+    res.status(500).json({ error: 'Error al eliminar el proyecto', details: error.message })
+  }
+}
+
+export async function getAlertasConfig(_req: Request, res: Response): Promise<void> {
   try {
     const result = await pool.query(`
-      SELECT 
-        id,
-        nombre,
-        nivel,
-        severidad,
-        icono,
-        color_hex AS "colorHex",
-        activa
+      SELECT id, nombre, nivel, severidad, icono, color_hex AS "colorHex", activa
       FROM alertas_config
       WHERE activa = TRUE
       ORDER BY nivel ASC
@@ -285,6 +206,6 @@ export async function getAlertasConfig(req: Request, res: Response): Promise<voi
     res.json(result.rows)
   } catch (error: any) {
     console.error('[encuestasController.getAlertasConfig] Error:', error)
-    res.status(500).json({ error: 'Error al consultar configuración de alertas', details: error.message })
+    res.json([])
   }
 }

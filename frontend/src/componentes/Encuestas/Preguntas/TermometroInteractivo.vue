@@ -8,14 +8,15 @@
   graduadas y todas las opciones de respuesta de la pregunta visibles y seleccionables.
   - Muestra TODAS las opciones de respuesta que tenga la pregunta.
   - La opción de menor puntaje comienza en ROJO (#ef4444) y avanza progresivamente
-    hacia naranja (#f97316), ámbar (#f59e0b), verde claro (#22c55e) hasta el VERDE
-    de mayor puntaje (#10b981), o usa el color configurado en la opción.
+    hacia naranja (#f97316), ámbar (#f59e0b), azul cielo (#38bdf8) hasta el AZUL INTENSO
+    de mayor puntaje (#2563eb), o usa el color configurado en la opción.
+  - Cada opción muestra su número de orden / puntaje con su color respectivo.
 -->
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { CheckCircle2 } from 'lucide-vue-next'
-import type { OpcionPregunta } from '@/ia'
+import { CheckCircle2, Check } from 'lucide-vue-next'
+import { resolverColorExactoOpcion, type OpcionPregunta } from '@/ia'
 
 const props = withDefaults(
   defineProps<{
@@ -31,7 +32,7 @@ const emit = defineEmits<{
   (e: 'seleccionar', opcion: OpcionPregunta | null): void
 }>()
 
-// Ordenar las opciones de menor a mayor puntaje (Rojo -> Verde)
+// Ordenar las opciones de menor a mayor puntaje (Rojo -> Azul)
 const opcionesOrdenadas = computed(() => {
   const lista = props.opciones || []
   if (lista.length === 0) {
@@ -39,8 +40,8 @@ const opcionesOrdenadas = computed(() => {
       { id: 'ter-1', texto: '1 - Muy Mal / Crítico', valor: 1, esAlerta: true, color: '#ef4444' },
       { id: 'ter-2', texto: '2 - Mal / Riesgo', valor: 2, esAlerta: false, color: '#f97316' },
       { id: 'ter-3', texto: '3 - Regular / Aceptable', valor: 3, esAlerta: false, color: '#f59e0b' },
-      { id: 'ter-4', texto: '4 - Bien / Favorable', valor: 4, esAlerta: false, color: '#22c55e' },
-      { id: 'ter-5', texto: '5 - Excelente / Óptimo', valor: 5, esAlerta: false, color: '#10b981' }
+      { id: 'ter-4', texto: '4 - Bien / Favorable', valor: 4, esAlerta: false, color: '#38bdf8' },
+      { id: 'ter-5', texto: '5 - Excelente / Óptimo', valor: 5, esAlerta: false, color: '#2563eb' }
     ]
   }
 
@@ -52,18 +53,26 @@ const opcionesOrdenadas = computed(() => {
 })
 
 const obtenerColorOpcion = (opc: OpcionPregunta | null | undefined, idx: number, total: number): string => {
-  if (opc?.color && opc.color.trim().length > 0) return opc.color
-  const r = total > 1 ? idx / (total - 1) : 0.5
-  const val = typeof opc?.valor === 'number' ? opc.valor : Math.round(1 + r * 4)
-  if (val <= 1 || r <= 0.2) return '#ef4444' // Rojo menor puntaje
-  if (val === 2 || r <= 0.4) return '#f97316' // Naranja
-  if (val === 3 || r <= 0.6) return '#f59e0b' // Ámbar / Amarillo
-  if (val === 4 || r <= 0.8) return '#22c55e' // Verde claro
-  return '#10b981' // Verde mayor puntaje
+  if (!opc) return '#2563eb'
+  return resolverColorExactoOpcion(opc, idx, total)
 }
 
 // -1 indica "Sin temperatura inicial / Sin selección previa"
 const indiceSeleccionado = ref<number>(-1)
+
+const esOpcionSeleccionada = (opc: OpcionPregunta, idx: number): boolean => {
+  if (indiceSeleccionado.value === idx) return true
+  if (!props.respuestaSeleccionada) return false
+  const valStr = typeof props.respuestaSeleccionada === 'object'
+    ? String(props.respuestaSeleccionada.texto || props.respuestaSeleccionada.id || '')
+    : String(props.respuestaSeleccionada)
+  const norm = valStr.trim().toLowerCase()
+  return (
+    opc.id === valStr ||
+    (opc.texto || '').trim().toLowerCase() === norm ||
+    (props.respuestaSeleccionada?.id && opc.id === props.respuestaSeleccionada.id)
+  )
+}
 
 // Sincronizar estado con respuestaSeleccionada recibida externamente
 watch(
@@ -105,7 +114,7 @@ const porcentajeMercurio = computed(() => {
   const total = opcionesOrdenadas.value.length
   if (total <= 1) return 50
 
-  // Sube progresivamente desde 25% (menor puntaje, rojo) hasta 92% (mayor puntaje, verde)
+  // Sube progresivamente desde 25% (menor puntaje, rojo) hasta 92% (mayor puntaje, azul)
   const fraccion = indiceSeleccionado.value / (total - 1)
   return Math.round(25 + fraccion * 67)
 })
@@ -120,9 +129,9 @@ const yMercurioSvg = computed(() => {
   return 250 - alturaMercurioSvg.value
 })
 
-// Color del líquido según la opción seleccionada (Rojo menor puntaje -> Verde mayor puntaje)
+// Color del líquido según la opción seleccionada (Rojo menor puntaje -> Azul mayor puntaje)
 const colorLiquido = computed(() => {
-  if (indiceSeleccionado.value === -1) return '#475569' // Gris vidrio reposo
+  if (indiceSeleccionado.value === -1) return '#475569' // Gris reposo
   return obtenerColorOpcion(opcionActual.value, indiceSeleccionado.value, opcionesOrdenadas.value.length)
 })
 
@@ -133,16 +142,16 @@ const seleccionarIndice = (idx: number) => {
 </script>
 
 <template>
-  <div class="p-5 sm:p-7 rounded-3xl bg-slate-900 border border-slate-700/60 shadow-2xl space-y-6 text-left font-['Poppins',sans-serif]">
+  <div class="p-4 sm:p-6 rounded-3xl bg-slate-900 border border-slate-700/60 shadow-2xl space-y-6 text-left font-['Poppins',sans-serif]">
     
     <!-- SECCIÓN DE CONTENIDO: TERMÓMETRO VECTORIAL + TODAS LAS OPCIONES -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
       
-      <!-- COLUMNA IZQUIERDA: TERMÓMETRO DE VIDRIO ILUSTRADO (5 COLS) -->
-      <div class="lg:col-span-5 flex flex-col items-center justify-center p-4 rounded-3xl bg-slate-950/90 border border-slate-800/80 relative">
+      <!-- COLUMNA IZQUIERDA: TERMÓMETRO DE VIDRIO ILUSTRADO (md: 5 COLS) -->
+      <div class="md:col-span-5 flex flex-col items-center justify-center p-4 rounded-3xl bg-slate-950/90 border border-slate-800/80 relative">
 
         <!-- TERMÓMETRO VECTORIAL SVG ESTILO ILUSTRACIÓN CRISTALINA -->
-        <svg viewBox="0 0 140 310" class="w-28 sm:w-36 h-auto drop-shadow-2xl select-none overflow-visible">
+        <svg viewBox="0 0 140 310" class="w-24 sm:w-32 h-auto drop-shadow-2xl select-none overflow-visible cursor-pointer">
           <defs>
             <linearGradient id="glassGradient" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stop-color="#ffffff" stop-opacity="0.85" />
@@ -220,22 +229,26 @@ const seleccionarIndice = (idx: number) => {
           />
         </svg>
 
-        <div class="text-xs font-bold pt-2 text-center">
+        <div class="text-xs font-bold pt-2 text-center max-w-full px-2">
           <span v-if="indiceSeleccionado === -1" class="italic text-slate-500 font-mono text-[11px]">
             Selecciona una opción
           </span>
-          <span v-else class="px-3 py-1 rounded-full border text-white shadow-md inline-block" :style="{ backgroundColor: colorLiquido + '33', borderColor: colorLiquido }">
+          <span 
+            v-else 
+            class="px-3 py-1 rounded-full border text-white shadow-md inline-block whitespace-normal break-words text-xs leading-snug" 
+            :style="{ backgroundColor: colorLiquido + '33', borderColor: colorLiquido }"
+          >
             {{ opcionActual?.texto }}
           </span>
         </div>
 
       </div>
 
-      <!-- COLUMNA DERECHA: TODAS LAS OPCIONES DE RESPUESTA CON COLOR PROGRESIVO (ROJO -> VERDE) (7 COLS) -->
-      <div class="lg:col-span-7 space-y-3">
+      <!-- COLUMNA DERECHA: TODAS LAS OPCIONES DE RESPUESTA CON COLOR PROGRESIVO (ROJO -> AZUL) (md: 7 COLS) -->
+      <div class="md:col-span-7 space-y-3">
         <p class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
-          <span>Selecciona tu respuesta:</span>
-          <span class="text-[10px] font-mono text-slate-500">Menor puntaje (Rojo) ➔ Mayor puntaje (Verde)</span>
+          <span>Opciones del Termómetro:</span>
+          <span class="text-[10px] font-mono text-slate-500">Rojo (Menor) ➔ Azul (Mayor)</span>
         </p>
 
         <div class="space-y-2.5">
@@ -244,38 +257,48 @@ const seleccionarIndice = (idx: number) => {
             :key="opc.id || idx"
             @click="seleccionarIndice(idx)"
             :class="[
-              'p-3.5 sm:p-4 rounded-2xl border-2 transition-all duration-300 cursor-pointer flex items-center justify-between group select-none relative overflow-hidden',
-              indiceSeleccionado === idx
-                ? 'bg-slate-800 shadow-xl scale-[1.01]'
+              'p-3 sm:p-3.5 rounded-2xl border-2 transition-all duration-200 cursor-pointer flex items-center justify-between gap-3 group select-none relative overflow-hidden',
+              esOpcionSeleccionada(opc, idx)
+                ? 'bg-slate-800 shadow-xl scale-[1.01] ring-2 ring-white/50'
                 : 'bg-slate-950/60 border-slate-800/80 hover:border-slate-700 hover:bg-slate-800/50'
             ]"
-            :style="indiceSeleccionado === idx
-              ? { borderColor: obtenerColorOpcion(opc, idx, opcionesOrdenadas.length), backgroundColor: obtenerColorOpcion(opc, idx, opcionesOrdenadas.length) + '22' }
+            :style="esOpcionSeleccionada(opc, idx)
+              ? { borderColor: obtenerColorOpcion(opc, idx, opcionesOrdenadas.length), backgroundColor: obtenerColorOpcion(opc, idx, opcionesOrdenadas.length) + '33' }
               : { borderLeftColor: obtenerColorOpcion(opc, idx, opcionesOrdenadas.length), borderLeftWidth: '5px' }
             "
           >
-            <div class="flex items-center gap-3 relative z-10">
-              <span
-                class="w-4 h-4 rounded-full shrink-0 shadow-sm"
-                :style="{ backgroundColor: obtenerColorOpcion(opc, idx, opcionesOrdenadas.length) }"
-              />
-              <div>
-                <h4 class="text-sm font-bold text-white transition-colors">
+            <div class="">
+              <!-- Insignia Numérica del Puntaje con degradado Rojo -> Azul -->
+              <span 
+                class="w-7 h-7 rounded-xl flex items-center justify-center font-mono font-bold text-xs shrink-0 shadow-sm border transition-transform duration-200 group-hover:scale-110"
+                :style="esOpcionSeleccionada(opc, idx)
+                  ? { backgroundColor: '#ffffff', color: '#090d16', borderColor: '#ffffff' }
+                  : { backgroundColor: obtenerColorOpcion(opc, idx, opcionesOrdenadas.length) + '22', color: obtenerColorOpcion(opc, idx, opcionesOrdenadas.length), borderColor: obtenerColorOpcion(opc, idx, opcionesOrdenadas.length) + '88' }
+                "
+              >
+              
+              </span>
+
+              <div class="min-w-0 flex-1">
+                <h4 
+                  class="text-sm sm:text-base font-bold transition-colors leading-snug whitespace-normal break-words"
+                  :class="esOpcionSeleccionada(opc, idx) ? 'text-white' : 'text-slate-200'"
+                >
                   {{ opc.texto }}
                 </h4>
               </div>
             </div>
 
             <!-- Indicador de Selección con el color de la opción -->
-            <div class="relative z-10 flex items-center gap-2">
+            <div class="relative z-10 flex items-center gap-2 shrink-0">
               <div 
                 class="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all"
-                :style="indiceSeleccionado === idx
-                  ? { borderColor: obtenerColorOpcion(opc, idx, opcionesOrdenadas.length), backgroundColor: obtenerColorOpcion(opc, idx, opcionesOrdenadas.length), color: '#090d16' }
+                :style="esOpcionSeleccionada(opc, idx)
+                  ? { borderColor: obtenerColorOpcion(opc, idx, opcionesOrdenadas.length), backgroundColor: obtenerColorOpcion(opc, idx, opcionesOrdenadas.length), color: '#ffffff' }
                   : { borderColor: '#475569' }
                 "
               >
-                <CheckCircle2 v-if="indiceSeleccionado === idx" class="w-4 h-4 stroke-[3]" />
+                <Check v-if="esOpcionSeleccionada(opc, idx)" class="w-3.5 h-3.5 stroke-[3]" />
               </div>
             </div>
           </div>

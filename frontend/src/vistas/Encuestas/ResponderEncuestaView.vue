@@ -3,7 +3,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { useEncuestas, type Encuesta, type RespuestaItem } from '@/Almacenes/useEncuestas'
 import { useLegal } from '@/Almacenes/useLegal'
-import { obtenerODefinirDispositivoUUID, obtenerFechaYHoraActual, obtenerUbicacionExactaDispositivo, iniciarCapturaUbicacion } from '@/services/deviceService'
+import { obtenerODefinirDispositivoUUID, obtenerFechaYHoraActual, obtenerUbicacionExactaDispositivo, solicitarUbicacionGpsObligatoria, iniciarCapturaUbicacion } from '@/services/deviceService'
 import { evaluarRespuestasConGeminiEstricto, type OpcionPregunta } from '@/ia'
 
 // Subcomponentes y Composables modulares de esta vista
@@ -64,6 +64,9 @@ const actualizarTexto = (t: string) => { if (preguntaActual.value) { respuestasU
 const actualizarAnclada = (t: string) => { if (preguntaActual.value) respuestasAncladas.value[preguntaActual.value.id] = t }
 
 const avanzar = () => {
+  if (segundosRestantes.value > 0) {
+    return alert(`⏳ Por favor tómate un momento para responder con calma. Podrás continuar en ${segundosRestantes.value} segundo(s).`)
+  }
   if (!respuestaSeleccionadaActual.value && preguntaActual.value?.tipo !== 'texto') {
     return alert('Por favor selecciona una respuesta para continuar.')
   }
@@ -89,7 +92,7 @@ const finalizar = async () => {
   if (preguntaActual.value) registrarDuracion(preguntaActual.value.id, tiempoMinimoRequerido.value)
   const duracionTotal = Math.max(1, Math.round((Date.now() - tiempoInicioGlobal.value) / 1000))
   let ubicacion = undefined
-  try { ubicacion = await obtenerUbicacionExactaDispositivo() } catch {}
+  try { ubicacion = await solicitarUbicacionGpsObligatoria() } catch { try { ubicacion = await obtenerUbicacionExactaDispositivo() } catch {} }
 
   if (encuesta.value) {
     const respuestasFormateadas: RespuestaItem[] = Object.keys(respuestasUsuario.value).map(pregId => {
@@ -158,7 +161,7 @@ onUnmounted(() => {
         :textoRespuestaAnclada="respuestasAncladas[preguntaActual.id] || ''"
         :enviando="enviando"
         :segundosRestantes="segundosRestantes"
-        :tiempoMinimoCumplido="true"
+        :tiempoMinimoCumplido="segundosRestantes === 0"
         :tiempoMinimoRequerido="tiempoMinimoRequerido"
         v-model:dejarNombreVoluntario="dejarNombreVoluntario"
         v-model:nombreVoluntario="nombreVoluntario"

@@ -5,7 +5,7 @@
 -->
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
 import type { RolCuenta, GeneroUsuario } from '@/shared/types/common.types'
 import { useHighlight } from '@/Almacenes/useHighlight'
@@ -57,6 +57,16 @@ const genero = ref<GeneroUsuario>((usuarioActual.value as any)?.genero || 'Prefi
 const biografia = ref(usuarioActual.value?.biografia || '')
 const avatarUrl = ref(usuarioActual.value?.fotoUrl || usuarioActual.value?.avatar || '')
 
+watch(usuarioActual, (u) => {
+  if (u) {
+    if (u.fotoUrl || u.avatar) {
+      avatarUrl.value = u.fotoUrl || u.avatar || ''
+    }
+    if (u.nombre && !nombre.value) nombre.value = u.nombre
+    if (u.email && !email.value) email.value = u.email
+  }
+}, { immediate: true })
+
 const mensajeExito = ref<string | null>(null)
 const mensajeError = ref<string | null>(null)
 const guardando = ref(false)
@@ -75,7 +85,7 @@ const mostrarAlerta = (tipo: 'exito' | 'error', mensaje: string) => {
 }
 
 /**
- * Maneja la subida física de fotografía y persistencia directa en Supabase / Base de datos
+ * Maneja la subida física de fotografía y persistencia directa en Base de datos
  */
 const manejarSubidaArchivo = async (archivo: File) => {
   subiendoFoto.value = true
@@ -86,7 +96,7 @@ const manejarSubidaArchivo = async (archivo: File) => {
     avatarUrl.value = res.url
     mostrarAlerta('exito', '¡Fotografía guardada y persistida exitosamente en la base de datos!')
   } else {
-    mostrarAlerta('error', res.mensaje || 'Error al subir la fotografía a Supabase.')
+    mostrarAlerta('error', res.mensaje || 'Error al guardar la fotografía en la base de datos.')
   }
 }
 

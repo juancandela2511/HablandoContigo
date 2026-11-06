@@ -6,14 +6,7 @@
   ¿QUÉ ES Y QUÉ HACE?
   Medidor circular SVG ('radial progress gauge') con halo de resplandor neón 3D,
   degradado continuo en el arco y cálculo automático de perímetro angular según el valor porcentual.
-  
-  ¿PARA QUÉ SIRVE?
-  - Representar métricas clave como eNPS (+46), Índice de Salud Global (84/100) y Riesgo de Burnout.
-  - Generar impacto visual inmediato en el panel de control ejecutivo.
-  
-  ¿CON QUÉ ESTÁ VINCULADO / CONECTADO?
-  - DashboardView.vue: Tarjeta KPI principal de salud eNPS.
-  - SimuladorImpactoClima.vue: Medidor que reacciona a los sliders de simulación.
+  Indica visualmente si el Clima Laboral es BUENO, REGULAR o MALO.
 -->
 
 <script setup lang="ts">
@@ -67,10 +60,30 @@ const colorDinamico = computed(() => {
     if (v <= 40) return '#f59e0b' // Amarillo: moderado
     return '#ef4444'              // Rojo: crítico
   }
-  if (v >= 80) return '#10b981'   // Verde: óptimo
-  if (v >= 70) return '#38bdf8'   // Azul: bueno
-  if (v >= 60) return '#f59e0b'   // Amarillo: alerta
-  return '#ef4444'                // Rojo: crítico
+  if (v >= 70) return '#10b981'   // Verde: Clima Bueno
+  if (v >= 50) return '#f59e0b'   // Amarillo: Clima Regular
+  return '#ef4444'                // Rojo: Clima Malo
+})
+
+/** Etiqueta clara de diagnóstico: Bueno, Regular o Malo */
+const diagnosticoClima = computed(() => {
+  const v = valorSeguro.value
+  if (v >= 70) {
+    return {
+      texto: 'CLIMA BUENO',
+      clase: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+    }
+  }
+  if (v >= 50) {
+    return {
+      texto: 'CLIMA REGULAR',
+      clase: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
+    }
+  }
+  return {
+    texto: 'CLIMA MALO',
+    clase: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30'
+  }
 })
 </script>
 
@@ -129,8 +142,18 @@ const colorDinamico = computed(() => {
       </div>
     </div>
 
+    <!-- Insignia de Clasificación (Clima Bueno / Regular / Malo) -->
+    <div class="mt-2">
+      <span
+        class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border inline-block"
+        :class="diagnosticoClima.clase"
+      >
+        {{ diagnosticoClima.texto }}
+      </span>
+    </div>
+
     <!-- Título y Subtítulo Inferior -->
-    <div v-if="titulo" class="mt-2 text-center space-y-0.5">
+    <div v-if="titulo" class="mt-1.5 text-center space-y-0.5">
       <p class="text-xs font-bold text-slate-900 dark:text-white">{{ titulo }}</p>
       <p v-if="subtitulo" class="text-[10px] text-slate-500 dark:text-slate-400">{{ subtitulo }}</p>
     </div>

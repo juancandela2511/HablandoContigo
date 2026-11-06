@@ -9,7 +9,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { OpcionPregunta } from '@/ia'
+import { resolverColorExactoOpcion, type OpcionPregunta } from '@/ia'
 
 const props = defineProps<{
   opciones?: OpcionPregunta[]
@@ -20,7 +20,7 @@ const emit = defineEmits<{
   (e: 'seleccionar', opcion: OpcionPregunta): void
 }>()
 
-// Ordenar de menor a mayor puntaje para que de izquierda a derecha vaya de Rojo (menor) a Verde (mayor)
+// Ordenar de menor a mayor puntaje para que de izquierda a derecha vaya de Rojo (menor) a Azul (mayor)
 const opcionesOrdenadas = computed<OpcionPregunta[]>(() => {
   const ops = props.opciones || []
   return [...ops].sort((a, b) => {
@@ -31,14 +31,7 @@ const opcionesOrdenadas = computed<OpcionPregunta[]>(() => {
 })
 
 const obtenerColorOpcion = (opc: OpcionPregunta, idx: number, total: number): string => {
-  if (opc?.color && opc.color.trim().length > 0) return opc.color
-  const r = total > 1 ? idx / (total - 1) : 0.5
-  const val = typeof opc?.valor === 'number' ? opc.valor : Math.round(1 + r * 4)
-  if (val <= 1 || r <= 0.2) return '#ef4444' // Rojo menor puntaje
-  if (val === 2 || r <= 0.4) return '#f97316' // Naranja
-  if (val === 3 || r <= 0.6) return '#f59e0b' // Ámbar / Amarillo
-  if (val === 4 || r <= 0.8) return '#22c55e' // Verde claro
-  return '#10b981' // Verde mayor
+  return resolverColorExactoOpcion(opc, idx, total)
 }
 
 const esSeleccionada = (opc: OpcionPregunta): boolean => {
@@ -81,7 +74,7 @@ const esSeleccionada = (opc: OpcionPregunta): boolean => {
 
     <div class="flex items-center justify-between text-[11px] font-bold px-1 font-sans">
       <span class="text-rose-400">🔴 Menor puntaje</span>
-      <span class="text-emerald-400">🟢 Mayor puntaje</span>
+      <span class="text-blue-400">🔵 Mayor puntaje</span>
     </div>
   </div>
 </template>

@@ -1,8 +1,9 @@
 /**
  * ============================================================================
- * MIDDLEWARE DE AUTENTICACIÓN JWT (server/src/middlewares/authMiddleware.ts)
+ * MIDDLEWARE DE AUTENTICACIÓN JWT (Backend/src/middlewares/authMiddleware.ts)
  * ============================================================================
- * Valida el Bearer Token JWT en los encabezados HTTP para proteger rutas privadas.
+ * Valida el Bearer Token JWT en los encabezados HTTP para proteger rutas privadas
+ * y ofrece soporte flexible para persistencia de contingencia.
  */
 
 import { Request, Response, NextFunction } from 'express'
@@ -28,14 +29,12 @@ declare global {
 
 export function verificarToken(req: Request, res: Response, next: NextFunction): void {
   const authHeader = req.headers.authorization
-
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     res.status(401).json({ ok: false, error: 'Acceso no autorizado. Token no proporcionado o formato inválido.' })
     return
   }
 
   const token = authHeader.split(' ')[1]
-
   try {
     const payload = jwt.verify(token, JWT_SECRET) as UsuarioAuthPayload
     req.usuario = payload
@@ -43,4 +42,16 @@ export function verificarToken(req: Request, res: Response, next: NextFunction):
   } catch (err: any) {
     res.status(401).json({ ok: false, error: 'Token inválido o expirado.', details: err.message })
   }
+}
+
+export function verificarTokenFlexible(req: Request, _res: Response, next: NextFunction): void {
+  const authHeader = req.headers.authorization
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.split(' ')[1]
+    try {
+      const payload = jwt.verify(token, JWT_SECRET) as UsuarioAuthPayload
+      req.usuario = payload
+    } catch {}
+  }
+  next()
 }

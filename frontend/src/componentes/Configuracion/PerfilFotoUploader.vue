@@ -1,19 +1,14 @@
 <!--
   ============================================================================
-  COMPONENTE CARGA Y GESTIÓN DE FOTO DE PERFIL CON DRAG & DROP (PerfilFotoUploader.vue)
+  COMPONENTE CARGA Y GESTIÓN DE FOTO DE PERFIL (PerfilFotoUploader.vue)
   ============================================================================
-  
-  ¿QUÉ ES Y QUÉ HACE?
-  Gestiona la imagen de perfil del usuario administrador:
-  - Preview circular con efecto zoom y overlay interactivo.
-  - Soporte completo de DRAG & DROP (arrastrar y soltar fotos directamente).
-  - Selección de archivo local (validando formato PNG/JPG/WEBP y tamaño máximo de 5MB).
-  - Persistencia directa en Supabase.
+  Gestiona la imagen de perfil con arrastrar y soltar, previsualización
+  inmediata y persistencia directa en la base de datos y sesión.
 -->
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Camera, Upload, Check, Loader2, Sparkles } from 'lucide-vue-next'
+import { Camera, Upload, Loader2 } from 'lucide-vue-next'
 
 const props = defineProps<{
   avatarUrl: string
@@ -30,6 +25,11 @@ const emit = defineEmits<{
 const inputArchivoRef = ref<HTMLInputElement | null>(null)
 const arrastrandoSobre = ref(false)
 
+const esImagenValida = (url?: string) => {
+  if (!url) return false
+  return url.startsWith('data:image') || url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/')
+}
+
 const abrirSelectorArchivo = () => {
   if (props.subiendo) return
   inputArchivoRef.value?.click()
@@ -40,12 +40,10 @@ const validarYSubirArchivo = (archivo: File) => {
     emit('mostrarAlerta', 'error', 'Por favor selecciona un archivo de imagen válido (PNG, JPG, JPEG, WEBP).')
     return
   }
-
   if (archivo.size > 5 * 1024 * 1024) {
     emit('mostrarAlerta', 'error', 'La imagen excede el tamaño máximo permitido de 5MB.')
     return
   }
-
   emit('subirArchivo', archivo)
 }
 
@@ -53,24 +51,16 @@ const manejarCargaFoto = (evento: Event) => {
   const elementoInput = evento.target as HTMLInputElement
   const archivos = elementoInput.files
   if (!archivos || archivos.length === 0) return
-
-  const archivo = archivos[0]
-  if (!archivo) return
-
-  validarYSubirArchivo(archivo)
+  validarYSubirArchivo(archivos[0])
   elementoInput.value = ''
 }
 
 const manejarSoltarFoto = (evento: DragEvent) => {
   arrastrandoSobre.value = false
   if (props.subiendo) return
-
   const archivos = evento.dataTransfer?.files
-  if (!archivos || archivos.length === 0) return
-
-  const archivo = archivos[0]
-  if (archivo) {
-    validarYSubirArchivo(archivo)
+  if (archivos && archivos.length > 0) {
+    validarYSubirArchivo(archivos[0])
   }
 }
 </script>
@@ -88,7 +78,6 @@ const manejarSoltarFoto = (evento: DragEvent) => {
         : 'bg-white/80 dark:bg-slate-900/80 border-slate-200/80 dark:border-white/10'
     ]"
   >
-    <!-- Overlay de Drag & Drop activo -->
     <div 
       v-if="arrastrandoSobre" 
       class="absolute inset-0 bg-sky-600/10 dark:bg-sky-500/10 rounded-3xl flex flex-col items-center justify-center pointer-events-none z-20 backdrop-blur-[2px]"
@@ -108,7 +97,6 @@ const manejarSoltarFoto = (evento: DragEvent) => {
       </span>
     </div>
 
-    <!-- Avatar Preview con botón de carga superpuesto -->
     <div class="relative w-36 h-36 mx-auto group">
       <div 
         :class="[
@@ -119,7 +107,7 @@ const manejarSoltarFoto = (evento: DragEvent) => {
         ]"
       >
         <img 
-          v-if="avatarUrl"
+          v-if="esImagenValida(avatarUrl)"
           :src="avatarUrl" 
           alt="Foto de perfil" 
           class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
@@ -129,17 +117,15 @@ const manejarSoltarFoto = (evento: DragEvent) => {
           <span class="text-[10px] font-medium">Sin fotografía</span>
         </div>
 
-        <!-- Spinner mientras sube a Supabase -->
         <div 
           v-if="subiendo" 
           class="absolute inset-0 bg-slate-950/70 flex flex-col items-center justify-center text-white gap-2 backdrop-blur-sm z-10"
         >
           <Loader2 class="w-7 h-7 text-sky-400 animate-spin" />
-          <span class="text-[10px] font-bold">Guardando en Supabase...</span>
+          <span class="text-[10px] font-bold">Guardando fotografía...</span>
         </div>
       </div>
 
-      <!-- Overlay botón para cambiar foto -->
       <button
         v-if="!subiendo"
         type="button"
@@ -148,33 +134,21 @@ const manejarSoltarFoto = (evento: DragEvent) => {
         title="Hacer clic para cambiar fotografía o arrastra una imagen aquí"
       >
         <Camera class="w-6 h-6 text-sky-400" />
-        <span class="text-[10px] font-semibold">{{ avatarUrl ? 'Cambiar Foto' : 'Subir Foto' }}</span>
+        <span class="text-[10px] font-semibold">Cambiar foto</span>
       </button>
+
+      <input 
+        ref="inputArchivoRef"
+        type="file" 
+        accept="image/png,image/jpeg,image/jpg,image/webp" 
+        class="hidden" 
+        @change="manejarCargaFoto"
+      />
     </div>
 
-    <!-- Input invisible para selección de archivo -->
-    <input 
-      ref="inputArchivoRef"
-      type="file" 
-      accept="image/*" 
-      class="hidden" 
-      @change="manejarCargaFoto"
-    />
-
-    <!-- Botones de Acción para la Foto -->
-    <div class="space-y-2">
-      <button
-        type="button"
-        :disabled="subiendo"
-        @click="abrirSelectorArchivo"
-        class="w-full py-2.5 px-4 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-white text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
-      >
-        <Loader2 v-if="subiendo" class="w-4 h-4 text-sky-500 animate-spin" />
-        <Upload v-else class="w-4 h-4 text-sky-500" />
-        <span>{{ subiendo ? 'Guardando en Base de Datos...' : (avatarUrl ? 'Subir o Arrastrar Nueva Foto' : 'Cargar o Arrastrar Fotografía') }}</span>
-      </button>
-      <p class="text-[11px] text-slate-500 dark:text-slate-400">
-        Arrastra tu imagen aquí o haz clic para examinar (PNG, JPG, WEBP máx. 5MB)
+    <div class="space-y-1.5 pt-1">
+      <p class="text-xs text-slate-500 dark:text-slate-400">
+        JPG, PNG o WEBP. Redimensión y persistencia automática en base de datos.
       </p>
     </div>
   </div>

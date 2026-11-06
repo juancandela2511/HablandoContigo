@@ -29,7 +29,7 @@ const emit = defineEmits<{
         <GraduationCap class="w-4 h-4" />
       </div>
       <h2 class="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-900 dark:text-white">
-        {{ tituloModulo || 'Estadística de Estudios & Talento' }}
+        {{  'Estadística de Estudios & Talento' }}
       </h2>
     </div>
 
@@ -40,7 +40,7 @@ const emit = defineEmits<{
         class="px-3 py-1.5 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/20 text-xs font-bold text-sky-600 dark:text-sky-400 flex items-center gap-1.5 transition-all cursor-pointer"
       >
         <Settings class="w-3.5 h-3.5 text-sky-500" />
-        <span>Configurar</span>
+       
       </button>
 
       <div class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
@@ -49,7 +49,7 @@ const emit = defineEmits<{
       </div>
 
       <div class="px-3 py-1.5 rounded-xl bg-purple-500/10 text-xs font-bold text-purple-600 dark:text-purple-400 flex items-center gap-1.5">
-        <Sparkles class="w-3.5 h-3.5 text-purple-500" />
+        
         <span>{{ totalHabilidadesUnicas }} Áreas</span>
       </div>
     </div>

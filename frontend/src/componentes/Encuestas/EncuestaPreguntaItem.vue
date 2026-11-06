@@ -10,7 +10,6 @@
 import { computed } from 'vue'
 import type { PreguntaEncuesta, OpcionPregunta } from '@/ia'
 import { TarjetaContenedor } from '@/componentes/ElementosBase'
-import { AlertTriangle, HeartHandshake } from 'lucide-vue-next'
 
 import PreguntaEscalaNumerica from './Preguntas/PreguntaEscalaNumerica.vue'
 import PreguntaOpcionMultiple from './Preguntas/PreguntaOpcionMultiple.vue'
@@ -68,6 +67,9 @@ const esPreguntaEscala = computed(() => {
 const comentariosHabilitados = computed(() => {
   const p = props.preguntaActual as any
   if (!p) return false
+  if (p.comentariosHabilitados === false || p.deteccionQuejas === false || p.solicitarPorQueSiNegativo === false) {
+    return false
+  }
   return Boolean(
     p.comentariosHabilitados ||
     p.deteccionQuejas ||
@@ -75,7 +77,7 @@ const comentariosHabilitados = computed(() => {
   )
 })
 
-// Solo dará la opción de comentar si se selecciona la opción de MENOR puntaje / valor numérico
+// Dará la opción de comentar si se selecciona una opción negativa / de alerta o de menor puntaje
 const esOpcionDeMenorPuntaje = computed(() => {
   if (!props.respuestaSeleccionada) return false
 
@@ -84,9 +86,13 @@ const esOpcionDeMenorPuntaje = computed(() => {
   const valNum = Number(val)
   const texto = typeof resp === 'object' && resp !== null ? resp.texto : String(resp ?? '')
 
-  // 1. Escala (1 a 5) -> el menor puntaje es 1
+  if (typeof resp === 'object' && resp !== null && (resp.esAlerta || resp.esNegativa)) {
+    return true
+  }
+
+  // 1. Escala (1 a 5) -> puntajes bajos (1 o 2) habilitan el comentario
   if (esPreguntaEscala.value) {
-    return valNum === 1
+    return valNum <= 2
   }
 
   // 2. Opciones de selección -> comparar con el menor valor numérico
@@ -180,7 +186,7 @@ const sugerenciasRapidasJefe = [
         :segundosRestantes="segundosRestantes"
         :tiempoMinimoCumplido="tiempoMinimoCumplido"
         @seleccionar="emit('seleccionarOpcion', $event)"
-        @avanzarAuto="emit('avanzarPregunta')"
+        @avanzarAuto="!debeMostrarCampoComentarios && emit('avanzarPregunta')"
       />
 
       <PreguntaTextoAbierto

@@ -36,9 +36,42 @@ const router = useRouter()
 const {
   graficosAnclados,
   totalGraficos,
+  actualizarGrafico,
   eliminarGraficoAnclado,
   calcularDatosGrafico
 } = useAnclajeGraficos()
+
+const obtenerPreguntaDeGrafico = (grafico: GraficoAnclado): PreguntaEncuesta | undefined => {
+  const lista = props.preguntasDisponibles || []
+  return lista.find(p =>
+    p.id === grafico.idPregunta ||
+    (p.texto && grafico.textoPregunta && p.texto.trim().toLowerCase() === grafico.textoPregunta.trim().toLowerCase())
+  )
+}
+
+const obtenerTipoGraficoEfectivo = (grafico: GraficoAnclado): 'barras' | 'pastel' => {
+  const preg = obtenerPreguntaDeGrafico(grafico)
+  if (preg?.tipoGrafico === 'pastel' || grafico.tipoGrafico === 'pastel') {
+    // Si la pregunta tiene explícitamente un tipoGrafico distinto, sincronizar
+    if (preg?.tipoGrafico === 'pastel' && grafico.tipoGrafico !== 'pastel') {
+      return 'pastel'
+    }
+    if (grafico.tipoGrafico === 'pastel') {
+      return 'pastel'
+    }
+  }
+  return 'barras'
+}
+
+const alternarTipoGraficoEnTarjeta = (grafico: GraficoAnclado) => {
+  const actual = obtenerTipoGraficoEfectivo(grafico)
+  const nuevo: 'barras' | 'pastel' = actual === 'pastel' ? 'barras' : 'pastel'
+  const preg = obtenerPreguntaDeGrafico(grafico)
+  if (preg) {
+    preg.tipoGrafico = nuevo
+  }
+  actualizarGrafico(grafico.id, { tipoGrafico: nuevo })
+}
 
 const cargandoCalculos = ref(false)
 const datosCalculadosPorGrafico = ref<Record<string, ResultadoAdaptacionGrafico>>({})
@@ -82,9 +115,19 @@ const extraerComentariosDeGrafico = (grafico: GraficoAnclado): string[] => {
 }
 
 const analizarComentariosDeGrafico = async (grafico: GraficoAnclado) => {
+  const comentarios = extraerComentariosDeGrafico(grafico)
+  if (comentarios.length === 0) {
+    resumenesIAPorGrafico.value[grafico.id] = {
+      resumenGeneral: 'Sin comentarios escritos registrados en esta pregunta.',
+      sentimientoGeneral: 'Neutral',
+      temasDetectados: [],
+      totalComentariosAnalizados: 0,
+      generadoPorIA: false
+    }
+    return
+  }
   cargandoResumenesIA.value[grafico.id] = true
   try {
-    const comentarios = extraerComentariosDeGrafico(grafico)
     const resumen = await resumirComentariosPreguntaConOllama(
       grafico.textoPregunta || grafico.titulo,
       comentarios
@@ -208,15 +251,18 @@ watch(
                 >
                   Pregunta #{{ obtenerIndicePregunta(grafico) + 1 }}
                 </span>
-                <span
-                  class="px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono flex items-center gap-1"
-                  :class="grafico.tipoGrafico === 'barras' 
+                <button
+                  type="button"
+                  @click="alternarTipoGraficoEnTarjeta(grafico)"
+                  class="px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono flex items-center gap-1 cursor-pointer transition-all hover:scale-105"
+                  :class="obtenerTipoGraficoEfectivo(grafico) === 'barras' 
                     ? 'bg-sky-100 dark:bg-sky-950/60 text-sky-700 dark:text-sky-400' 
                     : 'bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400'"
+                  title="Haz clic para alternar entre Gráfico de Barras y Gráfico de Pastel"
                 >
-                  <component :is="grafico.tipoGrafico === 'barras' ? BarChart3 : PieChart" class="w-3 h-3" />
-                  {{ grafico.tipoGrafico === 'barras' ? 'Gráfico de Barras' : 'Gráfico de Pastel' }}
-                </span>
+                  <component :is="obtenerTipoGraficoEfectivo(grafico) === 'barras' ? BarChart3 : PieChart" class="w-3 h-3" />
+                  {{ obtenerTipoGraficoEfectivo(grafico) === 'barras' ? 'Gráfico de Barras' : 'Gráfico de Pastel' }}
+                </button>
 
                 <span class="text-[10px] font-mono text-slate-400">
                   {{ datosCalculadosPorGrafico[grafico.id]?.totalMuestras || 0 }} respuestas
@@ -246,7 +292,7 @@ watch(
 
         <!-- Visualizador (Barras o Pastel) -->
         <GraficosAncladosVisualizador
-          :tipoGrafico="grafico.tipoGrafico"
+          :tipoGrafico="obtenerTipoGraficoEfectivo(grafico)"
           :segmentos="datosCalculadosPorGrafico[grafico.id]?.segmentos || []"
           :totalMuestras="datosCalculadosPorGrafico[grafico.id]?.totalMuestras || 0"
         />

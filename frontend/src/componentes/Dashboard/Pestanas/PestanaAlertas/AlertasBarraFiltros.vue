@@ -131,12 +131,7 @@ const emit = defineEmits<{
       </div>
     </div>
 
-    <!-- Barra de Filtros por Criterio / Tipo de Alerta -->
-    <div class="flex flex-wrap items-center gap-1.5 p-2.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs">
-      <span class="text-[11px] font-semibold text-slate-400 px-2 flex items-center gap-1">
-        <Filter class="w-3 h-3" />
-        <span>Tipo de Alerta:</span>
-      </span>
+  
 
       <button
         type="button"
@@ -150,37 +145,9 @@ const emit = defineEmits<{
       </button>
 
       <!-- Botones Dinámicos para cada Tipo -->
-      <div
-        v-for="tipo in tiposAlertas"
-        :key="tipo.id"
-        class="inline-flex items-center rounded-xl overflow-hidden border transition-all"
-        :class="filtroTipoId === tipo.id 
-          ? 'bg-amber-600 border-amber-600 text-white font-bold shadow-sm' 
-          : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'"
-      >
-        <button
-          type="button"
-          @click="emit('update:filtroTipoId', tipo.id)"
-          class="px-3 py-1.5 flex items-center gap-1.5 text-xs cursor-pointer"
-        >
-          <span 
-            class="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded"
-            :class="tipo.nivel === 1 ? 'bg-red-500 text-white' : tipo.nivel === 2 ? 'bg-rose-500 text-white' : 'bg-slate-700 text-slate-200'"
-          >
-            N{{ tipo.nivel }}
-          </span>
-          <span>{{ tipo.nombre }} ({{ contarAlertasPorTipo(tipo) }})</span>
-        </button>
+  
 
-        <button
-          type="button"
-          @click.stop="emit('eliminarTipoAlerta', tipo.id)"
-          class="px-1.5 py-1.5 hover:bg-black/20 text-slate-400 hover:text-red-400 transition-colors cursor-pointer"
-          title="Eliminar este tipo de alerta"
-        >
-          <X class="w-3 h-3" />
-        </button>
       </div>
-    </div>
-  </div>
+    
+ 
 </template>

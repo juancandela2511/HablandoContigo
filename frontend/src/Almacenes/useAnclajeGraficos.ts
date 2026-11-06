@@ -11,6 +11,7 @@
 import { ref, computed } from 'vue'
 import type { PreguntaEncuesta } from '@/ia'
 import { adaptarRespuestasAGrafico, type ResultadoAdaptacionGrafico } from '@/services/adaptadorRespuestasGraficos'
+import preguntasJson from '@/database/preguntas.json'
 
 import type { SegmentoGrafico } from '@/services/adaptadorRespuestasGraficos'
 
@@ -30,46 +31,115 @@ export interface GraficoAnclado {
   idEncuesta?: string
 }
 
-const CLAVE_STORAGE = 'hablandocontigo_anclajes_graficos_v3'
+const CLAVE_STORAGE = 'hablandocontigo_anclajes_graficos_v5'
 
-// Gráficos por defecto iniciales
-const ANCLAJES_INICIALES: GraficoAnclado[] = [
-  {
-    id: 'anclaje-001',
-    idEncuesta: 'enc-001',
-    titulo: 'Clima Laboral y Respeto',
-    idPregunta: 'b1-p1',
-    textoPregunta: '¿Cómo evalúas el ambiente de trabajo y el respeto entre compañeros?',
-    tipoGrafico: 'barras',
-    descripcion: 'Distribución porcentual del clima general.'
-  },
-  {
-    id: 'anclaje-002',
-    idEncuesta: 'enc-001',
-    titulo: 'Proyección y Sentido de Pertenencia',
-    idPregunta: 'b1-p2',
-    textoPregunta: '¿Te sientes motivado y respaldado por tus líderes de área?',
-    tipoGrafico: 'pastel',
-    descripcion: 'Proporción de respuestas favorables vs desfavorables.'
-  }
-]
+// Generar gráficos por defecto para TODAS las 32 preguntas de la encuesta oficial
+function construirAnclajesPredeterminados(preguntas: any[] = preguntasJson): GraficoAnclado[] {
+  return (preguntas || []).map((p: any, idx: number) => {
+    const tipoGrafico: TipoGraficoAnclado = p.tipoGrafico ? (p.tipoGrafico === 'pastel' ? 'pastel' : 'barras') : (idx % 2 === 0 ? 'barras' : 'pastel')
+    const texto = String(p.texto || '')
+    return {
+      id: `anclaje-auto-${p.id}`,
+      idEncuesta: 'enc-001',
+      titulo: `Estadística: ${texto.substring(0, 48)}${texto.length > 48 ? '...' : ''}`,
+      idPregunta: p.id,
+      textoPregunta: texto,
+      tipoGrafico,
+      descripcion: tipoGrafico === 'barras'
+        ? 'Análisis comparativo de frecuencias en gráfico de barras.'
+        : 'Distribución porcentual en gráfico circular.'
+    }
+  })
+}
+
+const ANCLAJES_INICIALES: GraficoAnclado[] = construirAnclajesPredeterminados(preguntasJson)
+
+function obtenerTiposGraficoDesdeEncuestasLocales(): Map<string, TipoGraficoAnclado> {
+  const mapa = new Map<string, TipoGraficoAnclado>()
+  try {
+    const claves = [
+      'hablandocontigo_encuestas',
+      'hablandocontigo_proyectos_guardados_v2',
+      'hablandocontigo_encuestas_clima_v14'
+    ]
+    claves.forEach(clave => {
+      const raw = localStorage.getItem(clave)
+      if (raw) {
+        const encuestas = JSON.parse(raw)
+        if (Array.isArray(encuestas)) {
+          encuestas.forEach((enc: any) => {
+            ;(enc?.preguntas || []).forEach((p: any) => {
+              if (p?.id && (p.tipoGrafico === 'pastel' || p.tipoGrafico === 'barras')) {
+                mapa.set(p.id, p.tipoGrafico)
+              }
+            })
+          })
+        }
+      }
+    })
+  } catch {}
+  return mapa
+}
+
+function sincronizarAnclajesConConfiguracion(guardados: GraficoAnclado[] = []): GraficoAnclado[] {
+  const mapaGuardados = new Map(guardados.map(g => [g.idPregunta, g]))
+  const mapaDesdeEncuestas = obtenerTiposGraficoDesdeEncuestasLocales()
+  const listaBase = (preguntasJson as any[]).map((p: any, idx: number) => {
+    const guardado = mapaGuardados.get(p.id)
+    const tipoEnEncuesta = mapaDesdeEncuestas.get(p.id)
+    // Priorizar la elección guardada por el usuario (en encuesta activa o en anclajes) sobre el JSON estático
+    const tipoGrafico: TipoGraficoAnclado =
+      tipoEnEncuesta === 'pastel' || guardado?.tipoGrafico === 'pastel'
+        ? 'pastel'
+        : guardado?.tipoGrafico
+          ? (guardado.tipoGrafico === 'pastel' ? 'pastel' : 'barras')
+          : tipoEnEncuesta
+            ? tipoEnEncuesta
+            : p.tipoGrafico
+              ? (p.tipoGrafico === 'pastel' ? 'pastel' : 'barras')
+              : (idx % 2 === 0 ? 'barras' : 'pastel')
+    const texto = String(guardado?.textoPregunta || p.texto || '')
+    return {
+      id: guardado?.id || `anclaje-auto-${p.id}`,
+      idEncuesta: guardado?.idEncuesta || 'enc-001',
+      titulo: guardado?.titulo || `Estadística: ${texto.substring(0, 48)}${texto.length > 48 ? '...' : ''}`,
+      idPregunta: p.id,
+      textoPregunta: texto,
+      tipoGrafico,
+      descripcion: tipoGrafico === 'barras'
+        ? 'Análisis comparativo de frecuencias en gráfico de barras.'
+        : 'Distribución porcentual en gráfico circular.'
+    }
+  })
+
+  // Conservar estadísticas adicionales creadas por el usuario para preguntas personalizadas
+  guardados.forEach(g => {
+    if (!listaBase.some(item => item.idPregunta === g.idPregunta)) {
+      listaBase.push(g)
+    }
+  })
+
+  return listaBase
+}
 
 function cargarAnclajes(): GraficoAnclado[] {
+  let guardados: GraficoAnclado[] = []
   try {
     const raw = localStorage.getItem(CLAVE_STORAGE)
     if (raw) {
       const parsed = JSON.parse(raw)
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed.map(g => ({
-          ...g,
-          tipoGrafico: g.tipoGrafico === 'barras' ? 'barras' : 'pastel'
-        }))
+        guardados = parsed
       }
     }
   } catch (e) {
     console.warn('[useAnclajeGraficos] Error leyendo localStorage:', e)
   }
-  return ANCLAJES_INICIALES
+  const sincronizados = sincronizarAnclajesConConfiguracion(guardados)
+  try {
+    localStorage.setItem(CLAVE_STORAGE, JSON.stringify(sincronizados))
+  } catch {}
+  return sincronizados
 }
 
 const graficosAnclados = ref<GraficoAnclado[]>(cargarAnclajes())
@@ -123,6 +193,7 @@ export function useAnclajeGraficos() {
     idEncuesta?: string
   ) => {
     const tipoGrafico: TipoGraficoAnclado = tipoGraficoDeseado === 'barras' ? 'barras' : 'pastel'
+    pregunta.tipoGrafico = tipoGrafico
     const existente = graficosAnclados.value.find(g => 
       g.idPregunta === pregunta.id || 
       (g.textoPregunta && pregunta.texto && g.textoPregunta.trim().toLowerCase() === pregunta.texto.trim().toLowerCase())
@@ -174,38 +245,25 @@ export function useAnclajeGraficos() {
     idEncuesta: string = 'enc-001'
   ): number => {
     let creados = 0
-    const preguntasConOpciones = preguntas.filter(p => p.tipo === 'multiple' || p.tipo === 'si_no' || p.tipo === 'escala' || p.tipo === 'texto')
-    if (preguntasConOpciones.length === 0) return 0
+    const lista = preguntas.length > 0 ? preguntas : (preguntasJson as unknown as PreguntaEncuesta[])
+    if (lista.length === 0) return 0
 
-    // Primer pregunta a Barras si no está ya
-    const p1 = preguntasConOpciones[0]
-    if (p1 && !graficosAnclados.value.some(g => g.idPregunta === p1.id)) {
-      anclarGrafico({
-        idEncuesta,
-        idPregunta: p1.id,
-        textoPregunta: p1.texto,
-        titulo: `Estadística: ${p1.texto.substring(0, 45)}`,
-        tipoGrafico: 'barras',
-        descripcion: 'Análisis de frecuencias en gráfico de barras.'
-      })
-      creados++
-    }
-
-    // Segunda pregunta a Pastel si no está ya
-    if (preguntasConOpciones.length > 1) {
-      const p2 = preguntasConOpciones[1]
-      if (p2 && !graficosAnclados.value.some(g => g.idPregunta === p2.id)) {
+    lista.forEach((p, idx) => {
+      if (p && !graficosAnclados.value.some(g => g.idPregunta === p.id)) {
+        const tipoGrafico: TipoGraficoAnclado = p.tipoGrafico ? (p.tipoGrafico === 'pastel' ? 'pastel' : 'barras') : (idx % 2 === 0 ? 'barras' : 'pastel')
         anclarGrafico({
           idEncuesta,
-          idPregunta: p2.id,
-          textoPregunta: p2.texto,
-          titulo: `Distribución: ${p2.texto.substring(0, 45)}`,
-          tipoGrafico: 'pastel',
-          descripcion: 'Distribución porcentual en gráfico circular.'
+          idPregunta: p.id,
+          textoPregunta: p.texto,
+          titulo: `Estadística: ${p.texto.substring(0, 48)}${p.texto.length > 48 ? '...' : ''}`,
+          tipoGrafico,
+          descripcion: tipoGrafico === 'barras'
+            ? 'Análisis de frecuencias en gráfico de barras.'
+            : 'Distribución porcentual en gráfico circular.'
         })
         creados++
       }
-    }
+    })
 
     return creados
   }

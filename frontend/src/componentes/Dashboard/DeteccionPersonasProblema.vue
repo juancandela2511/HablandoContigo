@@ -32,14 +32,15 @@ const actualizarDeteccion = async () => {
     if (actual === solicitudIA) {
       tarjetasPersonas.value = res
     }
-  } catch {
+  } catch (err) {
+    console.error('[DeteccionPersonasProblema] Error al detectar personas mencionadas:', err)
     if (actual === solicitudIA) {
       tarjetasPersonas.value = []
     }
   }
 }
 
-watch(() => [respuestasAnonimas.value.length, estadosCasos.value], actualizarDeteccion, { immediate: true, deep: true })
+watch([respuestasAnonimas, estadosCasos], actualizarDeteccion, { immediate: true, deep: true })
 
 const abrirComentariosPersona = (tarjeta: BloqueAlertaItem) => {
   tarjetaSeleccionada.value = tarjeta
@@ -64,14 +65,12 @@ const manejarCambioEstado = async (id: string, nuevoEstado: 'Detectada' | 'En Re
         </div>
         <div>
           <h3 class="text-xs font-black tracking-wider uppercase text-slate-900 dark:text-white flex items-center gap-2">
-            <span>Tarjetas de Personas Mencionadas (IA)</span>
+            <span>Tarjetas de Personas Mencionadas</span>
             <span v-if="tarjetasPersonas.length > 0" class="px-2 py-0.5 rounded-full bg-rose-600 text-white text-[9px] font-black uppercase">
               {{ tarjetasPersonas.length }} Detectada(s)
             </span>
           </h3>
-          <p class="text-[11px] text-slate-500 dark:text-slate-400">
-            Resumen IA por persona señalada. Haz clic en el ojo para ver los comentarios.
-          </p>
+         
         </div>
       </div>
 

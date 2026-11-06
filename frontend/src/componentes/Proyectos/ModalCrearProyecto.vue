@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { PlusCircle, X, Sparkles, FolderPlus, Building2 } from 'lucide-vue-next'
+import { PlusCircle, X, FolderPlus } from 'lucide-vue-next'
 import { useEncuestas, type Encuesta } from '@/Almacenes/useEncuestas'
-import { obtenerEscalaEstandarDetallada } from '@/ia'
+import { BLOQUES_ENCUESTA_CLIMA, PLANTILLA_CLIMA_INTEGRAL_DETALLADA } from '@/Config/preguntasCuestionario'
 
 const props = defineProps<{
   abierto: boolean
@@ -39,32 +39,8 @@ const guardarNuevoProyecto = async () => {
 
   guardando.value = true
   try {
-    const escala = obtenerEscalaEstandarDetallada('satisfaccion')
-    
-    // Preguntas base de ejemplo según tipo
-    const preguntasIniciales = [
-      {
-        id: `p-${Date.now()}-1`,
-        categoria: 'Satisfacción General',
-        texto: `¿Cómo calificas tu experiencia actual en el área de ${departamento.value}?`,
-        tipo: 'escala' as const,
-        opciones: escala
-      },
-      {
-        id: `p-${Date.now()}-2`,
-        categoria: 'Comunicación y Liderazgo',
-        texto: '¿Sientes que existe suficiente apoyo y claridad en las metas de este proyecto?',
-        tipo: 'escala' as const,
-        opciones: escala
-      },
-      {
-        id: `p-${Date.now()}-3`,
-        categoria: 'Retroalimentación Abierta',
-        texto: 'Comparte cualquier sugerencia, necesidad u oportunidad de mejora para este proyecto:',
-        tipo: 'texto' as const,
-        opciones: []
-      }
-    ]
+    const bloquesIniciales = JSON.parse(JSON.stringify(BLOQUES_ENCUESTA_CLIMA))
+    const preguntasIniciales = JSON.parse(JSON.stringify(PLANTILLA_CLIMA_INTEGRAL_DETALLADA))
 
     const nuevo = await crearEncuesta({
       titulo: titulo.value.trim(),
@@ -72,6 +48,7 @@ const guardarNuevoProyecto = async () => {
       departamento: departamento.value,
       creadoPor: 'Super Administrador',
       estado: 'Activa',
+      bloques: bloquesIniciales,
       preguntas: preguntasIniciales,
       preguntasSeguimiento: []
     })

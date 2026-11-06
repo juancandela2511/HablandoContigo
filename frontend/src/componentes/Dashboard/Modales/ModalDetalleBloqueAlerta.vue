@@ -180,9 +180,12 @@ const alertasFiltradasInternas = computed(() => {
             </div>
           </div>
 
-          <!-- Preguntas de bajo puntaje respondidas por esta persona -->
+          <!-- Pregunta o contexto reportado por esta persona -->
           <div v-if="alerta.descripcion" class="text-[11px] text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
-            <strong class="text-slate-800 dark:text-slate-200">Preguntas de bajo puntaje:</strong> {{ alerta.descripcion }}
+            <strong class="text-slate-800 dark:text-slate-200">
+              {{ bloque.esTarjetaPersonaMencionada ? 'Pregunta donde se escribió el comentario:' : 'Preguntas de bajo puntaje:' }}
+            </strong>
+            {{ alerta.descripcion }}
           </div>
 
           <!-- Comentario cualitativo escrito por la persona -->

@@ -34,21 +34,30 @@ export function guardarModeloOllama(modelo: string) {
   } catch {}
 }
 
+let ultimoFalloOllamaTs = 0
+const COOLDOWN_FALLO_MS = 60000
+
 export async function verificarOllama(): Promise<{ conectado: boolean; modelos: string[]; error?: string }> {
   try {
-    const res = await fetch(`${obtenerUrlOllama()}/api/tags`, { method: 'GET', signal: AbortSignal.timeout(3000) })
+    const res = await fetch(`${obtenerUrlOllama()}/api/tags`, { method: 'GET', signal: AbortSignal.timeout(2000) })
     if (res.ok) {
+      ultimoFalloOllamaTs = 0
       const data = await res.json()
       const modelos = (data?.models || []).map((m: any) => m.name || m.model || '')
       return { conectado: true, modelos }
     }
+    ultimoFalloOllamaTs = Date.now()
     return { conectado: false, modelos: [], error: `Código ${res.status}` }
   } catch (err: any) {
+    ultimoFalloOllamaTs = Date.now()
     return { conectado: false, modelos: [], error: err?.message || 'Ollama desconectado' }
   }
 }
 
 export async function consultarOllama(prompt: string, modeloCustom?: string): Promise<string | null> {
+  if (Date.now() - ultimoFalloOllamaTs < COOLDOWN_FALLO_MS) {
+    return null
+  }
   const model = modeloCustom || obtenerModeloOllama()
   try {
     const res = await fetch(`${obtenerUrlOllama()}/api/generate`, {
@@ -61,12 +70,16 @@ export async function consultarOllama(prompt: string, modeloCustom?: string): Pr
         format: 'json',
         options: { temperature: 0.1 }
       }),
-      signal: AbortSignal.timeout(12000)
+      signal: AbortSignal.timeout(3000)
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      ultimoFalloOllamaTs = Date.now()
+      return null
+    }
     const data = await res.json()
     return data?.response || null
   } catch {
+    ultimoFalloOllamaTs = Date.now()
     return null
   }
 }

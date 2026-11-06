@@ -14,7 +14,10 @@ import type {
   SugerenciaCambioPreguntaIA
 } from './tiposAsistente'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
+import { obtenerApiBaseUrl } from '@/services/api'
+
+const API_URL = obtenerApiBaseUrl()
+let ultimoFalloBackendIA = 0
 
 export async function obtenerSugerenciasCopilotoOllama(params: {
   preguntas: Array<{ id: string; texto: string; categoria?: string; tipo?: string }>
@@ -23,6 +26,9 @@ export async function obtenerSugerenciasCopilotoOllama(params: {
   totalRespuestas?: number
   promedioClima?: number
 }): Promise<RespuestaSugerenciasAdminIA> {
+  if (Date.now() - ultimoFalloBackendIA < 60000) {
+    return generarSugerenciasLocalesRespaldo(params)
+  }
   try {
     const res = await fetch(`${API_URL}/ia/sugerencias-admin`, {
       method: 'POST',
@@ -36,7 +42,7 @@ export async function obtenerSugerenciasCopilotoOllama(params: {
           promedioClima: params.promedioClima || 78
         }
       }),
-      signal: AbortSignal.timeout(10000)
+      signal: AbortSignal.timeout(2500)
     })
 
     if (res.ok) {
@@ -45,8 +51,9 @@ export async function obtenerSugerenciasCopilotoOllama(params: {
         return data as RespuestaSugerenciasAdminIA
       }
     }
+    ultimoFalloBackendIA = Date.now()
   } catch (err) {
-    console.warn('[servicioAsistenteOllama] Usando motor local de respaldo:', err)
+    ultimoFalloBackendIA = Date.now()
   }
 
   return generarSugerenciasLocalesRespaldo(params)
@@ -61,12 +68,15 @@ export async function obtenerAnalisisDetalladoPdfOllama(params: {
   totalAlertas: number
   dimensiones: Array<{ nombre: string; porcentaje: number }>
 }): Promise<InformeDetalladoPdfIA> {
+  if (Date.now() - ultimoFalloBackendIA < 60000) {
+    return generarInformePdfLocalRespaldo(params)
+  }
   try {
     const res = await fetch(`${API_URL}/ia/informe-detallado-pdf`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(params),
-      signal: AbortSignal.timeout(10000)
+      signal: AbortSignal.timeout(2500)
     })
 
     if (res.ok) {

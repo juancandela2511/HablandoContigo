@@ -6,7 +6,7 @@
  * a datos estructurados para renderizar en gráficos de Barras o Pastel.
  * - Para preguntas con opciones cerradas: utiliza el color configurado en cada
  *   opción o la progresión de menor puntaje en ROJO (#ef4444) hasta mayor puntaje
- *   en VERDE (#10b981).
+ *   en AZUL (#2563eb).
  * - Para preguntas de respuesta abierta (texto): agrupa dinámicamente las
  *   respuestas creando los puntos correspondientes (ej. Sistemas, Software,
  *   Data, Abogado, o temas abiertos).

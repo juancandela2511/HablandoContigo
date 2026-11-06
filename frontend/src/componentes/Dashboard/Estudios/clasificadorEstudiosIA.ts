@@ -219,6 +219,12 @@ export function clasificarEstudioAbierto(respuestaRaw: string): string | null {
     }
   }
 
+  // Excluir frases comunes de respuestas de opinión, opciones de encuesta o actitudes
+  const esFraseOpinionOpcion = /\b(conocimiento|estable|retos|puesto|avanzar|empresa|organizacion|acuerdo|desacuerdo|neutral|excelente|regular|bueno|malo|siempre|nunca|a veces|casi siempre|opcion|siento|considero|laboral|oportunidad|crecimiento|salario|beneficios|liderazgo|jefe|ambiente)\b/.test(limpio)
+  if (esFraseOpinionOpcion) {
+    return null
+  }
+
   // Si es otra profesión no listada (ej. "Arquitecto", "Enfermería", "Medicina", "Idiomas"),
   // se crea dinámicamente el punto para esa profesión
   return extraerNombreProfesionDinamica(respuestaRaw)

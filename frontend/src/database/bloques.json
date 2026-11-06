@@ -2,73 +2,73 @@
   {
     "id": "bloque-1",
     "numero": 1,
-    "titulo": "Datos de Contexto y Segmentación",
-    "descripcion": "Información general para identificar tendencias por área sin comprometer la identidad.",
+    "titulo": "Bloque 1: Datos de Contexto y Segmentación",
+    "descripcion": "Identificación de la antigüedad del colaborador en la empresa y su departamento o área.",
     "icono": "Users",
-    "colorClase": "from-slate-600 to-slate-800",
-    "textColorClase": "text-slate-100"
+    "colorClase": "from-sky-500 to-blue-600",
+    "textColorClase": "text-sky-600"
   },
   {
     "id": "bloque-2",
     "numero": 2,
-    "titulo": "Bienestar Emocional, Estrés y Condiciones de Trabajo",
-    "descripcion": "Evalúa cómo te sientes en tu entorno de trabajo, niveles de fatiga y condiciones del puesto.",
-    "icono": "Heart",
-    "colorClase": "from-violet-600 to-purple-700",
-    "textColorClase": "text-violet-50"
+    "titulo": "Bloque 2: Bienestar Emocional, Estrés y Condiciones de Trabajo",
+    "descripcion": "Evaluación de comodidad en el entorno, niveles de estrés, fatiga física/mental y herramientas de trabajo.",
+    "icono": "HeartPulse",
+    "colorClase": "from-rose-500 to-orange-500",
+    "textColorClase": "text-rose-600"
   },
   {
     "id": "bloque-3",
     "numero": 3,
-    "titulo": "Convivencia, Compañerismo y Trabajo en Equipo",
-    "descripcion": "Mide la calidad de las relaciones interpersonales, respeto y colaboración.",
+    "titulo": "Bloque 3: Convivencia, Compañerismo y Trabajo en Equipo",
+    "descripcion": "Valoración de la colaboración, respeto, comunicación entre pares, clima laboral y manejo de conflictos.",
     "icono": "Handshake",
-    "colorClase": "from-sky-600 to-blue-700",
-    "textColorClase": "text-sky-50"
+    "colorClase": "from-emerald-500 to-teal-600",
+    "textColorClase": "text-emerald-600"
   },
   {
     "id": "bloque-4",
     "numero": 4,
-    "titulo": "Liderazgo, Instrucciones y Feedback del Jefe Inmediato",
-    "descripcion": "Evalúa la claridad, accesibilidad, reconocimiento y retroalimentación de tu líder directo.",
-    "icono": "Star",
-    "colorClase": "from-amber-500 to-orange-600",
-    "textColorClase": "text-amber-50"
+    "titulo": "Bloque 4: Liderazgo, Instrucciones y Feedback del Jefe Inmediato",
+    "descripcion": "Diagnóstico de claridad en instrucciones, reconocimiento, espacio de confianza, accesibilidad y retroalimentación.",
+    "icono": "Award",
+    "colorClase": "from-indigo-500 to-violet-600",
+    "textColorClase": "text-indigo-600"
   },
   {
     "id": "bloque-5",
     "numero": 5,
-    "titulo": "Capacitación, Plan Carrera, Beneficios y Gestión Humana",
-    "descripcion": "Percepción sobre oportunidades de crecimiento, compensaciones y el área de RRHH.",
-    "icono": "TrendingUp",
-    "colorClase": "from-emerald-600 to-teal-700",
-    "textColorClase": "text-emerald-50"
+    "titulo": "Bloque 5: Capacitación, Plan Carrera, Beneficios y Gestión Humana",
+    "descripcion": "Evaluación de capacitaciones, compensación, plan carrera, beneficios, equidad, agilidad de procesos y RRHH.",
+    "icono": "Briefcase",
+    "colorClase": "from-amber-500 to-yellow-600",
+    "textColorClase": "text-amber-600"
   },
   {
     "id": "bloque-6",
     "numero": 6,
-    "titulo": "Nivel Académico, Estudios y Talento Humano",
-    "descripcion": "Identifica el potencial académico del equipo y si sus estudios son aprovechados.",
+    "titulo": "Bloque 6: Nivel Académico, Estudios y Talento Humano",
+    "descripcion": "Identificación de estudios actuales, carrera o área de formación y aprovechamiento del talento en la empresa.",
     "icono": "GraduationCap",
-    "colorClase": "from-indigo-600 to-violet-700",
-    "textColorClase": "text-indigo-50"
+    "colorClase": "from-purple-500 to-fuchsia-600",
+    "textColorClase": "text-purple-600"
   },
   {
     "id": "bloque-7",
     "numero": 7,
-    "titulo": "Proyección a Futuro y Visión en la Empresa",
-    "descripcion": "Conoce las aspiraciones y el nivel de compromiso a largo plazo del colaborador.",
-    "icono": "Telescope",
-    "colorClase": "from-rose-500 to-pink-700",
-    "textColorClase": "text-rose-50"
+    "titulo": "Bloque 7: Proyección a Futuro y Visión en la Empresa",
+    "descripcion": "Visualización de crecimiento profesional en los próximos dos años y motivación de permanencia en Contigo Call Center.",
+    "icono": "Compass",
+    "colorClase": "from-cyan-500 to-blue-600",
+    "textColorClase": "text-cyan-600"
   },
   {
     "id": "bloque-8",
     "numero": 8,
-    "titulo": "Propuestas de Mejora y Diagnóstico Abierto",
-    "descripcion": "Espacio libre para sugerencias, mejoras de infraestructura, procesos y bienestar.",
-    "icono": "MessageSquareText",
-    "colorClase": "from-cyan-600 to-sky-700",
-    "textColorClase": "text-cyan-50"
+    "titulo": "Bloque 8: Propuestas de Mejora y Diagnóstico Abierto",
+    "descripcion": "Espacio abierto para iniciativas y cambios que ayuden a que la compañía funcione mejor.",
+    "icono": "MessageSquarePlus",
+    "colorClase": "from-teal-500 to-emerald-600",
+    "textColorClase": "text-teal-600"
   }
 ]

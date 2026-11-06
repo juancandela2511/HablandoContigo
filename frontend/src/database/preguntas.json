@@ -1,1059 +1,1572 @@
 [
   {
-    "id": "b1-p1-antiguedad",
+    "id": "b1-p1-tiempo-empresa",
     "bloqueId": "bloque-1",
+    "texto": "¿Cuánto tiempo llevas trabajando en la organización?",
     "categoria": "Bloque 1: Datos de Contexto y Segmentación",
-    "texto": "Pregunta 1 — ¿Cuánto tiempo tienes laborando en la empresa?",
     "tipo": "multiple",
+    "tipoGrafico": "barras",
+    "modoPresentacion": "deslizador_tiempo",
+    "maxAnos": 5,
+    "maxMeses": 60,
+    "obligatoria": true,
+    "comentariosHabilitados": false,
+    "deteccionQuejas": false,
+    "solicitarPorQueSiNegativo": false,
     "opciones": [
       {
-        "id": "ant-1",
-        "texto": "Menos de 6 meses",
-        "valor": 1,
-        "esAlerta": false
+        "texto": "Menos de 3 meses",
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#38bdf8"
       },
       {
-        "id": "ant-2",
+        "texto": "De 3 a 6 meses",
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#0284c7"
+      },
+      {
         "texto": "De 6 meses a 1 año",
-        "valor": 2,
-        "esAlerta": false
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#2563eb"
       },
       {
-        "id": "ant-3",
         "texto": "De 1 a 3 años",
-        "valor": 3,
-        "esAlerta": false
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#6366f1"
       },
       {
-        "id": "ant-4",
         "texto": "Más de 3 años",
-        "valor": 4,
-        "esAlerta": false
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#8b5cf6"
       }
-    ]
+    ],
+    "esCondicional": false,
+    "idEncuesta": "enc-001",
+    "secuencia": 1,
+    "esObligatoria": true,
+    "esSensibleAcoso": false,
+    "activarSaltoCondicional": false
   },
   {
-    "id": "b1-p2-area",
+    "id": "b1-p2-area-departamento",
     "bloqueId": "bloque-1",
+    "texto": "¿A qué departamento o área perteneces?",
     "categoria": "Bloque 1: Datos de Contexto y Segmentación",
-    "texto": "Pregunta 2 — ¿A qué departamento o área perteneces?",
     "tipo": "multiple",
+    "tipoGrafico": "barras",
+    "modoPresentacion": "tarjetas",
+    "obligatoria": true,
+    "comentariosHabilitados": true,
+    "deteccionQuejas": true,
+    "solicitarPorQueSiNegativo": true,
     "opciones": [
       {
-        "id": "area-1",
-        "texto": "Operaciones / Call Center",
-        "valor": 1,
-        "esAlerta": false
+        "texto": "Operaciones / Call Center / Agentes",
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#2563eb"
       },
       {
-        "id": "area-2",
-        "texto": "Gestión Humana / RRHH",
-        "valor": 2,
-        "esAlerta": false
+        "texto": "Calidad / Formación / Capacitación",
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#38bdf8"
       },
       {
-        "id": "area-3",
-        "texto": "Tecnología / IT",
-        "valor": 3,
-        "esAlerta": false
+        "texto": "Supervisión / Coordinación / Liderazgo",
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#6366f1"
       },
       {
-        "id": "area-4",
-        "texto": "Administrativo / Gerencia",
-        "valor": 4,
-        "esAlerta": false
+        "texto": "Tecnología / Soporte TI / Datos",
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#8b5cf6"
       },
       {
-        "id": "area-5",
-        "texto": "Otro",
-        "valor": 5,
-        "esAlerta": false
+        "texto": "Gestión Humana / Administración / Backoffice",
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#0ea5e9"
       }
-    ]
+    ],
+    "esCondicional": false,
+    "idEncuesta": "enc-001",
+    "secuencia": 2,
+    "esObligatoria": true,
+    "esSensibleAcoso": false
   },
   {
     "id": "b2-p3-gusto",
     "bloqueId": "bloque-2",
+    "texto": "En una escala del 1 al 5, ¿qué tan cómodo y satisfecho te sientes en tu entorno y puesto de trabajo actual?",
     "categoria": "Bloque 2: Bienestar Emocional, Estrés y Condiciones de Trabajo",
-    "texto": "Pregunta 3 — Del 1 al 5 (teniendo en cuenta que 1 es Mal y 5 es Excelente), ¿qué tan bien te sientes trabajando en tu puesto actual?",
     "tipo": "multiple",
+    "tipoGrafico": "barras",
+    "modoPresentacion": "deslizador_emocional",
+    "obligatoria": true,
+    "comentariosHabilitados": true,
+    "deteccionQuejas": true,
+    "solicitarPorQueSiNegativo": true,
     "opciones": [
       {
-        "id": "b2p3-1",
-        "texto": "5 - Excelente (Muy bien)",
-        "valor": 5,
-        "esAlerta": false
+        "texto": "5 — Muy cómodo y totalmente satisfecho",
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#2563eb"
       },
       {
-        "id": "b2p3-1b",
-        "texto": "4 - Bien",
-        "valor": 4,
-        "esAlerta": false
+        "texto": "4 — Cómodo y satisfecho en general",
+        "valor": 80,
+        "esAlerta": false,
+        "color": "#38bdf8"
       },
       {
-        "id": "b2p3-2",
-        "texto": "3 - Regular",
-        "valor": 3,
-        "esAlerta": false
+        "texto": "3 — Neutral / Regular",
+        "valor": 60,
+        "esAlerta": false,
+        "color": "#f59e0b"
       },
       {
-        "id": "b2p3-3",
-        "texto": "2 - Mal",
-        "valor": 2,
-        "esAlerta": true
+        "texto": "2 — Poco cómodo / Insatisfecho",
+        "valor": 30,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-molestias-cotidianas",
+        "nombreAlerta": "Alerta de Molestias y Fastidio Cotidiano",
+        "severidadAlerta": "Alta",
+        "color": "#f97316"
       },
       {
-        "id": "b2p3-4",
-        "texto": "1 - Muy mal",
-        "valor": 1,
-        "esAlerta": true
+        "texto": "1 — Nada cómodo / Muy insatisfecho",
+        "valor": 10,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-molestias-cotidianas",
+        "nombreAlerta": "Alerta de Molestias y Fastidio Cotidiano",
+        "severidadAlerta": "Crítica",
+        "color": "#ef4444"
       }
-    ]
+    ],
+    "esCondicional": false,
+    "idEncuesta": "enc-001",
+    "secuencia": 3,
+    "esObligatoria": true,
+    "esSensibleAcoso": false
   },
   {
     "id": "b2-p4-estres",
     "bloqueId": "bloque-2",
+    "texto": "¿Sientes niveles de estrés elevados o fatiga crónica asociados a tus labores diarias?",
     "categoria": "Bloque 2: Bienestar Emocional, Estrés y Condiciones de Trabajo",
-    "texto": "Pregunta 4 — ¿Qué tanto estrés sientes en tu trabajo del día a día?",
     "tipo": "multiple",
+    "tipoGrafico": "barras",
+    "modoPresentacion": "termometro",
+    "obligatoria": true,
+    "comentariosHabilitados": true,
+    "deteccionQuejas": true,
+    "solicitarPorQueSiNegativo": true,
     "opciones": [
       {
-        "id": "b2p4-si",
-        "texto": "Mucho estrés (Me siento sobrecargado/a)",
-        "valor": 1,
+        "texto": "No, manejo un nivel de estrés saludable",
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#2563eb"
+      },
+      {
+        "texto": "Ocasionalmente, en momentos puntuales de alta demanda",
+        "valor": 75,
+        "esAlerta": false,
+        "color": "#38bdf8"
+      },
+      {
+        "texto": "Frecuentemente siento estrés elevado en mi turno",
+        "valor": 35,
         "esAlerta": true,
-        "tipoAlertaId": "tipo-depresion",
-        "nombreAlerta": "Estrés Severo y Agotamiento Crónico",
-        "severidadAlerta": "Crítica"
+        "tipoAlertaId": "tipo-sobrecarga-burnout",
+        "nombreAlerta": "Alerta de Sobrecarga y Agotamiento (Burnout)",
+        "severidadAlerta": "Alta",
+        "color": "#f97316"
       },
       {
-        "id": "b2p4-av",
-        "texto": "Regular (Solo algunas veces)",
-        "valor": 3,
-        "esAlerta": false
-      },
-      {
-        "id": "b2p4-no",
-        "texto": "Nada de estrés (Me siento tranquilo/a)",
-        "valor": 5,
-        "esAlerta": false
+        "texto": "Sí, siento estrés extremo o fatiga crónica constante (Burnout)",
+        "valor": 10,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-sobrecarga-burnout",
+        "nombreAlerta": "Alerta de Sobrecarga y Agotamiento (Burnout)",
+        "severidadAlerta": "Crítica",
+        "color": "#ef4444"
       }
-    ]
+    ],
+    "esCondicional": false,
+    "idEncuesta": "enc-001",
+    "secuencia": 4,
+    "esObligatoria": true,
+    "esSensibleAcoso": false
   },
   {
     "id": "b2-p5-fatiga",
     "bloqueId": "bloque-2",
+    "texto": "¿Sientes fatiga o cansancio físico/mental constante asociado a tu trabajo?",
     "categoria": "Bloque 2: Bienestar Emocional, Estrés y Condiciones de Trabajo",
-    "texto": "Pregunta 5 — ¿Sientes mucho cansancio físico o mental por tu trabajo?",
     "tipo": "multiple",
+    "tipoGrafico": "barras",
+    "modoPresentacion": "termometro",
+    "obligatoria": true,
+    "comentariosHabilitados": true,
+    "deteccionQuejas": true,
+    "solicitarPorQueSiNegativo": true,
     "opciones": [
       {
-        "id": "b2p5-si",
-        "texto": "Sí, mucho cansancio",
-        "valor": 1,
+        "texto": "No, termino mi jornada con energía normal",
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#2563eb"
+      },
+      {
+        "texto": "A veces siento cansancio moderado al finalizar el turno",
+        "valor": 75,
+        "esAlerta": false,
+        "color": "#38bdf8"
+      },
+      {
+        "texto": "Casi todos los días siento agotamiento físico o mental fuerte",
+        "valor": 30,
         "esAlerta": true,
-        "tipoAlertaId": "tipo-depresion",
-        "nombreAlerta": "Estrés Severo y Agotamiento Crónico",
-        "severidadAlerta": "Crítica"
+        "tipoAlertaId": "tipo-sobrecarga-burnout",
+        "nombreAlerta": "Alerta de Sobrecarga y Agotamiento (Burnout)",
+        "severidadAlerta": "Alta",
+        "color": "#f97316"
       },
       {
-        "id": "b2p5-av",
-        "texto": "Algunas veces",
-        "valor": 3,
-        "esAlerta": false
-      },
-      {
-        "id": "b2p5-no",
-        "texto": "No, me siento bien",
-        "valor": 5,
-        "esAlerta": false
+        "texto": "Sí, siento fatiga física y mental constante y severa",
+        "valor": 10,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-sobrecarga-burnout",
+        "nombreAlerta": "Alerta de Sobrecarga y Agotamiento (Burnout)",
+        "severidadAlerta": "Crítica",
+        "color": "#ef4444"
       }
-    ]
+    ],
+    "esCondicional": false,
+    "idEncuesta": "enc-001",
+    "secuencia": 5,
+    "esObligatoria": true,
+    "esSensibleAcoso": false
   },
   {
     "id": "b2-p6-herramientas",
     "bloqueId": "bloque-2",
+    "texto": "¿Consideras que las herramientas y equipos de trabajo son adecuados para desempeñar tu labor?",
     "categoria": "Bloque 2: Bienestar Emocional, Estrés y Condiciones de Trabajo",
-    "texto": "Pregunta 6 — Del 1 al 5 (donde 1 es Mal y 5 es Excelente), ¿qué tan buenas son tus herramientas y equipos para trabajar?",
     "tipo": "multiple",
+    "tipoGrafico": "barras",
+    "modoPresentacion": "semaforo",
+    "obligatoria": true,
+    "comentariosHabilitados": true,
+    "deteccionQuejas": true,
+    "solicitarPorQueSiNegativo": true,
     "opciones": [
       {
-        "id": "b2p6-si",
-        "texto": "5 - Excelente / Muy bien",
-        "valor": 5,
-        "esAlerta": false
+        "texto": "Sí, mis equipos, diadema y sistemas funcionan de forma óptima",
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#2563eb"
       },
       {
-        "id": "b2p6-av",
-        "texto": "3 - Regular (A veces fallan)",
-        "valor": 3,
-        "esAlerta": false
+        "texto": "Son aceptables, aunque a veces presentan lentitud menor",
+        "valor": 75,
+        "esAlerta": false,
+        "color": "#38bdf8"
       },
       {
-        "id": "b2p6-no",
-        "texto": "1 - Mal / Muy mal",
-        "valor": 1,
-        "esAlerta": true
+        "texto": "Presentan fallas frecuentes que dificultan mi labor",
+        "valor": 35,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-recursos-condiciones",
+        "nombreAlerta": "Alerta de Fallas en Recursos, Herramientas y Condiciones Físicas",
+        "severidadAlerta": "Alta",
+        "color": "#f97316"
+      },
+      {
+        "texto": "No, las herramientas o equipos son deficientes o inadecuados",
+        "valor": 10,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-recursos-condiciones",
+        "nombreAlerta": "Alerta de Fallas en Recursos, Herramientas y Condiciones Físicas",
+        "severidadAlerta": "Crítica",
+        "color": "#ef4444"
       }
-    ]
-  },
-  {
-    "id": "b2-p7-condiciones-fisicas",
-    "bloqueId": "bloque-2",
-    "categoria": "Bloque 2: Bienestar Emocional, Estrés y Condiciones de Trabajo",
-    "texto": "Pregunta 7 — Del 1 al 5 (donde 1 es Mal y 5 es Excelente), ¿qué tan cómodo es tu puesto de trabajo (silla, luz, ruido, clima)?",
-    "tipo": "multiple",
-    "opciones": [
-      {
-        "id": "b2p7-si",
-        "texto": "5 - Excelente / Muy cómodo",
-        "valor": 5,
-        "esAlerta": false
-      },
-      {
-        "id": "b2p7-av",
-        "texto": "3 - Regular",
-        "valor": 3,
-        "esAlerta": false
-      },
-      {
-        "id": "b2p7-no",
-        "texto": "1 - Mal / Incómodo",
-        "valor": 1,
-        "esAlerta": true
-      }
-    ]
+    ],
+    "esCondicional": false,
+    "idEncuesta": "enc-001",
+    "secuencia": 6,
+    "esObligatoria": true,
+    "esSensibleAcoso": false
   },
   {
     "id": "b3-p8-colaboracion",
     "bloqueId": "bloque-3",
+    "texto": "Hay un ambiente de colaboración y apoyo mutuo entre compañeros",
     "categoria": "Bloque 3: Convivencia, Compañerismo y Trabajo en Equipo",
-    "texto": "Pregunta 8 — ¿Qué tan bien se ayudan y colaboran entre tus compañeros de equipo?",
     "tipo": "multiple",
+    "tipoGrafico": "barras",
+    "modoPresentacion": "semaforo",
+    "obligatoria": true,
+    "comentariosHabilitados": true,
+    "deteccionQuejas": true,
+    "solicitarPorQueSiNegativo": true,
     "opciones": [
       {
-        "id": "b3p8-si",
-        "texto": "Muy bien (Siempre nos ayudamos)",
-        "valor": 5,
-        "esAlerta": false
+        "texto": "Totalmente de acuerdo, siempre nos apoyamos en equipo",
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#2563eb"
       },
       {
-        "id": "b3p8-av",
-        "texto": "Regular (Algunas veces)",
-        "valor": 3,
-        "esAlerta": false
+        "texto": "De acuerdo, en la mayoría de ocasiones hay colaboración",
+        "valor": 80,
+        "esAlerta": false,
+        "color": "#38bdf8"
       },
       {
-        "id": "b3p8-no",
-        "texto": "Mal (No hay apoyo)",
-        "valor": 1,
-        "esAlerta": true
+        "texto": "En desacuerdo, cada quien trabaja por su cuenta y hay poca ayuda",
+        "valor": 35,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-molestias-cotidianas",
+        "nombreAlerta": "Alerta de Molestias y Fastidio Cotidiano",
+        "severidadAlerta": "Alta",
+        "color": "#f97316"
+      },
+      {
+        "texto": "Totalmente en desacuerdo, hay egoísmo o rivalidad negativa",
+        "valor": 10,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-molestias-cotidianas",
+        "nombreAlerta": "Alerta de Molestias y Fastidio Cotidiano",
+        "severidadAlerta": "Crítica",
+        "color": "#ef4444"
       }
-    ]
+    ],
+    "esCondicional": false,
+    "idEncuesta": "enc-001",
+    "secuencia": 7,
+    "esObligatoria": true,
+    "esSensibleAcoso": false,
+    "activarSaltoCondicional": false
   },
   {
     "id": "b3-p9-respeto",
     "bloqueId": "bloque-3",
+    "texto": "¿Sientes que existe respeto dentro de tu equipo de trabajo?",
     "categoria": "Bloque 3: Convivencia, Compañerismo y Trabajo en Equipo",
-    "texto": "Pregunta 9 — ¿Sientes que en tu entorno de trabajo prevalece un ambiente libre de gritos, humillaciones o acoso?",
     "tipo": "multiple",
+    "tipoGrafico": "barras",
+    "modoPresentacion": "semaforo",
+    "obligatoria": true,
+    "comentariosHabilitados": true,
+    "deteccionQuejas": true,
+    "solicitarPorQueSiNegativo": true,
     "opciones": [
       {
-        "id": "b3p9-si",
-        "texto": "Sí",
-        "valor": 5,
-        "esAlerta": false
+        "texto": "Sí, siempre predomina el trato cordial y respetuoso",
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#2563eb"
       },
       {
-        "id": "b3p9-av",
-        "texto": "Algunas veces",
-        "valor": 3,
-        "esAlerta": false
+        "texto": "Casi siempre hay respeto entre los integrantes del área",
+        "valor": 80,
+        "esAlerta": false,
+        "color": "#38bdf8"
       },
       {
-        "id": "b3p9-no",
-        "texto": "No",
-        "valor": 1,
+        "texto": "Pocas veces, se presentan faltas de respeto o malos tratos",
+        "valor": 30,
         "esAlerta": true,
-        "tipoAlertaId": "tipo-acoso",
-        "nombreAlerta": "Acoso Laboral y Hostigamiento",
-        "severidadAlerta": "Crítica"
+        "tipoAlertaId": "tipo-molestias-cotidianas",
+        "nombreAlerta": "Alerta de Molestias y Fastidio Cotidiano",
+        "severidadAlerta": "Alta",
+        "color": "#f97316"
+      },
+      {
+        "texto": "No, existe un ambiente hostil o de irrespeto constante",
+        "valor": 10,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-molestias-cotidianas",
+        "nombreAlerta": "Alerta de Molestias y Fastidio Cotidiano",
+        "severidadAlerta": "Crítica",
+        "color": "#ef4444"
       }
-    ]
+    ],
+    "esCondicional": false,
+    "idEncuesta": "enc-001",
+    "secuencia": 8,
+    "esObligatoria": true,
+    "esSensibleAcoso": false,
+    "activarSaltoCondicional": false
   },
   {
     "id": "b3-p10-comunicacion",
     "bloqueId": "bloque-3",
+    "texto": "¿Existe buena comunicación y fluidez de información con tus pares?",
     "categoria": "Bloque 3: Convivencia, Compañerismo y Trabajo en Equipo",
-    "texto": "Pregunta 10 — ¿La comunicación entre tus compañeros de área es fluida, asertiva y respetuosa?",
     "tipo": "multiple",
+    "tipoGrafico": "barras",
+    "modoPresentacion": "tarjetas",
+    "obligatoria": true,
+    "comentariosHabilitados": true,
+    "deteccionQuejas": true,
+    "solicitarPorQueSiNegativo": true,
     "opciones": [
       {
-        "id": "b3p10-si",
-        "texto": "Sí",
-        "valor": 5,
-        "esAlerta": false
+        "texto": "Sí, la comunicación entre compañeros es clara, fluida y efectiva",
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#2563eb"
       },
       {
-        "id": "b3p10-av",
-        "texto": "Algunas veces",
-        "valor": 3,
-        "esAlerta": false
+        "texto": "Es buena en general, con leves detalles por mejorar",
+        "valor": 80,
+        "esAlerta": false,
+        "color": "#38bdf8"
       },
       {
-        "id": "b3p10-no",
-        "texto": "No",
-        "valor": 1,
-        "esAlerta": true
+        "texto": "Es regular, a veces hay malentendidos o falta de comunicación",
+        "valor": 40,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-molestias-cotidianas",
+        "nombreAlerta": "Alerta de Molestias y Fastidio Cotidiano",
+        "severidadAlerta": "Alta",
+        "color": "#f97316"
+      },
+      {
+        "texto": "No, la comunicación con mis pares es deficiente o nula",
+        "valor": 10,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-molestias-cotidianas",
+        "nombreAlerta": "Alerta de Molestias y Fastidio Cotidiano",
+        "severidadAlerta": "Crítica",
+        "color": "#ef4444"
       }
-    ]
+    ],
+    "esCondicional": false,
+    "idEncuesta": "enc-001",
+    "secuencia": 9,
+    "esObligatoria": true,
+    "esSensibleAcoso": false
   },
   {
     "id": "b3-p11-clima-convivencia",
     "bloqueId": "bloque-3",
+    "texto": "En una escala del 1 al 5, ¿cómo calificas el clima laboral de la empresa?",
     "categoria": "Bloque 3: Convivencia, Compañerismo y Trabajo en Equipo",
-    "texto": "Pregunta 11 — ¿Cómo calificarías la convivencia general e integración interpersonal en tu área?",
     "tipo": "multiple",
+    "tipoGrafico": "barras",
+    "modoPresentacion": "deslizador_emocional",
+    "obligatoria": true,
+    "comentariosHabilitados": true,
+    "deteccionQuejas": true,
+    "solicitarPorQueSiNegativo": true,
     "opciones": [
       {
-        "id": "b3p11-1",
-        "texto": "Excelente (ambiente de apoyo y armonía)",
-        "valor": 5,
-        "esAlerta": false
+        "texto": "5 — Excelente clima laboral",
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#2563eb"
       },
       {
-        "id": "b3p11-2",
-        "texto": "Buena (relación cordial)",
-        "valor": 4,
-        "esAlerta": false
+        "texto": "4 — Buen clima laboral",
+        "valor": 80,
+        "esAlerta": false,
+        "color": "#38bdf8"
       },
       {
-        "id": "b3p11-3",
-        "texto": "Regular (hay indiferencia o poca cooperación)",
-        "valor": 2,
-        "esAlerta": true
+        "texto": "3 — Clima laboral regular / aceptable",
+        "valor": 60,
+        "esAlerta": false,
+        "color": "#f59e0b"
       },
       {
-        "id": "b3p11-4",
-        "texto": "Mala (existen tensiones o fricciones frecuentes)",
-        "valor": 1,
-        "esAlerta": true
+        "texto": "2 — Mal clima laboral",
+        "valor": 30,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-molestias-cotidianas",
+        "nombreAlerta": "Alerta de Molestias y Fastidio Cotidiano",
+        "severidadAlerta": "Alta",
+        "color": "#f97316"
+      },
+      {
+        "texto": "1 — Pésimo clima laboral / Ambiente muy tenso",
+        "valor": 10,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-molestias-cotidianas",
+        "nombreAlerta": "Alerta de Molestias y Fastidio Cotidiano",
+        "severidadAlerta": "Crítica",
+        "color": "#ef4444"
       }
-    ]
+    ],
+    "esCondicional": false,
+    "idEncuesta": "enc-001",
+    "secuencia": 10,
+    "esObligatoria": true,
+    "esSensibleAcoso": false,
+    "activarSaltoCondicional": false
   },
   {
     "id": "b3-p12-conflictos",
     "bloqueId": "bloque-3",
+    "texto": "¿Has tenido roces, conflictos o tensiones significativas con alguien en el equipo?",
     "categoria": "Bloque 3: Convivencia, Compañerismo y Trabajo en Equipo",
-    "texto": "Pregunta 12 — ¿Has presenciado o experimentado situaciones de fricción o desacuerdos no resueltos en tu equipo?",
     "tipo": "multiple",
+    "tipoGrafico": "barras",
+    "modoPresentacion": "tarjetas",
+    "obligatoria": true,
+    "comentariosHabilitados": true,
+    "deteccionQuejas": true,
+    "solicitarPorQueSiNegativo": true,
     "opciones": [
       {
-        "id": "b3p12-no",
-        "texto": "No, ninguno",
-        "valor": 5,
-        "esAlerta": false
+        "texto": "No, mantengo una convivencia armónica y sin conflictos",
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#2563eb"
       },
       {
-        "id": "b3p12-si",
-        "texto": "Sí",
-        "valor": 1,
+        "texto": "Solo diferencias menores de trabajo que se resolvieron con respeto",
+        "valor": 80,
+        "esAlerta": false,
+        "color": "#38bdf8"
+      },
+      {
+        "texto": "Sí, he tenido roces o tensiones frecuentes con alguien del equipo",
+        "valor": 30,
         "esAlerta": true,
-        "tipoAlertaId": "tipo-acoso",
-        "nombreAlerta": "Conflictos Interpersonales",
-        "severidadAlerta": "Alta"
+        "tipoAlertaId": "tipo-molestias-cotidianas",
+        "nombreAlerta": "Alerta de Molestias y Fastidio Cotidiano",
+        "severidadAlerta": "Alta",
+        "color": "#f97316"
+      },
+      {
+        "texto": "Sí, vivo un conflicto grave o trato hostil directo",
+        "valor": 10,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-molestias-cotidianas",
+        "nombreAlerta": "Alerta de Molestias y Fastidio Cotidiano",
+        "severidadAlerta": "Crítica",
+        "color": "#ef4444"
       }
-    ]
-  },
-  {
-    "id": "b3-p12b-conflictos-detalle",
-    "bloqueId": "bloque-3",
-    "categoria": "Bloque 3: Convivencia, Compañerismo y Trabajo en Equipo",
-    "texto": "Pregunta 12b — Especifique de forma totalmente confidencial la situación de conflicto presenciada:",
-    "tipo": "texto",
-    "opciones": []
+    ],
+    "esCondicional": false,
+    "idEncuesta": "enc-001",
+    "secuencia": 11,
+    "esObligatoria": true,
+    "esSensibleAcoso": false,
+    "activarSaltoCondicional": false
   },
   {
     "id": "b4-p13-instrucciones-claras",
     "bloqueId": "bloque-4",
+    "texto": "¿Tu jefe o líder inmediato proporciona instrucciones claras?",
     "categoria": "Bloque 4: Liderazgo, Instrucciones y Feedback del Jefe Inmediato",
-    "texto": "Pregunta 13 — Del 1 al 5 (donde 1 es Mal y 5 es Excelente), ¿qué tan claro te explica tu jefe lo que debes hacer?",
     "tipo": "multiple",
+    "tipoGrafico": "barras",
+    "modoPresentacion": "semaforo",
+    "obligatoria": true,
+    "comentariosHabilitados": true,
+    "deteccionQuejas": true,
+    "solicitarPorQueSiNegativo": true,
     "opciones": [
       {
-        "id": "b4p13-si",
-        "texto": "5 - Excelente (Muy claro)",
-        "valor": 5,
-        "esAlerta": false
+        "texto": "Sí, siempre explica con claridad las directrices y objetivos",
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#2563eb"
       },
       {
-        "id": "b4p13-av",
-        "texto": "3 - Regular (Algunas veces)",
-        "valor": 3,
-        "esAlerta": false
+        "texto": "La mayoría de las veces sus indicaciones son claras",
+        "valor": 80,
+        "esAlerta": false,
+        "color": "#38bdf8"
       },
       {
-        "id": "b4p13-no",
-        "texto": "1 - Mal (No explica claro)",
-        "valor": 1,
-        "esAlerta": true
+        "texto": "A veces sus instrucciones son confusas o contradictorias",
+        "valor": 35,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-claridad-rol",
+        "nombreAlerta": "Alerta de Falta de Claridad en el Rol",
+        "severidadAlerta": "Moderada",
+        "color": "#f97316"
+      },
+      {
+        "texto": "No, rara vez da instrucciones claras sobre cómo hacer el trabajo",
+        "valor": 10,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-claridad-rol",
+        "nombreAlerta": "Alerta de Falta de Claridad en el Rol",
+        "severidadAlerta": "Alta",
+        "color": "#ef4444"
       }
-    ]
-  },
-  {
-    "id": "b4-p14-instrucciones-estructuradas",
-    "bloqueId": "bloque-4",
-    "categoria": "Bloque 4: Liderazgo, Instrucciones y Feedback del Jefe Inmediato",
-    "texto": "Pregunta 14 — ¿Qué tan bien organiza tu jefe directo las tareas y metas del equipo?",
-    "tipo": "multiple",
-    "opciones": [
-      {
-        "id": "b4p14-si",
-        "texto": "Muy bien / Bien",
-        "valor": 5,
-        "esAlerta": false
-      },
-      {
-        "id": "b4p14-av",
-        "texto": "Regular (Algunas veces)",
-        "valor": 3,
-        "esAlerta": false
-      },
-      {
-        "id": "b4p14-no",
-        "texto": "Mal / Muy mal",
-        "valor": 1,
-        "esAlerta": true
-      }
-    ]
+    ],
+    "esCondicional": false,
+    "idEncuesta": "enc-001",
+    "secuencia": 12,
+    "esObligatoria": true,
+    "esSensibleAcoso": false
   },
   {
     "id": "b4-p15-reconocimiento",
     "bloqueId": "bloque-4",
+    "texto": "¿Sientes que tu líder valora tu esfuerzo y reconoce tu buen desempeño?",
     "categoria": "Bloque 4: Liderazgo, Instrucciones y Feedback del Jefe Inmediato",
-    "texto": "Pregunta 15 — ¿Tu jefe directo te felicita o reconoce cuando haces bien tu trabajo?",
     "tipo": "multiple",
+    "tipoGrafico": "barras",
+    "modoPresentacion": "deslizador_emocional",
+    "obligatoria": true,
+    "comentariosHabilitados": true,
+    "deteccionQuejas": true,
+    "solicitarPorQueSiNegativo": true,
     "opciones": [
       {
-        "id": "b4p15-si",
-        "texto": "Sí, siempre o casi siempre",
-        "valor": 5,
-        "esAlerta": false
+        "texto": "Sí, reconoce y valora constantemente mi trabajo y esfuerzo",
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#2563eb"
       },
       {
-        "id": "b4p15-av",
-        "texto": "Algunas veces",
-        "valor": 3,
-        "esAlerta": false
+        "texto": "Ocasionalmente destaca los buenos resultados del equipo",
+        "valor": 75,
+        "esAlerta": false,
+        "color": "#38bdf8"
       },
       {
-        "id": "b4p15-no",
-        "texto": "No, nunca",
-        "valor": 1,
-        "esAlerta": true
+        "texto": "Pocas veces reconoce los logros, suele enfocarse solo en los errores",
+        "valor": 35,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-reconocimiento-valoracion",
+        "nombreAlerta": "Alerta de Reconocimiento y Valoración",
+        "severidadAlerta": "Alta",
+        "color": "#f97316"
+      },
+      {
+        "texto": "No, siento que mi esfuerzo no es valorado en absoluto",
+        "valor": 10,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-reconocimiento-valoracion",
+        "nombreAlerta": "Alerta de Reconocimiento y Valoración",
+        "severidadAlerta": "Crítica",
+        "color": "#ef4444"
       }
-    ]
-  },
-  {
-    "id": "b4-p16-valoracion-esfuerzo",
-    "bloqueId": "bloque-4",
-    "categoria": "Bloque 4: Liderazgo, Instrucciones y Feedback del Jefe Inmediato",
-    "texto": "Pregunta 16 — Del 1 al 5 (donde 1 es Mal y 5 es Excelente), ¿qué tanto sientes que tu jefe valora tu esfuerzo diario?",
-    "tipo": "multiple",
-    "opciones": [
-      {
-        "id": "b4p16-si",
-        "texto": "5 - Excelente (Sí lo valora)",
-        "valor": 5,
-        "esAlerta": false
-      },
-      {
-        "id": "b4p16-av",
-        "texto": "3 - Regular (Algunas veces)",
-        "valor": 3,
-        "esAlerta": false
-      },
-      {
-        "id": "b4p16-no",
-        "texto": "1 - Mal (No lo valora)",
-        "valor": 1,
-        "esAlerta": true
-      }
-    ]
-  },
-  {
-    "id": "b4-p17-accesibilidad-dudas",
-    "bloqueId": "bloque-4",
-    "categoria": "Bloque 4: Liderazgo, Instrucciones y Feedback del Jefe Inmediato",
-    "texto": "Pregunta 17 — ¿Qué tan bien te trata tu jefe directo cuando tienes dudas o necesitas ayuda?",
-    "tipo": "multiple",
-    "opciones": [
-      {
-        "id": "b4p17-1",
-        "texto": "Muy bien (Siempre me apoya con respeto)",
-        "valor": 5,
-        "esAlerta": false
-      },
-      {
-        "id": "b4p17-1b",
-        "texto": "Bien",
-        "valor": 4,
-        "esAlerta": false
-      },
-      {
-        "id": "b4p17-2",
-        "texto": "Regular (Depende del momento)",
-        "valor": 3,
-        "esAlerta": false
-      },
-      {
-        "id": "b4p17-2b",
-        "texto": "Mal",
-        "valor": 2,
-        "esAlerta": true
-      },
-      {
-        "id": "b4p17-3",
-        "texto": "Muy mal (Es distante o trata mal)",
-        "valor": 1,
-        "esAlerta": true
-      }
-    ]
-  },
-  {
-    "id": "b4-p18-escucha-inquietudes",
-    "bloqueId": "bloque-4",
-    "categoria": "Bloque 4: Liderazgo, Instrucciones y Feedback del Jefe Inmediato",
-    "texto": "Pregunta 18 — ¿Tu jefe te escucha con respeto cuando propones una idea o mejora?",
-    "tipo": "multiple",
-    "opciones": [
-      {
-        "id": "b4p18-si",
-        "texto": "Sí, me escucha muy bien",
-        "valor": 5,
-        "esAlerta": false
-      },
-      {
-        "id": "b4p18-av",
-        "texto": "Algunas veces",
-        "valor": 3,
-        "esAlerta": false
-      },
-      {
-        "id": "b4p18-no",
-        "texto": "No me escucha",
-        "valor": 1,
-        "esAlerta": true
-      }
-    ]
+    ],
+    "esCondicional": false,
+    "idEncuesta": "enc-001",
+    "secuencia": 13,
+    "esObligatoria": true,
+    "esSensibleAcoso": false,
+    "activarSaltoCondicional": false
   },
   {
     "id": "b4-p19-confianza",
     "bloqueId": "bloque-4",
+    "texto": "¿Tu líder promueve un espacio de confianza donde puedas expresar tus opiniones?",
     "categoria": "Bloque 4: Liderazgo, Instrucciones y Feedback del Jefe Inmediato",
-    "texto": "Pregunta 19 — Del 1 al 5 (donde 1 es Mal y 5 es Excelente), ¿qué tanta confianza sientes con tu jefe directo?",
     "tipo": "multiple",
+    "tipoGrafico": "barras",
+    "modoPresentacion": "semaforo",
+    "obligatoria": true,
+    "comentariosHabilitados": true,
+    "deteccionQuejas": true,
+    "solicitarPorQueSiNegativo": true,
     "opciones": [
       {
-        "id": "b4p19-si",
-        "texto": "5 - Excelente (Mucha confianza)",
-        "valor": 5,
-        "esAlerta": false
+        "texto": "Sí, escucha con apertura y genera total confianza",
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#2563eb"
       },
       {
-        "id": "b4p19-av",
-        "texto": "3 - Regular (A veces)",
-        "valor": 3,
-        "esAlerta": false
+        "texto": "En general sí permite expresar ideas y sugerencias",
+        "valor": 80,
+        "esAlerta": false,
+        "color": "#38bdf8"
       },
       {
-        "id": "b4p19-no",
-        "texto": "1 - Mal (Nada de confianza)",
-        "valor": 1,
-        "esAlerta": true
+        "texto": "Hay poca apertura para expresar opiniones o desacuerdos",
+        "valor": 35,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-fallas-procesos",
+        "nombreAlerta": "Alerta Fallas en Procesos de la Empresa",
+        "severidadAlerta": "Moderada",
+        "color": "#f97316"
+      },
+      {
+        "texto": "No, no existe confianza ni escucha ante nuestras opiniones",
+        "valor": 10,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-fallas-procesos",
+        "nombreAlerta": "Alerta Fallas en Procesos de la Empresa",
+        "severidadAlerta": "Alta",
+        "color": "#ef4444"
       }
-    ]
+    ],
+    "esCondicional": false,
+    "idEncuesta": "enc-001",
+    "secuencia": 14,
+    "esObligatoria": true,
+    "esSensibleAcoso": false,
+    "activarSaltoCondicional": false
+  },
+  {
+    "id": "b4-p17-accesibilidad-dudas",
+    "bloqueId": "bloque-4",
+    "texto": "¿Tu jefe directo es accesible y está disponible cuando requieres orientación o resolver dudas operativas?",
+    "categoria": "Bloque 4: Liderazgo, Instrucciones y Feedback del Jefe Inmediato",
+    "tipo": "multiple",
+    "tipoGrafico": "barras",
+    "modoPresentacion": "tarjetas",
+    "obligatoria": true,
+    "comentariosHabilitados": true,
+    "deteccionQuejas": true,
+    "solicitarPorQueSiNegativo": true,
+    "opciones": [
+      {
+        "texto": "Sí, siempre está disponible y me orienta oportunamente",
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#2563eb"
+      },
+      {
+        "texto": "Casi siempre atiende mis dudas cuando se lo solicito",
+        "valor": 80,
+        "esAlerta": false,
+        "color": "#38bdf8"
+      },
+      {
+        "texto": "A menudo está ocupado y tarda en resolver dudas operativas",
+        "valor": 35,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-capacitacion-induccion",
+        "nombreAlerta": "Alerta de Déficit de Capacitación e Inducción",
+        "severidadAlerta": "Moderada",
+        "color": "#f97316"
+      },
+      {
+        "texto": "No, es inaccesible y no brinda acompañamiento ni orientación",
+        "valor": 10,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-capacitacion-induccion",
+        "nombreAlerta": "Alerta de Déficit de Capacitación e Inducción",
+        "severidadAlerta": "Alta",
+        "color": "#ef4444"
+      }
+    ],
+    "esCondicional": false,
+    "idEncuesta": "enc-001",
+    "secuencia": 15,
+    "esObligatoria": true,
+    "esSensibleAcoso": false
   },
   {
     "id": "b4-p20-feedback",
     "bloqueId": "bloque-4",
+    "texto": "¿Recibes retroalimentación periódica (feedback) orientada al desarrollo continuo y mejora en tu puesto?",
     "categoria": "Bloque 4: Liderazgo, Instrucciones y Feedback del Jefe Inmediato",
-    "texto": "Pregunta 20 — ¿Tu jefe te da consejos útiles para mejorar en tu trabajo?",
     "tipo": "multiple",
+    "tipoGrafico": "barras",
+    "modoPresentacion": "tarjetas",
+    "obligatoria": true,
+    "comentariosHabilitados": true,
+    "deteccionQuejas": true,
+    "solicitarPorQueSiNegativo": true,
     "opciones": [
       {
-        "id": "b4p20-1",
-        "texto": "Sí, muy bien y de forma constante",
-        "valor": 5,
-        "esAlerta": false
+        "texto": "Sí, recibo feedback constructivo y periódico que me ayuda a mejorar",
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#2563eb"
       },
       {
-        "id": "b4p20-2",
-        "texto": "Regular (Solo cuando hay errores)",
-        "valor": 2,
-        "esAlerta": false
+        "texto": "Recibo retroalimentación de manera ocasional",
+        "valor": 75,
+        "esAlerta": false,
+        "color": "#38bdf8"
       },
       {
-        "id": "b4p20-3",
-        "texto": "Mal (Nunca me aconseja)",
-        "valor": 1,
-        "esAlerta": true
+        "texto": "Rara vez recibo retroalimentación formativa sobre mi desempeño",
+        "valor": 35,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-capacitacion-induccion",
+        "nombreAlerta": "Alerta de Déficit de Capacitación e Inducción",
+        "severidadAlerta": "Moderada",
+        "color": "#f97316"
+      },
+      {
+        "texto": "No, nunca recibo feedback orientado a mi desarrollo",
+        "valor": 10,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-capacitacion-induccion",
+        "nombreAlerta": "Alerta de Déficit de Capacitación e Inducción",
+        "severidadAlerta": "Alta",
+        "color": "#ef4444"
       }
-    ]
+    ],
+    "esCondicional": false,
+    "idEncuesta": "enc-001",
+    "secuencia": 16,
+    "esObligatoria": true,
+    "esSensibleAcoso": false,
+    "activarSaltoCondicional": false
   },
   {
     "id": "b5-p21-capacitacion",
     "bloqueId": "bloque-5",
+    "texto": "En una escala del 1 al 5, ¿qué tan útiles y actualizadas son las capacitaciones que te brinda la empresa para realizar mejor tu trabajo?",
     "categoria": "Bloque 5: Capacitación, Plan Carrera, Beneficios y Gestión Humana",
-    "texto": "Pregunta 21 — ¿La empresa te brinda capacitaciones útiles y actualizadas para realizar mejor tu trabajo?",
     "tipo": "multiple",
+    "tipoGrafico": "barras",
+    "modoPresentacion": "deslizador_emocional",
+    "obligatoria": true,
+    "comentariosHabilitados": true,
+    "deteccionQuejas": true,
+    "solicitarPorQueSiNegativo": true,
     "opciones": [
       {
-        "id": "b5p21-si",
-        "texto": "Sí",
-        "valor": 5,
-        "esAlerta": false
+        "texto": "5 — Muy útiles, completas y actualizadas",
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#2563eb"
       },
       {
-        "id": "b5p21-av",
-        "texto": "Algunas veces",
-        "valor": 3,
-        "esAlerta": false
+        "texto": "4 — Útiles y adecuadas para mi función",
+        "valor": 80,
+        "esAlerta": false,
+        "color": "#38bdf8"
       },
       {
-        "id": "b5p21-no",
-        "texto": "No",
-        "valor": 1,
-        "esAlerta": true
+        "texto": "3 — Regulares / Suficientes solo para lo básico",
+        "valor": 60,
+        "esAlerta": false,
+        "color": "#f59e0b"
+      },
+      {
+        "texto": "2 — Poco útiles o desactualizadas",
+        "valor": 30,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-claridad-rol",
+        "nombreAlerta": "Alerta de Falta de Claridad en el Rol",
+        "severidadAlerta": "Moderada",
+        "color": "#f97316"
+      },
+      {
+        "texto": "1 — Nada útiles / No recibo capacitación adecuada",
+        "valor": 10,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-claridad-rol",
+        "nombreAlerta": "Alerta de Falta de Claridad en el Rol",
+        "severidadAlerta": "Alta",
+        "color": "#ef4444"
       }
-    ]
-  },
-  {
-    "id": "b5-p22-plan-carrera",
-    "bloqueId": "bloque-5",
-    "categoria": "Bloque 5: Capacitación, Plan Carrera, Beneficios y Gestión Humana",
-    "texto": "Pregunta 22 — ¿Conoces las oportunidades y requisitos para crecer o ascender profesionalmente dentro de la organización?",
-    "tipo": "multiple",
-    "opciones": [
-      {
-        "id": "b5p22-si",
-        "texto": "Sí",
-        "valor": 5,
-        "esAlerta": false
-      },
-      {
-        "id": "b5p22-av",
-        "texto": "Parcialmente",
-        "valor": 3,
-        "esAlerta": false
-      },
-      {
-        "id": "b5p22-no",
-        "texto": "No",
-        "valor": 1,
-        "esAlerta": true
-      }
-    ]
-  },
-  {
-    "id": "b5-p23-beneficios",
-    "bloqueId": "bloque-5",
-    "categoria": "Bloque 5: Capacitación, Plan Carrera, Beneficios y Gestión Humana",
-    "texto": "Pregunta 23 — ¿Consideras atractivos y convenientes los programas de bienestar y beneficios corporativos ofrecidos?",
-    "tipo": "multiple",
-    "opciones": [
-      {
-        "id": "b5p23-si",
-        "texto": "Sí",
-        "valor": 5,
-        "esAlerta": false
-      },
-      {
-        "id": "b5p23-av",
-        "texto": "Algunas veces",
-        "valor": 3,
-        "esAlerta": false
-      },
-      {
-        "id": "b5p23-no",
-        "texto": "No",
-        "valor": 1,
-        "esAlerta": true
-      }
-    ]
+    ],
+    "esCondicional": false,
+    "idEncuesta": "enc-001",
+    "secuencia": 17,
+    "esObligatoria": true,
+    "esSensibleAcoso": false,
+    "activarSaltoCondicional": false
   },
   {
     "id": "b5-p24-compensaciones",
     "bloqueId": "bloque-5",
+    "texto": "¿Consideras satisfactorias las compensaciones económicas recibidas por tu trabajo?",
     "categoria": "Bloque 5: Capacitación, Plan Carrera, Beneficios y Gestión Humana",
-    "texto": "Pregunta 24 — ¿Consideras satisfactorias las compensaciones económicas recibidas por tu trabajo?",
     "tipo": "multiple",
+    "tipoGrafico": "barras",
+    "modoPresentacion": "termometro",
+    "obligatoria": true,
+    "comentariosHabilitados": true,
+    "deteccionQuejas": true,
+    "solicitarPorQueSiNegativo": true,
     "opciones": [
       {
-        "id": "b5p24-si",
-        "texto": "Sí",
-        "valor": 5,
-        "esAlerta": false
+        "texto": "Sí, son totalmente satisfactorias y acordes a mi labor",
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#2563eb"
       },
       {
-        "id": "b5p24-av",
-        "texto": "Algunas veces",
-        "valor": 3,
-        "esAlerta": false
+        "texto": "Son aceptables en relación con mis funciones",
+        "valor": 75,
+        "esAlerta": false,
+        "color": "#38bdf8"
       },
       {
-        "id": "b5p24-no",
-        "texto": "No",
-        "valor": 1,
-        "esAlerta": true
+        "texto": "Poco satisfactorias frente al esfuerzo y carga exigida",
+        "valor": 35,
+        "esAlerta": false,
+        "tipoAlertaId": "tipo-retribucion-monetaria",
+        "nombreAlerta": "Alerta de Insatisfacción en Retribución Monetaria y Beneficios",
+        "severidadAlerta": "Alta",
+        "color": "#f97316"
+      },
+      {
+        "texto": "No, estoy muy insatisfecho con la compensación económica",
+        "valor": 10,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-retribucion-monetaria",
+        "nombreAlerta": "Alerta de Insatisfacción en Retribución Monetaria y Beneficios",
+        "severidadAlerta": "Crítica",
+        "color": "#ef4444"
       }
-    ]
+    ],
+    "esCondicional": false,
+    "idEncuesta": "enc-001",
+    "secuencia": 18,
+    "esObligatoria": true,
+    "esSensibleAcoso": false,
+    "activarSaltoCondicional": false
   },
   {
-    "id": "b5-p25-rrhh-respuesta",
+    "id": "b5-p22-plan-carrera",
     "bloqueId": "bloque-5",
+    "texto": "¿Conoces las oportunidades y requisitos para crecer o ascender profesionalmente dentro de la organización?",
     "categoria": "Bloque 5: Capacitación, Plan Carrera, Beneficios y Gestión Humana",
-    "texto": "Pregunta 25 — ¿El área de Gestión Humana / RRHH brinda respuesta oportuna a tus solicitudes o inquietudes?",
     "tipo": "multiple",
+    "tipoGrafico": "barras",
+    "modoPresentacion": "semaforo",
+    "obligatoria": true,
+    "comentariosHabilitados": true,
+    "deteccionQuejas": true,
+    "solicitarPorQueSiNegativo": true,
     "opciones": [
       {
-        "id": "b5p25-si",
-        "texto": "Sí",
-        "valor": 5,
-        "esAlerta": false
+        "texto": "Sí, conozco claramente el plan carrera y las convocatorias",
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#2563eb"
       },
       {
-        "id": "b5p25-av",
-        "texto": "Algunas veces",
-        "valor": 3,
-        "esAlerta": false
+        "texto": "Tengo conocimiento parcial sobre cómo postular a un ascenso",
+        "valor": 75,
+        "esAlerta": false,
+        "color": "#38bdf8"
       },
       {
-        "id": "b5p25-no",
-        "texto": "No",
-        "valor": 1,
-        "esAlerta": true
+        "texto": "Hay poca información sobre cómo crecer en la empresa",
+        "valor": 35,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-crecimiento-subutilizacion",
+        "nombreAlerta": "Alerta de Estancamiento y Subutilización de Talento",
+        "severidadAlerta": "Moderada",
+        "color": "#f97316"
+      },
+      {
+        "texto": "No conozco oportunidades ni veo opciones reales de ascenso",
+        "valor": 10,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-crecimiento-subutilizacion",
+        "nombreAlerta": "Alerta de Estancamiento y Subutilización de Talento",
+        "severidadAlerta": "Alta",
+        "color": "#ef4444"
       }
-    ]
+    ],
+    "esCondicional": false,
+    "idEncuesta": "enc-001",
+    "secuencia": 19,
+    "esObligatoria": true,
+    "esSensibleAcoso": false,
+    "activarSaltoCondicional": false
   },
   {
-    "id": "b5-p26-procesos-agiles",
+    "id": "b5-p23-beneficios",
     "bloqueId": "bloque-5",
+    "texto": "¿Consideras atractivos y convenientes los programas de bienestar y beneficios corporativos ofrecidos?",
     "categoria": "Bloque 5: Capacitación, Plan Carrera, Beneficios y Gestión Humana",
-    "texto": "Pregunta 26 — ¿Consideras que los procesos y trámites internos de la empresa son ágiles?",
     "tipo": "multiple",
+    "tipoGrafico": "barras",
+    "modoPresentacion": "tarjetas",
+    "obligatoria": true,
+    "comentariosHabilitados": true,
+    "deteccionQuejas": true,
+    "solicitarPorQueSiNegativo": true,
     "opciones": [
       {
-        "id": "b5p26-si",
-        "texto": "Sí",
-        "valor": 5,
-        "esAlerta": false
+        "texto": "Sí, son muy atractivos y aportan gran bienestar",
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#2563eb"
       },
       {
-        "id": "b5p26-av",
-        "texto": "Algunas veces",
-        "valor": 3,
-        "esAlerta": false
+        "texto": "Son buenos, aunque podrían ampliarse algunas opciones",
+        "valor": 75,
+        "esAlerta": false,
+        "color": "#38bdf8"
       },
       {
-        "id": "b5p26-no",
-        "texto": "No",
-        "valor": 1,
-        "esAlerta": true
+        "texto": "Son poco atractivos o casi no tengo acceso a ellos",
+        "valor": 35,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-retribucion-monetaria",
+        "nombreAlerta": "Alerta de Insatisfacción en Retribución Monetaria y Beneficios",
+        "severidadAlerta": "Alta",
+        "color": "#f97316"
+      },
+      {
+        "texto": "No, no percibo beneficios ni programas de bienestar convenientes",
+        "valor": 10,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-retribucion-monetaria",
+        "nombreAlerta": "Alerta de Insatisfacción en Retribución Monetaria y Beneficios",
+        "severidadAlerta": "Crítica",
+        "color": "#ef4444",
+        "saltarHastaId": "b1-p1-tiempo-empresa"
       }
-    ]
-  },
-  {
-    "id": "b5-p27-procesos-claros",
-    "bloqueId": "bloque-5",
-    "categoria": "Bloque 5: Capacitación, Plan Carrera, Beneficios y Gestión Humana",
-    "texto": "Pregunta 27 — ¿Los procedimientos e instructivos de la empresa son claros y comprensibles?",
-    "tipo": "multiple",
-    "opciones": [
-      {
-        "id": "b5p27-si",
-        "texto": "Sí",
-        "valor": 5,
-        "esAlerta": false
-      },
-      {
-        "id": "b5p27-av",
-        "texto": "Algunas veces",
-        "valor": 3,
-        "esAlerta": false
-      },
-      {
-        "id": "b5p27-no",
-        "texto": "No",
-        "valor": 1,
-        "esAlerta": true
-      }
-    ]
+    ],
+    "esCondicional": false,
+    "idEncuesta": "enc-001",
+    "secuencia": 20,
+    "esObligatoria": true,
+    "esSensibleAcoso": false,
+    "activarSaltoCondicional": false
   },
   {
     "id": "b5-p28-equidad-tareas",
     "bloqueId": "bloque-5",
+    "texto": "¿Existe equidad en la asignación y distribución de tareas en tu área?",
     "categoria": "Bloque 5: Capacitación, Plan Carrera, Beneficios y Gestión Humana",
-    "texto": "Pregunta 28 — ¿Existe equidad en la asignación y distribución de tareas en tu área?",
     "tipo": "multiple",
+    "tipoGrafico": "barras",
+    "modoPresentacion": "semaforo",
+    "obligatoria": true,
+    "comentariosHabilitados": true,
+    "deteccionQuejas": true,
+    "solicitarPorQueSiNegativo": true,
     "opciones": [
       {
-        "id": "b5p28-si",
-        "texto": "Sí",
-        "valor": 5,
-        "esAlerta": false
+        "texto": "Sí, la carga laboral se distribuye de manera justa y equitativa",
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#2563eb"
       },
       {
-        "id": "b5p28-av",
-        "texto": "Algunas veces",
-        "valor": 3,
-        "esAlerta": false
+        "texto": "En la mayoría de los casos hay equidad en las tareas",
+        "valor": 75,
+        "esAlerta": false,
+        "color": "#38bdf8"
       },
       {
-        "id": "b5p28-no",
-        "texto": "No",
-        "valor": 1,
-        "esAlerta": true
+        "texto": "Pocas veces, algunas personas reciben mucha más carga que otras",
+        "valor": 35,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-sobrecarga-burnout",
+        "nombreAlerta": "Alerta de Sobrecarga y Agotamiento (Burnout)",
+        "severidadAlerta": "Alta",
+        "color": "#f97316"
+      },
+      {
+        "texto": "No, la distribución de trabajo es totalmente desproporcionada e injusta",
+        "valor": 10,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-sobrecarga-burnout",
+        "nombreAlerta": "Alerta de Sobrecarga y Agotamiento (Burnout)",
+        "severidadAlerta": "Crítica",
+        "color": "#ef4444"
       }
-    ]
+    ],
+    "esCondicional": false,
+    "idEncuesta": "enc-001",
+    "secuencia": 21,
+    "esObligatoria": true,
+    "esSensibleAcoso": false,
+    "activarSaltoCondicional": false
+  },
+  {
+    "id": "b5-p25-rrhh-respuesta",
+    "bloqueId": "bloque-5",
+    "texto": "¿El área de Gestión Humana / RRHH brinda respuesta oportuna a tus solicitudes o inquietudes?",
+    "categoria": "Bloque 5: Capacitación, Plan Carrera, Beneficios y Gestión Humana",
+    "tipo": "multiple",
+    "tipoGrafico": "barras",
+    "modoPresentacion": "tarjetas",
+    "obligatoria": true,
+    "comentariosHabilitados": true,
+    "deteccionQuejas": true,
+    "solicitarPorQueSiNegativo": true,
+    "opciones": [
+      {
+        "texto": "Sí, atienden y resuelven las solicitudes de forma ágil y oportuna",
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#2563eb"
+      },
+      {
+        "texto": "Brindan buena respuesta dentro de tiempos razonables",
+        "valor": 80,
+        "esAlerta": false,
+        "color": "#38bdf8"
+      },
+      {
+        "texto": "Tardan demasiado o cuesta obtener respuesta a las solicitudes",
+        "valor": 35,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-fallas-procesos",
+        "nombreAlerta": "Alerta Fallas en Procesos de la Empresa",
+        "severidadAlerta": "Moderada",
+        "color": "#f97316"
+      },
+      {
+        "texto": "No brindan respuesta oportuna ni solucionan las inquietudes",
+        "valor": 10,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-fallas-procesos",
+        "nombreAlerta": "Alerta Fallas en Procesos de la Empresa",
+        "severidadAlerta": "Alta",
+        "color": "#ef4444"
+      }
+    ],
+    "esCondicional": false,
+    "idEncuesta": "enc-001",
+    "secuencia": 22,
+    "esObligatoria": true,
+    "esSensibleAcoso": false,
+    "activarSaltoCondicional": false
+  },
+  {
+    "id": "b5-p26-procesos-agiles",
+    "bloqueId": "bloque-5",
+    "texto": "¿Consideras que los procesos internos de la empresa son ágiles?",
+    "categoria": "Bloque 5: Capacitación, Plan Carrera, Beneficios y Gestión Humana",
+    "tipo": "multiple",
+    "tipoGrafico": "barras",
+    "modoPresentacion": "semaforo",
+    "obligatoria": true,
+    "comentariosHabilitados": true,
+    "deteccionQuejas": true,
+    "solicitarPorQueSiNegativo": true,
+    "opciones": [
+      {
+        "texto": "Sí, los procesos son ágiles, claros y facilitan la gestión diaria",
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#2563eb"
+      },
+      {
+        "texto": "c",
+        "valor": 75,
+        "esAlerta": false,
+        "color": "#38bdf8"
+      },
+      {
+        "texto": "Son lentos o burocráticos en varios procedimientos",
+        "valor": 35,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-fallas-procesos",
+        "nombreAlerta": "Alerta Fallas en Procesos de la Empresa",
+        "severidadAlerta": "Moderada",
+        "color": "#f97316"
+      },
+      {
+        "texto": "No, los procesos internos son engorrosos, confusos y retrasan el trabajo",
+        "valor": 10,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-fallas-procesos",
+        "nombreAlerta": "Alerta Fallas en Procesos de la Empresa",
+        "severidadAlerta": "Alta",
+        "color": "#ef4444"
+      }
+    ],
+    "esCondicional": false,
+    "idEncuesta": "enc-001",
+    "secuencia": 23,
+    "esObligatoria": true,
+    "esSensibleAcoso": false,
+    "activarSaltoCondicional": false
   },
   {
     "id": "b5-p29-equidad-oportunidades",
     "bloqueId": "bloque-5",
+    "texto": "¿Existe igualdad de oportunidades de desarrollo y crecimiento para todos en la empresa?",
     "categoria": "Bloque 5: Capacitación, Plan Carrera, Beneficios y Gestión Humana",
-    "texto": "Pregunta 29 — ¿Existe igualdad de oportunidades de desarrollo y crecimiento para todos en la empresa?",
     "tipo": "multiple",
+    "tipoGrafico": "barras",
+    "modoPresentacion": "tarjetas",
+    "obligatoria": true,
+    "comentariosHabilitados": true,
+    "deteccionQuejas": true,
+    "solicitarPorQueSiNegativo": true,
     "opciones": [
       {
-        "id": "b5p29-si",
-        "texto": "Sí",
-        "valor": 5,
-        "esAlerta": false
+        "texto": "Sí, todos tenemos las mismas oportunidades basadas en mérito",
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#2563eb"
       },
       {
-        "id": "b5p29-av",
-        "texto": "Algunas veces",
-        "valor": 3,
-        "esAlerta": false
+        "texto": "En general hay equidad en los procesos de desarrollo",
+        "valor": 75,
+        "esAlerta": false,
+        "color": "#38bdf8"
       },
       {
-        "id": "b5p29-no",
-        "texto": "No",
-        "valor": 1,
-        "esAlerta": true
+        "texto": "A veces se perciben preferencias o pocas oportunidades para ciertas áreas",
+        "valor": 35,
+        "esAlerta": false,
+        "tipoAlertaId": "tipo-crecimiento-subutilizacion",
+        "nombreAlerta": "Alerta de Estancamiento y Subutilización de Talento",
+        "severidadAlerta": "Moderada",
+        "color": "#f97316"
+      },
+      {
+        "texto": "No, no existe igualdad de oportunidades para crecer en la empresa",
+        "valor": 10,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-crecimiento-subutilizacion",
+        "nombreAlerta": "Alerta de Estancamiento y Subutilización de Talento",
+        "severidadAlerta": "Alta",
+        "color": "#ef4444"
       }
-    ]
+    ],
+    "esCondicional": false,
+    "idEncuesta": "enc-001",
+    "secuencia": 24,
+    "esObligatoria": true,
+    "esSensibleAcoso": false,
+    "activarSaltoCondicional": false
   },
   {
     "id": "b5-p30-equilibrio-vida",
     "bloqueId": "bloque-5",
+    "texto": "¿Consideras que la empresa se preocupa por el equilibrio entre la vida laboral y personal de sus empleados?",
     "categoria": "Bloque 5: Capacitación, Plan Carrera, Beneficios y Gestión Humana",
-    "texto": "Pregunta 30 — ¿Consideras que la empresa se preocupa por el equilibrio entre la vida laboral y personal de sus empleados?",
     "tipo": "multiple",
+    "tipoGrafico": "barras",
+    "modoPresentacion": "semaforo",
+    "obligatoria": true,
+    "comentariosHabilitados": true,
+    "deteccionQuejas": true,
+    "solicitarPorQueSiNegativo": true,
     "opciones": [
       {
-        "id": "b5p30-si",
-        "texto": "Sí",
-        "valor": 5,
-        "esAlerta": false
+        "texto": "Sí, se respeta mi tiempo personal y de descanso plenamente",
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#2563eb"
       },
       {
-        "id": "b5p30-av",
-        "texto": "Algunas veces",
-        "valor": 3,
-        "esAlerta": false
+        "texto": "Casi siempre hay respeto por mis horarios y vida familiar",
+        "valor": 75,
+        "esAlerta": false,
+        "color": "#38bdf8"
       },
       {
-        "id": "b5p30-no",
-        "texto": "No",
-        "valor": 1,
-        "esAlerta": true
+        "texto": "Pocas veces, cuesta equilibrar los turnos con mi vida personal",
+        "valor": 35,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-invasion-vida-personal",
+        "nombreAlerta": "Alerta de Invasión de Vida Personal / Desconexión Laboral",
+        "severidadAlerta": "Alta",
+        "color": "#f97316"
+      },
+      {
+        "texto": "No, no se respeta la desconexión laboral ni el equilibrio personal",
+        "valor": 10,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-invasion-vida-personal",
+        "nombreAlerta": "Alerta de Invasión de Vida Personal / Desconexión Laboral",
+        "severidadAlerta": "Crítica",
+        "color": "#ef4444"
       }
-    ]
+    ],
+    "esCondicional": false,
+    "idEncuesta": "enc-001",
+    "secuencia": 25,
+    "esObligatoria": true,
+    "esSensibleAcoso": false,
+    "activarSaltoCondicional": false
   },
   {
     "id": "b5-p31-comunicacion-interna",
     "bloqueId": "bloque-5",
+    "texto": "¿Los canales de comunicación interna de la compañía son efectivos?",
     "categoria": "Bloque 5: Capacitación, Plan Carrera, Beneficios y Gestión Humana",
-    "texto": "Pregunta 31 — ¿Los canales de comunicación interna de la compañía son efectivos?",
     "tipo": "multiple",
+    "tipoGrafico": "barras",
+    "modoPresentacion": "tarjetas",
+    "obligatoria": true,
+    "comentariosHabilitados": true,
+    "deteccionQuejas": true,
+    "solicitarPorQueSiNegativo": true,
     "opciones": [
       {
-        "id": "b5p31-si",
-        "texto": "Sí",
-        "valor": 5,
-        "esAlerta": false
+        "texto": "Sí, nos enteramos a tiempo de los cambios, noticias y novedades",
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#2563eb"
       },
       {
-        "id": "b5p31-av",
-        "texto": "Algunas veces",
-        "valor": 3,
-        "esAlerta": false
+        "texto": "Funcionan bien en la mayoría de anuncios importantes",
+        "valor": 80,
+        "esAlerta": false,
+        "color": "#38bdf8"
       },
       {
-        "id": "b5p31-no",
-        "texto": "No",
-        "valor": 1,
-        "esAlerta": true
+        "texto": "Son regulares, la información suele llegar tarde o incompleta",
+        "valor": 35,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-fallas-procesos",
+        "nombreAlerta": "Alerta Fallas en Procesos de la Empresa",
+        "severidadAlerta": "Moderada",
+        "color": "#f97316"
+      },
+      {
+        "texto": "No, los canales de comunicación interna son inefectivos",
+        "valor": 10,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-fallas-procesos",
+        "nombreAlerta": "Alerta Fallas en Procesos de la Empresa",
+        "severidadAlerta": "Alta",
+        "color": "#ef4444"
       }
-    ]
-  },
-  {
-    "id": "b5-p32-respaldo-organizacion",
-    "bloqueId": "bloque-5",
-    "categoria": "Bloque 5: Capacitación, Plan Carrera, Beneficios y Gestión Humana",
-    "texto": "Pregunta 32 — ¿Te sientes respaldado/a por la organización ante situaciones imprevistas o dificultades operativas?",
-    "tipo": "multiple",
-    "opciones": [
-      {
-        "id": "b5p32-si",
-        "texto": "Sí",
-        "valor": 5,
-        "esAlerta": false
-      },
-      {
-        "id": "b5p32-av",
-        "texto": "Algunas veces",
-        "valor": 3,
-        "esAlerta": false
-      },
-      {
-        "id": "b5p32-no",
-        "texto": "No",
-        "valor": 1,
-        "esAlerta": true
-      }
-    ]
+    ],
+    "esCondicional": false,
+    "idEncuesta": "enc-001",
+    "secuencia": 26,
+    "esObligatoria": true,
+    "esSensibleAcoso": false,
+    "activarSaltoCondicional": false
   },
   {
     "id": "b6-p33-estudia",
     "bloqueId": "bloque-6",
+    "texto": "¿Te encuentras actualmente cursando algún estudio técnico, tecnológico, profesional o posgrado?",
     "categoria": "Bloque 6: Nivel Académico, Estudios y Talento Humano",
-    "texto": "Pregunta 33 — ¿Te encuentras actualmente cursando algún estudio técnico, tecnológico, profesional o posgrado?",
     "tipo": "multiple",
+    "tipoGrafico": "barras",
+    "modoPresentacion": "palanca_sino",
+    "obligatoria": true,
+    "comentariosHabilitados": true,
+    "deteccionQuejas": true,
+    "solicitarPorQueSiNegativo": true,
     "opciones": [
       {
-        "id": "b6p33-si",
-        "texto": "Sí",
-        "valor": 5,
-        "esAlerta": false
+        "texto": "Sí, me encuentro estudiando actualmente",
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#2563eb"
       },
       {
-        "id": "b6p33-no",
-        "texto": "No (Pase directamente al Bloque 7)",
-        "valor": 1,
-        "esAlerta": false
+        "texto": "No estoy estudiando actualmente, pero planeo retomar pronto",
+        "valor": 90,
+        "esAlerta": false,
+        "color": "#38bdf8"
+      },
+      {
+        "texto": "No me encuentro estudiando en este momento",
+        "valor": 85,
+        "esAlerta": false,
+        "color": "#64748b"
       }
-    ]
+    ],
+    "esCondicional": false,
+    "idEncuesta": "enc-001",
+    "secuencia": 27,
+    "esObligatoria": true,
+    "esSensibleAcoso": false,
+    "activarSaltoCondicional": false
   },
   {
     "id": "b6-p33b-que-estudia",
     "bloqueId": "bloque-6",
+    "texto": "Especifica qué estudias",
     "categoria": "Bloque 6: Nivel Académico, Estudios y Talento Humano",
-    "texto": "Pregunta 33b — Especifique qué área o programa de estudios se encuentra cursando actualmente:",
     "tipo": "texto",
-    "opciones": []
+    "tipoGrafico": "barras",
+    "obligatoria": true,
+    "comentariosHabilitados": true,
+    "deteccionQuejas": true,
+    "solicitarPorQueSiNegativo": true,
+    "opciones": [],
+    "esCondicional": false,
+    "modoPresentacion": "tarjetas",
+    "idEncuesta": "enc-001",
+    "secuencia": 28,
+    "esObligatoria": true,
+    "esSensibleAcoso": true,
+    "activarSaltoCondicional": false
   },
   {
     "id": "b6-p34-talento-aprovechado",
     "bloqueId": "bloque-6",
+    "texto": "¿Consideras que tu nivel académico actual es aprovechado por la empresa?",
     "categoria": "Bloque 6: Nivel Académico, Estudios y Talento Humano",
-    "texto": "Pregunta 34 — ¿Consideras que tu nivel académico actual es aprovechado por la empresa?",
     "tipo": "multiple",
+    "tipoGrafico": "barras",
+    "modoPresentacion": "semaforo",
+    "obligatoria": true,
+    "comentariosHabilitados": true,
+    "deteccionQuejas": true,
+    "solicitarPorQueSiNegativo": true,
     "opciones": [
       {
-        "id": "b6p34-1",
-        "texto": "Sí, totalmente aprovechados en mi rol o en proyecciones internas",
-        "valor": 5,
-        "esAlerta": false
+        "texto": "Sí, aplico mis conocimientos y siento que mi talento es bien aprovechado",
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#2563eb"
       },
       {
-        "id": "b6p34-2",
-        "texto": "Parcialmente (solo se usa una parte)",
-        "valor": 3,
-        "esAlerta": false
+        "texto": "Parcialmente, aplico algunas habilidades en mi puesto actual",
+        "valor": 75,
+        "esAlerta": false,
+        "color": "#38bdf8"
       },
       {
-        "id": "b6p34-3",
-        "texto": "No, siento que mi perfil o nivel de estudios está subutilizado en mi puesto actual",
-        "valor": 1,
-        "esAlerta": true
+        "texto": "Poco, mis estudios y capacidades podrían aprovecharse mucho más",
+        "valor": 35,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-crecimiento-subutilizacion",
+        "nombreAlerta": "Alerta de Estancamiento y Subutilización de Talento",
+        "severidadAlerta": "Moderada",
+        "color": "#f97316"
+      },
+      {
+        "texto": "No, siento que mi nivel académico y talento están subutilizados",
+        "valor": 10,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-crecimiento-subutilizacion",
+        "nombreAlerta": "Alerta de Estancamiento y Subutilización de Talento",
+        "severidadAlerta": "Alta",
+        "color": "#ef4444"
       }
-    ]
+    ],
+    "esCondicional": false,
+    "idEncuesta": "enc-001",
+    "secuencia": 29,
+    "esObligatoria": true,
+    "esSensibleAcoso": false,
+    "activarSaltoCondicional": false
   },
   {
     "id": "b7-p35-vision-2anos",
     "bloqueId": "bloque-7",
+    "texto": "¿Cómo te visualizas a ti mismo/a y a tu crecimiento profesional dentro de la compañía en los próximos dos años?",
     "categoria": "Bloque 7: Proyección a Futuro y Visión en la Empresa",
-    "texto": "Pregunta 35 — ¿Cómo te visualizas a ti mismo/a y a tu crecimiento profesional dentro de la compañía en los próximos dos años?",
-    "tipo": "texto",
-    "opciones": []
+    "tipo": "multiple",
+    "tipoGrafico": "barras",
+    "modoPresentacion": "tarjetas",
+    "obligatoria": true,
+    "comentariosHabilitados": true,
+    "deteccionQuejas": true,
+    "solicitarPorQueSiNegativo": true,
+    "opciones": [
+      {
+        "texto": "Asumiendo nuevos retos, ascendiendo y creciendo dentro de Contigo Call Center",
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#2563eb"
+      },
+      {
+        "texto": "Estable en mi puesto, fortaleciendo mi experiencia actual",
+        "valor": 80,
+        "esAlerta": false,
+        "color": "#38bdf8"
+      },
+      {
+        "texto": "Con incertidumbre, aún no veo claro mi crecimiento profesional aquí",
+        "valor": 35,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-riesgo-fuga",
+        "nombreAlerta": "Alerta de Riesgo de Fuga y Renuncia",
+        "severidadAlerta": "Alta",
+        "color": "#f97316"
+      },
+      {
+        "texto": "No me visualizo trabajando en la compañía en los próximos dos años",
+        "valor": 10,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-riesgo-fuga",
+        "nombreAlerta": "Alerta de Riesgo de Fuga y Renuncia",
+        "severidadAlerta": "Crítica",
+        "color": "#ef4444"
+      }
+    ],
+    "esCondicional": false,
+    "idEncuesta": "enc-001",
+    "secuencia": 30,
+    "esObligatoria": true,
+    "esSensibleAcoso": false,
+    "activarSaltoCondicional": false
   },
   {
     "id": "b7-p36-permanencia",
     "bloqueId": "bloque-7",
+    "texto": "¿Te motiva permanecer y consolidar tu carrera a largo plazo en Contigo Call Center?",
     "categoria": "Bloque 7: Proyección a Futuro y Visión en la Empresa",
-    "texto": "Pregunta 36 — ¿Te motiva permanecer y consolidar tu carrera a largo plazo en Contigo Call Center?",
     "tipo": "multiple",
+    "tipoGrafico": "barras",
+    "modoPresentacion": "termometro",
+    "obligatoria": true,
+    "comentariosHabilitados": true,
+    "deteccionQuejas": true,
+    "solicitarPorQueSiNegativo": true,
     "opciones": [
       {
-        "id": "b7p36-1",
-        "texto": "Sí, me motiva mucho crecer aquí si hay planes claros",
-        "valor": 5,
-        "esAlerta": false
+        "texto": "Sí, me siento muy motivado de consolidar mi carrera aquí",
+        "valor": 100,
+        "esAlerta": false,
+        "color": "#2563eb"
       },
       {
-        "id": "b7p36-2",
-        "texto": "Tengo dudas, depende de cómo evolucionen las condiciones, salarios y vacantes",
-        "valor": 3,
-        "esAlerta": false
+        "texto": "Sí, siempre que existan oportunidades de mejora y desarrollo",
+        "valor": 75,
+        "esAlerta": false,
+        "color": "#38bdf8"
       },
       {
-        "id": "b7p36-3",
-        "texto": "No, no visualizo un crecimiento a largo plazo en la empresa",
-        "valor": 1,
-        "esAlerta": true
+        "texto": "Tengo poca motivación por falta de oportunidades de crecimiento",
+        "valor": 35,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-crecimiento-subutilizacion",
+        "nombreAlerta": "Alerta de Estancamiento y Subutilización de Talento",
+        "severidadAlerta": "Alta",
+        "color": "#f97316"
+      },
+      {
+        "texto": "No me motiva permanecer a largo plazo y busco otras opciones",
+        "valor": 10,
+        "esAlerta": true,
+        "tipoAlertaId": "tipo-riesgo-fuga",
+        "nombreAlerta": "Alerta de Riesgo de Fuga y Renuncia",
+        "severidadAlerta": "Crítica",
+        "color": "#ef4444"
       }
-    ]
-  },
-  {
-    "id": "b8-p37-mejoras-infraestructura",
-    "bloqueId": "bloque-8",
-    "categoria": "Bloque 8: Propuestas de Mejora y Diagnóstico Abierto",
-    "texto": "Pregunta 37 — ¿Qué cambiarías o mejorarías de manera prioritaria en la infraestructura física y puestos de trabajo del Call Center?",
-    "tipo": "texto",
-    "opciones": []
-  },
-  {
-    "id": "b8-p38-mejoras-procesos",
-    "bloqueId": "bloque-8",
-    "categoria": "Bloque 8: Propuestas de Mejora y Diagnóstico Abierto",
-    "texto": "Pregunta 38 — ¿Qué propuestas o cambios prioritarios implementarías en los procesos operativos del Call Center?",
-    "tipo": "texto",
-    "opciones": []
-  },
-  {
-    "id": "b8-p39-sugerencias-direccion",
-    "bloqueId": "bloque-8",
-    "categoria": "Bloque 8: Propuestas de Mejora y Diagnóstico Abierto",
-    "texto": "Pregunta 39 — ¿Qué sugerencias le darías a la Alta Dirección para incrementar el bienestar y liderazgo organizacional?",
-    "tipo": "texto",
-    "opciones": []
-  },
-  {
-    "id": "b8-p40-sugerencias-rrhh",
-    "bloqueId": "bloque-8",
-    "categoria": "Bloque 8: Propuestas de Mejora y Diagnóstico Abierto",
-    "texto": "Pregunta 40 — ¿Qué recomendaciones le darías a Gestión Humana / RRHH para incrementar el bienestar y la motivación general?",
-    "tipo": "texto",
-    "opciones": []
+    ],
+    "esCondicional": false,
+    "idEncuesta": "enc-001",
+    "secuencia": 31,
+    "esObligatoria": true,
+    "esSensibleAcoso": false,
+    "activarSaltoCondicional": false
   },
   {
     "id": "b8-p41-comentarios-libres",
     "bloqueId": "bloque-8",
+    "texto": "Tu punto de vista cuenta: ¿qué cambios o iniciativas crees que ayudarían a que la compañía funcione mejor?",
     "categoria": "Bloque 8: Propuestas de Mejora y Diagnóstico Abierto",
-    "texto": "Pregunta 41 — Escribe cualquier otro comentario, sugerencia o inquietud adicional que consideres relevante y no se haya mencionado en la encuesta:",
     "tipo": "texto",
-    "opciones": []
+    "tipoGrafico": "barras",
+    "obligatoria": true,
+    "esSensibleAcoso": true,
+    "comentariosHabilitados": true,
+    "deteccionQuejas": true,
+    "solicitarPorQueSiNegativo": true,
+    "opciones": [],
+    "esCondicional": false,
+    "modoPresentacion": "tarjetas",
+    "idEncuesta": "enc-001",
+    "secuencia": 32,
+    "esObligatoria": true
   }
 ]

@@ -5,12 +5,13 @@ import {
   updateCuenta,
   deleteCuenta
 } from '../controllers/cuentasController.js'
+import { verificarToken } from '../middlewares/authMiddleware.js'
 
 const router = Router()
 
-router.get('/', getCuentas)
-router.post('/', createCuenta)
-router.put('/:id', updateCuenta)
-router.delete('/:id', deleteCuenta)
+router.get('/', verificarToken, getCuentas)
+router.post('/', verificarToken, createCuenta)
+router.put('/:id', verificarToken, updateCuenta)
+router.delete('/:id', verificarToken, deleteCuenta)
 
 export default router

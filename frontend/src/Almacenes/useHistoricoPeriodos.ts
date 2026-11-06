@@ -171,6 +171,16 @@ export function useHistoricoPeriodos() {
   }
 
   /**
+   * Revierte y remueve el cierre de periodo anual si el proyecto fue revertido dentro de los 3 días hábiles
+   */
+  const revertirCierrePeriodo = (idEncuestaOAnio: string | number) => {
+    historicoPeriodos.value = historicoPeriodos.value.filter(
+      p => p.idEncuesta !== String(idEncuestaOAnio) && p.id !== String(idEncuestaOAnio) && p.anio !== Number(idEncuestaOAnio)
+    )
+    guardarEnLocalStorage(historicoPeriodos.value)
+  }
+
+  /**
    * Calcula la comparativa porcentual entre el valor actual y el año anterior más reciente
    */
   const calcularComparativaHistorica = (porcentajeActual: number): ComparativaPeriodosResult => {
@@ -213,6 +223,7 @@ export function useHistoricoPeriodos() {
     guardarDatoAnioAnterior,
     eliminarDatoAnioAnterior,
     cerrarYGuardarPeriodoAnual,
+    revertirCierrePeriodo,
     calcularComparativaHistorica
   }
 }

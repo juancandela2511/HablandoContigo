@@ -134,7 +134,6 @@ export function depurarRastrosLocales(): void {
   if (typeof window === 'undefined') return
 
   const llavesAEliminar = [
-    'hablandocontigo_respuestas',
     'hablandocontigo_db_table_cuentas_admin',
     'hablandocontigo_db_table_encuestas',
     'hablandocontigo_db_table_respuestas',
