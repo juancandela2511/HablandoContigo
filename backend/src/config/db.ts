@@ -38,7 +38,10 @@ async function leerPreguntasInicialesResiliente(): Promise<any[] | null> {
   const rutasCandidatas = [
     path.resolve(process.cwd(), 'src/data/preguntas.json'),
     path.resolve(process.cwd(), 'data/preguntas.json'),
-    path.resolve(process.cwd(), '../Frontend/src/database/preguntas.json')
+    path.resolve(process.cwd(), '../frontend/src/database/preguntas.json'),
+    path.resolve(process.cwd(), '../Frontend/src/database/preguntas.json'),
+    path.resolve(process.cwd(), '../frontend/src/Config/preguntas.json'),
+    path.resolve(process.cwd(), '../Frontend/src/Config/preguntas.json')
   ]
 
   for (const ruta of rutasCandidatas) {

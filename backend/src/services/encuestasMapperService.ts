@@ -112,11 +112,17 @@ export function construirParametrosInsercionPregunta(idEncuesta: string, p: any,
 
 export async function sincronizarPreguntasJsonLocales(preguntas: any[]): Promise<void> {
   try {
-    const rutaDbJson = path.resolve(process.cwd(), '../Frontend/src/database/preguntas.json')
-    const rutaConfigJson = path.resolve(process.cwd(), '../Frontend/src/Config/preguntas.json')
     const jsonContent = JSON.stringify(preguntas, null, 2)
-    await fs.writeFile(rutaDbJson, jsonContent, 'utf-8').catch(() => {})
-    await fs.writeFile(rutaConfigJson, jsonContent, 'utf-8').catch(() => {})
+    const rutasPosibles = [
+      path.resolve(process.cwd(), '../frontend/src/database/preguntas.json'),
+      path.resolve(process.cwd(), '../Frontend/src/database/preguntas.json'),
+      path.resolve(process.cwd(), '../frontend/src/Config/preguntas.json'),
+      path.resolve(process.cwd(), '../Frontend/src/Config/preguntas.json'),
+      path.resolve(process.cwd(), 'src/data/preguntas.json')
+    ]
+    for (const r of rutasPosibles) {
+      await fs.writeFile(r, jsonContent, 'utf-8').catch(() => {})
+    }
   } catch {
     // Entornos Docker o standalone pueden no tener carpeta Frontend adyacente
   }

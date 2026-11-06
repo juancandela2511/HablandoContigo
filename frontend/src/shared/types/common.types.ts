@@ -37,7 +37,7 @@ export const PERMISOS_POR_ROL: Record<RolCuenta, PermisosRol> = {
     proyectos: true,
     dashboard: true,
     alertas: true,
-    cuentas: false,
+    cuentas: true,
     cambiarContrasenasOtros: false,
     configuracion: true,
     editarEncuestaClima: true

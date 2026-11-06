@@ -9,6 +9,7 @@
 import { consultarOllama } from './clienteOllama'
 import type { AnalisisRespuestaAbierta } from './tiposIA'
 import { esOpcionMultipleCerrada } from './menciones/filtroComentariosReales'
+import { obtenerApiBaseUrl } from '@/services/api'
 
 export interface ResumenComentariosPregunta {
   totalComentarios: number
@@ -34,6 +35,38 @@ export async function analizarRespuestaAbierta(
     }
   }
 
+  // 1. Intentar primero a través del backend centralizado (resuelve Docker / producción sin errores de CORS)
+  try {
+    const apiUrl = obtenerApiBaseUrl()
+    const resp = await fetch(`${apiUrl}/ia/analizar-respuesta`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ textoPregunta: pregunta, respuestaTexto: texto }),
+      signal: AbortSignal.timeout(3000)
+    })
+    if (resp.ok) {
+      const data = await resp.json()
+      if (data && data.clasificacion) {
+        return {
+          clasificacion: data.clasificacion,
+          puntaje: Number(data.puntaje) || 3,
+          tema: data.tema || 'General',
+          resumen: data.resumen || 'Análisis procesado por IA.',
+          palabrasClave: data.palabrasClave || [],
+          esAlerta: Boolean(data.esAlerta),
+          alertaSugerida: data.esAlerta ? {
+            tipoAlertaId: data.tipoAlerta === 'acoso' ? 'tipo-acoso-sexual' : (data.tipoAlerta === 'burnout' || data.tipoAlerta === 'depresion' ? 'tipo-sobrecarga-burnout' : 'tipo-molestias-cotidianas'),
+            nombre: data.tipoAlerta === 'acoso' ? 'Alerta de Acoso Sexual' : 'Alerta Psicosocial',
+            severidad: 'Alta',
+            motivo: data.resumen || 'Detectado por análisis de IA'
+          } : undefined
+        }
+      }
+    }
+  } catch {
+    // Si el backend no está disponible o da timeout, continúa con el fallback directo
+  }
+
   const prompt = `Analiza como psicólogo organizacional este comentario libre de clima laboral:
 PREGUNTA: "${pregunta}"
 COMENTARIO: "${texto}"
@@ -44,7 +77,7 @@ Responde ÚNICAMENTE un JSON:
   "tema": "Liderazgo" | "Salud Mental" | "Carga Laboral" | "Acoso y Convivencia" | "Infraestructura" | "Procesos",
   "resumen": "Resumen conciso de 1 frase de lo que pasa",
   "esAlerta": true o false,
-  "alerta": { "tipoAlertaId": "tipo-jefes-gestion", "nombre": "Nombre Alerta", "severidad": "Alta", "motivo": "Explicación" }
+  "alerta": { "tipoAlertaId": "tipo-molestias-cotidianas", "nombre": "Nombre Alerta", "severidad": "Alta", "motivo": "Explicación" }
 }`
 
   const raw = await consultarOllama(prompt)
@@ -71,20 +104,20 @@ Responde ÚNICAMENTE un JSON:
 
 function fallbackLocalAbierta(texto: string): AnalisisRespuestaAbierta {
   const low = texto.toLowerCase()
-  if (/acoso|me toco|toco|tocamiento|inapropiad|sexual|humillaci/i.test(low)) {
+  if (/sexual|toco|tocamiento|inapropiad|connotaci[oó]n/i.test(low)) {
     return {
       clasificacion: 'Mala', puntaje: 1, tema: 'Acoso y Convivencia',
-      resumen: `Reporte de posible vulneración o acoso: "${texto.slice(0, 90)}..."`,
-      palabrasClave: ['acoso'], esAlerta: true,
-      alertaSugerida: { tipoAlertaId: 'tipo-acoso', nombre: 'Acoso Laboral', severidad: 'Crítica', motivo: 'Reporte de hostigamiento o contacto inapropiado.' }
+      resumen: `Reporte de posible vulneración o conducta sexual inapropiada: "${texto.slice(0, 90)}..."`,
+      palabrasClave: ['acoso sexual'], esAlerta: true,
+      alertaSugerida: { tipoAlertaId: 'tipo-acoso-sexual', nombre: 'Alerta de Acoso Sexual', severidad: 'Crítica', motivo: 'Reporte de insinuación o contacto no consentido.' }
     }
   }
-  if (/grito|insult|amenaz|maltrato|jefe grita|autoritari/i.test(low)) {
+  if (/grito|insult|amenaz|maltrato|jefe grita|autoritari|se la monta|humillaci/i.test(low)) {
     return {
-      clasificacion: 'Mala', puntaje: 1, tema: 'Liderazgo',
-      resumen: `Inconformidad con el trato o jefatura directa: "${texto.slice(0, 90)}..."`,
-      palabrasClave: ['liderazgo'], esAlerta: true,
-      alertaSugerida: { tipoAlertaId: 'tipo-jefes-gestion', nombre: 'Liderazgo Tóxico', severidad: 'Alta', motivo: 'Trato autoritario o gritos en el área.' }
+      clasificacion: 'Mala', puntaje: 1, tema: 'Liderazgo y Convivencia',
+      resumen: `Inconformidad con el trato hostil o roces: "${texto.slice(0, 90)}..."`,
+      palabrasClave: ['convivencia'], esAlerta: true,
+      alertaSugerida: { tipoAlertaId: 'tipo-molestias-cotidianas', nombre: 'Alerta de Molestias y Fastidio Cotidiano', severidad: 'Crítica', motivo: 'Trato autoritario, hostigamiento verbal o roces en el área.' }
     }
   }
   if (/excelente|muy bien|motivad|feliz|gran equipo|apoyo|gracias/i.test(low)) {
@@ -118,6 +151,29 @@ export async function resumirComentariosPreguntaConOllama(
       citasDirectas: []
     }
   }
+
+  // 1. Intentar a través del backend centralizado
+  try {
+    const apiUrl = obtenerApiBaseUrl()
+    const resp = await fetch(`${apiUrl}/ia/resumen-comentarios`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ comentarios: limpios }),
+      signal: AbortSignal.timeout(4000)
+    })
+    if (resp.ok) {
+      const data = await resp.json()
+      if (data && data.resumen) {
+        return {
+          totalComentarios: limpios.length,
+          resumen: data.resumen,
+          sentimientoPredominante: data.sentimientoPredominante || (data.alertaDetectada ? 'Crítico' : 'Constructivo'),
+          problemasPrincipales: Array.isArray(data.problemasPrincipales) ? data.problemasPrincipales : [],
+          citasDirectas: limpios
+        }
+      }
+    }
+  } catch {}
 
   const prompt = `Actúa como psicólogo especialista en clima laboral.
 Analiza estos ${limpios.length} comentarios escritos por colaboradores para la pregunta:

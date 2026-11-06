@@ -10,48 +10,57 @@ export function sugerirAlertaParaSeccion(
 ): SugerenciaAlerta {
   const txt = (textoSeccionOPregunta || '').toLowerCase()
 
-  if (/acoso|tocamiento|hostig|discriminaci|sexual|intimidaci|humillaci/i.test(txt)) {
+  if (/sexual|tocamiento|propuesta indebida|inapropiad|connotaci[oó]n sexual/i.test(txt)) {
     return {
-      tipoAlertaId: 'tipo-acoso',
-      nombreAlerta: 'Acoso Laboral & Hostigamiento',
+      tipoAlertaId: 'tipo-acoso-sexual',
+      nombreAlerta: 'Alerta de Acoso Sexual',
       severidad: 'Crítica',
-      explicacion: 'Detecta conductas de vulneración o acoso.'
+      explicacion: 'Detecta conductas de vulneración, contacto no consentido o insinuaciones sexuales.'
     }
   }
 
-  if (/lider|líder|jefe|supervisor|coordinad|direcci|autoritar|gritos|favoritism/i.test(txt)) {
+  if (/acoso|hostig|grito|humillaci|trata mal|grosero|se la monta|maltrato/i.test(txt)) {
     return {
-      tipoAlertaId: 'tipo-jefes-gestion',
-      nombreAlerta: 'Mala Gestión de Jefes & Liderazgo Tóxico',
+      tipoAlertaId: 'tipo-molestias-cotidianas',
+      nombreAlerta: 'Alerta de Molestias y Fastidio Cotidiano',
+      severidad: 'Crítica',
+      explicacion: 'Identifica trato hostil, gritos, humillaciones o roces interpersonales.'
+    }
+  }
+
+  if (/lider|líder|jefe|supervisor|coordinad|direcci|autoritar|favoritism/i.test(txt)) {
+    return {
+      tipoAlertaId: 'tipo-reconocimiento-valoracion',
+      nombreAlerta: 'Alerta de Reconocimiento y Valoración',
       severidad: 'Alta',
-      explicacion: 'Identifica abuso de autoridad o falta de empatía directiva.'
+      explicacion: 'Identifica percepción de falta de apoyo, empatía directiva o respaldo del líder.'
     }
   }
 
-  if (/salud mental|depresi|ansiedad|llanto|desesper|p[aá]nico|burnout|agotad/i.test(txt)) {
+  if (/salud mental|depresi|ansiedad|llanto|desesper|p[aá]nico|burnout|agotad|estrés|estres|cansancio/i.test(txt)) {
     return {
-      tipoAlertaId: 'tipo-depresion',
-      nombreAlerta: 'Crisis Anímica & Salud Mental (Burnout)',
+      tipoAlertaId: 'tipo-sobrecarga-burnout',
+      nombreAlerta: 'Alerta de Sobrecarga y Agotamiento (Burnout)',
       severidad: 'Crítica',
-      explicacion: 'Señales de agotamiento o crisis emocional extrema.'
+      explicacion: 'Señales de fatiga física o mental extrema y estrés desmedido en el puesto.'
     }
   }
 
   if (/carga|sobrecarga|hora extra|turno|descanso|jornada|presi[oó]n|explotaci/i.test(txt)) {
     return {
-      tipoAlertaId: 'tipo-sobrecarga',
-      nombreAlerta: 'Sobrecarga & Jornada Extensiva',
+      tipoAlertaId: 'tipo-sobrecarga-burnout',
+      nombreAlerta: 'Alerta de Sobrecarga y Agotamiento (Burnout)',
       severidad: 'Alta',
       explicacion: 'Exceso en la carga operativa o falta de descansos reglamentarios.'
     }
   }
 
-  if (/herramient|equipo|computador|instalaci|ruido|infraestructur/i.test(txt)) {
+  if (/herramient|equipo|computador|instalaci|ruido|infraestructur|diadema|silla|lento/i.test(txt)) {
     return {
-      tipoAlertaId: 'tipo-instalaciones',
-      nombreAlerta: 'Infraestructura & Condiciones Físicas',
+      tipoAlertaId: 'tipo-recursos-condiciones',
+      nombreAlerta: 'Alerta de Fallas en Recursos, Herramientas y Condiciones Físicas',
       severidad: 'Moderada',
-      explicacion: 'Fallas materiales o condiciones inseguras en el puesto de trabajo.'
+      explicacion: 'Fallas materiales, lentitud técnica o condiciones ergonómicas deficientes.'
     }
   }
 
