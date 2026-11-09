@@ -11,11 +11,11 @@ export function obtenerApiBaseUrl(): string {
   if (typeof window !== 'undefined') {
     const { hostname, port } = window.location
     if (port === '5173' || port === '4173') {
-      return `http://${hostname}:3000/api`
+      return `http://${hostname}:3001/api`
     }
     return '/api'
   }
-  return 'http://localhost:3000/api'
+  return 'http://localhost:3001/api'
 }
 
 const API_BASE_URL = obtenerApiBaseUrl()

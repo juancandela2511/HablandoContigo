@@ -62,12 +62,12 @@ export async function inicializarBaseDatos(): Promise<void> {
     client = await pool.connect()
     const res = await client.query('SELECT NOW() as now, version() as version;')
     await client.query('ALTER TABLE encuestas DROP CONSTRAINT IF EXISTS encuestas_estado_check;').catch(() => {})
+    await client.query('ALTER TABLE usuarios DROP CONSTRAINT IF EXISTS usuarios_rol_check;').catch(() => {})
+    await client.query('ALTER TABLE usuarios DROP CONSTRAINT IF EXISTS usuarios_estado_check;').catch(() => {})
 
     // Garantizar que las columnas de fotos y avatares permitan cadenas Base64 completas sin truncamiento
     await client.query('ALTER TABLE usuarios ALTER COLUMN avatar TYPE TEXT;').catch(() => {})
     await client.query('ALTER TABLE usuarios ALTER COLUMN foto_url TYPE TEXT;').catch(() => {})
-    await client.query('ALTER TABLE cuentas ALTER COLUMN avatar TYPE TEXT;').catch(() => {})
-    await client.query('ALTER TABLE cuentas ALTER COLUMN foto_url TYPE TEXT;').catch(() => {})
 
     console.log(`[PostgreSQL] Conexión establecida con ${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || 5432}/${process.env.DB_NAME || 'mi_base_datos'}`)
     console.log(`[PostgreSQL] Motor: ${res.rows[0].version.split(' ')[0]} ${res.rows[0].version.split(' ')[1]} | Timestamp DB: ${res.rows[0].now}`)

@@ -6,6 +6,15 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig(({ mode }) => ({
   base: './', // Rutas relativas correctas en Vercel
+  server: {
+    port: 5173,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true
+      }
+    }
+  },
   plugins: [
     vue(),
     // DevTools solo en desarrollo — NO en el bundle de producción
