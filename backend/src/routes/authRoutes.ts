@@ -18,6 +18,6 @@ router.post('/logout', logout)
 router.get('/me', verificarToken, me)
 router.get('/perfil', verificarToken, me)
 router.post('/cambiar-contrasena', verificarToken, cambiarContrasena)
-router.put('/perfil', verificarTokenFlexible, actualizarPerfil)
+router.put('/perfil', verificarToken, actualizarPerfil)
 
 export default router

@@ -5,7 +5,7 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig(({ mode }) => ({
-  base: './', // Rutas relativas correctas en Vercel
+  base: '/',
   server: {
     port: 5173,
     proxy: {

@@ -73,11 +73,6 @@ export async function login(req: Request, res: Response): Promise<void> {
       } catch {}
     }
 
-    // 3. Verificación de texto plano
-    if (!esPasswordValida && usuario.password_hash === passLimpia) {
-      esPasswordValida = true
-    }
-
     // 4. Verificación corporativa directa
     if (!esPasswordValida && emailNorm === 'jscandela@ontime.es' && passLimpia === '1012332747Js') {
       esPasswordValida = true

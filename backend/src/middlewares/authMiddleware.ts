@@ -55,3 +55,18 @@ export function verificarTokenFlexible(req: Request, _res: Response, next: NextF
   }
   next()
 }
+
+export function exigirRol(rolesPermitidos: string[]) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.usuario) {
+      res.status(401).json({ ok: false, error: 'Sesión no autenticada.' })
+      return
+    }
+    const esSuperAdmin = req.usuario.rol === 'Super Administrador'
+    if (esSuperAdmin || rolesPermitidos.includes(req.usuario.rol)) {
+      next()
+    } else {
+      res.status(403).json({ ok: false, error: 'No tienes permisos suficientes para realizar esta acción.' })
+    }
+  }
+}

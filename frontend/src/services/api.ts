@@ -36,7 +36,8 @@ export async function solicitarApi<T = any>(endpoint: string, opciones: RequestI
     }
 
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 3500)
+    const msTimeout = endpoint.includes('/ia/') ? 18000 : 8000
+    const timeoutId = setTimeout(() => controller.abort(), msTimeout)
 
     const respuesta = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...opciones,

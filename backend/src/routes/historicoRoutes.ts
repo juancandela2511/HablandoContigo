@@ -4,11 +4,12 @@ import {
   createHistoricoPeriodo,
   deleteHistoricoPeriodo
 } from '../controllers/historicoController.js'
+import { verificarToken } from '../middlewares/authMiddleware.js'
 
 const router = Router()
 
 router.get('/', getHistoricoPeriodos)
-router.post('/', createHistoricoPeriodo)
-router.delete('/:id', deleteHistoricoPeriodo)
+router.post('/', verificarToken, createHistoricoPeriodo)
+router.delete('/:id', verificarToken, deleteHistoricoPeriodo)
 
 export default router

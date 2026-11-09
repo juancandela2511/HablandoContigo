@@ -216,8 +216,14 @@ export async function limpiarTodasLasRespuestasEnBD(
   })
 
   try {
+    const token = typeof window !== 'undefined'
+      ? (localStorage.getItem('hablandocontigo_auth_token') || localStorage.getItem('hablandocontigo_auth_token_jwt'))
+      : null
     await fetch(`${API_URL}/respuestas/limpiar`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: {
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      }
     })
   } catch (e: any) {
     console.warn('[servicioRespuestas] No se pudo limpiar la base de datos PostgreSQL:', e)

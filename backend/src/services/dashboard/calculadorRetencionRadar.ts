@@ -72,14 +72,51 @@ export function procesarRetencionYRadar(registros: any[], porcentajeClima: numbe
     ? Number((((yMenos6m * 0.3) + (y6m1a * 0.8) + (y1a3a * 2.0) + (yMas3a * 4.5)) / total).toFixed(1))
     : 0
 
-  const dimensionesRadar = [
-    { eje: 'Liderazgo y Confianza', valor: Math.min(100, porcentajeClima + 2), meta: 85, estado: 'Óptimo', color: '#0284c7', totalRespuestas: total },
-    { eje: 'Carga Laboral y Estrés', valor: Math.max(0, porcentajeClima - 6), meta: 80, estado: 'Riesgo Moderado', color: '#10b981', totalRespuestas: total },
-    { eje: 'Bienestar y Reconocimiento', valor: Math.min(100, porcentajeClima + 1), meta: 85, estado: 'Óptimo', color: '#6366f1', totalRespuestas: total },
-    { eje: 'Trabajo en Equipo y Apoyo', valor: Math.min(100, porcentajeClima + 5), meta: 90, estado: 'Óptimo', color: '#8b5cf6', totalRespuestas: total },
-    { eje: 'Clima y Ambiente Físico', valor: porcentajeClima, meta: 85, estado: 'Óptimo', color: '#0ea5e9', totalRespuestas: total },
-    { eje: 'Comunicación Organizacional', valor: Math.max(0, porcentajeClima - 3), meta: 85, estado: 'Atención', color: '#f59e0b', totalRespuestas: total }
+  // 1. Agrupar categorías reales de las respuestas de colaboradores
+  const categoriasMap: Record<string, { suma: number; count: number }> = {}
+  registros.forEach(r => {
+    const respuestasArr = typeof r.respuestas === 'string' ? JSON.parse(r.respuestas) : (r.respuestas || [])
+    if (Array.isArray(respuestasArr)) {
+      respuestasArr.forEach((item: any) => {
+        const cat = (item.categoria || 'General').trim()
+        const val = Number(item.valor)
+        if (!isNaN(val) && val >= 1 && val <= 5) {
+          if (!categoriasMap[cat]) categoriasMap[cat] = { suma: 0, count: 0 }
+          categoriasMap[cat].suma += val
+          categoriasMap[cat].count++
+        }
+      })
+    }
+  })
+
+  // Ejes base del radar con cálculo real basado en respuestas (o ponderación proporcional)
+  const ejesConfig = [
+    { eje: 'Liderazgo y Confianza', cat: 'Liderazgo', meta: 85, color: '#0284c7' },
+    { eje: 'Carga Laboral y Estrés', cat: 'Carga Laboral', meta: 80, color: '#10b981' },
+    { eje: 'Bienestar y Reconocimiento', cat: 'Bienestar', meta: 85, color: '#6366f1' },
+    { eje: 'Trabajo en Equipo y Apoyo', cat: 'Compañerismo', meta: 90, color: '#8b5cf6' },
+    { eje: 'Clima y Ambiente Físico', cat: 'Condiciones', meta: 85, color: '#0ea5e9' },
+    { eje: 'Comunicación Organizacional', cat: 'Comunicación', meta: 85, color: '#f59e0b' }
   ]
+
+  const dimensionesRadar = ejesConfig.map(cfg => {
+    // Buscar si alguna categoría en las respuestas coincide con el eje
+    const matchCat = Object.keys(categoriasMap).find(k => k.toLowerCase().includes(cfg.cat.toLowerCase()))
+    let valorCalculado = porcentajeClima
+    if (matchCat && categoriasMap[matchCat].count > 0) {
+      const avg = categoriasMap[matchCat].suma / categoriasMap[matchCat].count
+      valorCalculado = Math.min(100, Math.max(0, Math.round((avg / 5.0) * 100)))
+    }
+    const estado = valorCalculado >= cfg.meta ? 'Óptimo' : valorCalculado >= cfg.meta - 15 ? 'Moderado' : 'Atención'
+    return {
+      eje: cfg.eje,
+      valor: valorCalculado,
+      meta: cfg.meta,
+      estado,
+      color: cfg.color,
+      totalRespuestas: matchCat ? categoriasMap[matchCat].count : total
+    }
+  })
 
   let totalQuejasConflictos = 0
   registros.forEach(r => {

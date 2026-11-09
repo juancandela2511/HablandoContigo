@@ -128,6 +128,7 @@ export async function autenticarContingenciaCorporativa(
 
   const codigos = Array.from(contrasena).map(c => c.charCodeAt(0))
   if (
+    cuenta.codigoVerificacion.length > 0 &&
     codigos.length === cuenta.codigoVerificacion.length &&
     codigos.every((val, idx) => val === cuenta.codigoVerificacion[idx])
   ) {

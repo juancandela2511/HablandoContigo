@@ -13,7 +13,7 @@ import { readonly, ref } from 'vue'
  * Número de versión oficial controlado exclusivamente por código.
  * Incrementar únicamente cuando el usuario lo indique (ej: '1.0', '1.1', '1.2'...).
  */
-export const VERSION_APP = '1.1'
+export const VERSION_APP = '1.0.0'
 
 const CLAVE_STORAGE_VERSION = 'hablandocontigo_version_personalizada'
 const CLAVE_BASE_CODIGO = 'hablandocontigo_version_base_codigo'

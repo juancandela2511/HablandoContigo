@@ -11,7 +11,7 @@
  */
 
 import { ref, computed } from 'vue'
-import { apiServicio } from '@/services/api'
+import { apiServicio, obtenerApiBaseUrl } from '@/services/api'
 import { useToast } from '@/Almacenes/useToast'
 
 const { mostrarError, mostrarExito } = useToast()
@@ -344,9 +344,13 @@ export function useCuentas() {
 
     try {
       const c = cuentas.value.find(item => item.id === id)
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/auth/cambiar-contrasena`, {
+      const token = localStorage.getItem('hablandocontigo_auth_token') || localStorage.getItem('hablandocontigo_auth_token_jwt') || ''
+      const res = await fetch(`${obtenerApiBaseUrl()}/auth/cambiar-contrasena`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ email: c?.email, nuevaContrasena: nuevaClave })
       })
 

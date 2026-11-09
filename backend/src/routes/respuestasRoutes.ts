@@ -9,7 +9,7 @@ import { verificarToken } from '../middlewares/authMiddleware.js'
 
 const router = Router()
 
-router.get('/', getRespuestas)
+router.get('/', verificarToken, getRespuestas)
 router.post('/', createRespuesta)
 router.get('/metricas/:id_encuesta', getMetricasEncuesta)
 router.delete('/limpiar', verificarToken, limpiarRespuestas)

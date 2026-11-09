@@ -65,6 +65,33 @@ export async function inicializarBaseDatos(): Promise<void> {
     await client.query('ALTER TABLE usuarios DROP CONSTRAINT IF EXISTS usuarios_rol_check;').catch(() => {})
     await client.query('ALTER TABLE usuarios DROP CONSTRAINT IF EXISTS usuarios_estado_check;').catch(() => {})
 
+    // Corregir trigger de métricas para soportar DELETE e INSERT con robustez
+    await client.query(`
+      CREATE OR REPLACE FUNCTION trg_actualizar_metricas_encuesta()
+      RETURNS TRIGGER AS $$
+      DECLARE
+        target_id VARCHAR(100);
+      BEGIN
+        IF TG_OP = 'DELETE' THEN
+          target_id := OLD.id_encuesta;
+        ELSE
+          target_id := NEW.id_encuesta;
+        END IF;
+
+        IF target_id IS NOT NULL THEN
+          UPDATE encuestas
+          SET total_respuestas = (SELECT COUNT(*) FROM respuestas WHERE id_encuesta = target_id),
+              puntaje_promedio = COALESCE((SELECT ROUND(AVG(puntaje_general), 1) FROM respuestas WHERE id_encuesta = target_id), 5.0),
+              alertas_registradas = (SELECT COUNT(*) FROM respuestas WHERE id_encuesta = target_id AND jsonb_array_length(COALESCE(alertas_detectadas, '[]'::jsonb)) > 0),
+              updated_at = CURRENT_TIMESTAMP
+          WHERE id = target_id;
+        END IF;
+
+        RETURN COALESCE(NEW, OLD);
+      END;
+      $$ LANGUAGE plpgsql;
+    `).catch(() => {})
+
     // Garantizar que las columnas de fotos y avatares permitan cadenas Base64 completas sin truncamiento
     await client.query('ALTER TABLE usuarios ALTER COLUMN avatar TYPE TEXT;').catch(() => {})
     await client.query('ALTER TABLE usuarios ALTER COLUMN foto_url TYPE TEXT;').catch(() => {})
