@@ -107,8 +107,8 @@ export async function cargarEncuestasUnificadas(encuestasEnMemoria: Encuesta[] =
 
           return {
             ...enc,
-            titulo: localMatch?.titulo || enc.titulo,
-            descripcion: localMatch?.descripcion || enc.descripcion,
+            titulo: enc.id === 'enc-001' ? TITULO_ENCUESTA_CLIMA_INTEGRAL : (localMatch?.titulo || enc.titulo),
+            descripcion: enc.id === 'enc-001' ? DESCRIPCION_ENCUESTA_CLIMA_INTEGRAL : (localMatch?.descripcion || enc.descripcion),
             departamento: localMatch?.departamento || enc.departamento,
             estado: estadoReal,
             fechaCreacion: localMatch?.fechaCreacion || encMeta.fechaCreacion || enc.fechaCreacion,
@@ -145,8 +145,8 @@ export async function cargarEncuestasUnificadas(encuestasEnMemoria: Encuesta[] =
       if (enc.id === 'enc-001') {
         enc.bloques = Array.isArray(enc.bloques) && enc.bloques.length >= 8 ? enc.bloques : bloquesJson
         enc.preguntas = fusionarPreguntasConConfiguracion(enc.preguntas)
-        enc.titulo = enc.titulo || TITULO_ENCUESTA_CLIMA_INTEGRAL
-        enc.descripcion = enc.descripcion || DESCRIPCION_ENCUESTA_CLIMA_INTEGRAL
+        enc.titulo = TITULO_ENCUESTA_CLIMA_INTEGRAL
+        enc.descripcion = DESCRIPCION_ENCUESTA_CLIMA_INTEGRAL
       }
     })
     const ordenadas = ordenarProyectos(encuestasLocales)

@@ -101,7 +101,7 @@ const emit = defineEmits<{
           type="button"
           @click="emit('eliminar', registro.idRespuesta)"
           class="p-1.5 rounded-xl text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all cursor-pointer"
-          title="Eliminar esta respuesta de Supabase"
+          title="Eliminar esta respuesta de la base de datos"
         >
           <Trash2 class="w-4 h-4" />
         </button>

@@ -46,7 +46,7 @@ defineProps<{
           </InsigniaPill>
         </div>
         <span class="text-[10px] text-neutral-400 font-mono block">
-          Auditoría de Clima Psicosocial · Cero Rastreo
+          Espacio Seguro de Escucha · 100% Confidencial
         </span>
       </div>
     </div>

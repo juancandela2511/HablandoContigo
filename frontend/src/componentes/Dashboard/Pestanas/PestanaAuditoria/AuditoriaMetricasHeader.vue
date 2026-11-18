@@ -5,7 +5,7 @@
 -->
 
 <script setup lang="ts">
-import { ShieldCheck, ShieldAlert, ZapOff, Sliders } from 'lucide-vue-next'
+import { ShieldCheck, ShieldAlert, Sliders, Trash2 } from 'lucide-vue-next'
 import { BotonBase } from '@/componentes/ElementosBase'
 
 defineProps<{
@@ -15,6 +15,7 @@ defineProps<{
 
 defineEmits<{
   (e: 'abrirGestionAlertas'): void
+  (e: 'limpiarBaseDatos'): void
 }>()
 </script>
 
@@ -24,26 +25,38 @@ defineEmits<{
       <div class="space-y-1">
         <div class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold uppercase tracking-wider">
           <ShieldCheck class="w-3.5 h-3.5" />
-          <span>Auditoría Criptográfica por Hardware</span>
+          <span>Supervisión y Auditoría Interna</span>
         </div>
         <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
-          Trazabilidad de Respuestas & Prevención de Fraude
+          Trazabilidad de Respuestas & Participaciones
         </h3>
         <p class="text-xs text-slate-500 dark:text-slate-400">
-          Supervisión de huellas digitales UUID, tiempo de respuesta y detección de anomalías.
+          Supervisión de participaciones, alertas detectadas y estadísticas consolidadas.
         </p>
       </div>
 
-      <BotonBase
-        variante="secundario"
-        tamano="pequeno"
-        @click="$emit('abrirGestionAlertas')"
-      >
-        <template #iconoIzquierdo>
-          <Sliders class="w-3.5 h-3.5" />
-        </template>
-        <span>Gestionar Filtros de Alertas</span>
-      </BotonBase>
+      <div class="flex items-center gap-2 flex-wrap">
+        <BotonBase
+          variante="secundario"
+          tamano="pequeno"
+          @click="$emit('abrirGestionAlertas')"
+        >
+          <template #iconoIzquierdo>
+            <Sliders class="w-3.5 h-3.5" />
+          </template>
+          <span>Gestionar Filtros de Alertas</span>
+        </BotonBase>
+
+        <button
+          type="button"
+          @click="$emit('limpiarBaseDatos')"
+          class="px-3 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all"
+          title="Restablecer todas las respuestas de la base de datos a cero"
+        >
+          <Trash2 class="w-3.5 h-3.5" />
+          <span>Limpiar Base de Datos</span>
+        </button>
+      </div>
     </div>
 
     <!-- Indicadores Rápidos -->

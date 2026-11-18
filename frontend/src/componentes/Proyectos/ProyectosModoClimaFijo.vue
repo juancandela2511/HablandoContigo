@@ -41,7 +41,7 @@ import {
   DESCRIPCION_ENCUESTA_CLIMA_INTEGRAL,
   BLOQUES_ENCUESTA_CLIMA, PLANTILLA_CLIMA_INTEGRAL_DETALLADA,
   type MetadataBloque
-} from '@/Config/preguntasCuestionario.ts'
+} from '@/Config/preguntasCuestionario'
 import { useAutenticacion } from '@/Almacenes/useAutenticacion'
 import { useEncuestas } from '@/Almacenes/useEncuestas'
 import { useAnclajeGraficos as useGraficosAnclados } from '@/Almacenes/useAnclajeGraficos'

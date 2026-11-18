@@ -104,8 +104,10 @@ export async function inicializarBaseDatos(): Promise<void> {
       if (preguntasConfig) {
         await client.query(`
           INSERT INTO encuestas (id, titulo, descripcion, departamento, estado, fecha_creacion, creado_por, metadata)
-          VALUES ('enc-001', 'Proyecto Clima Laboral — Diagnóstico Organizacional', 'Evaluación troncal de bienestar, liderazgo, respeto y desarrollo en el equipo.', 'Operaciones & Clima Laboral', 'Activa', TO_CHAR(CURRENT_TIMESTAMP, 'DD Mon YYYY'), 'Super Administrador', '{}'::jsonb)
-          ON CONFLICT (id) DO NOTHING
+          VALUES ('enc-001', 'Contigo Te Escucha: Construyendo Juntos Nuestro Entorno', 'Espacio 100% confidencial y seguro. Tu opinión sincera es fundamental para identificar oportunidades de bienestar, apoyo y desarrollo continuo en nuestro equipo.', 'Operaciones & Clima Laboral', 'Activa', TO_CHAR(CURRENT_TIMESTAMP, 'DD Mon YYYY'), 'Super Administrador', '{}'::jsonb)
+          ON CONFLICT (id) DO UPDATE SET
+            titulo = EXCLUDED.titulo,
+            descripcion = EXCLUDED.descripcion
         `)
 
         const countRes = await client.query("SELECT COUNT(*) FROM preguntas WHERE id_encuesta = 'enc-001'")

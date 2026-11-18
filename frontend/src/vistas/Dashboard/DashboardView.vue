@@ -32,6 +32,7 @@ import ModalDetalleAlerta from '@/componentes/Dashboard/ModalDetalleAlerta.vue'
 import ModalExportarInforme from '@/componentes/Dashboard/ModalExportarInforme.vue'
 import ModalCrearGraficoAnclado from '@/componentes/Dashboard/Modales/ModalCrearGraficoAnclado.vue'
 import BannerSugerenciasAdmin from '@/componentes/AsistenteOllama/BannerSugerenciasAdmin.vue'
+import { TITULO_ENCUESTA_CLIMA_INTEGRAL } from '@/Config/preguntasCuestionario'
 
 const route = useRoute()
 const { elementoResaltadoId } = useHighlight()
@@ -40,7 +41,8 @@ const { alertasConvivencia, actualizarEstadoAlerta } = useNotificaciones()
 const { 
   encuestas, 
   respuestasAnonimas, 
-  eliminarRespuestaIndividual
+  eliminarRespuestaIndividual,
+  vaciarTodasLasEstadisticas
 } = useEncuestas()
 
 const {
@@ -141,11 +143,17 @@ const manejarEliminarRespuestaIndividual = async (idRespuesta: string) => {
   await eliminarRespuestaIndividual(idRespuesta)
 }
 
+const manejarLimpiarTodasLasRespuestas = async () => {
+  if (confirm('¿Estás seguro de restablecer todas las respuestas de la base de datos a cero? Esta acción limpiará tanto PostgreSQL como los datos locales.')) {
+    await vaciarTodasLasEstadisticas()
+  }
+}
+
 const encuestasOrdenadas = computed(() => {
   const master = encuestas.value.find(e => e.id === 'enc-001') || {
     id: 'enc-001',
-    titulo: 'Proyecto Clima Laboral — Diagnóstico Organizacional',
-    descripcion: 'Evaluación oficial de bienestar, liderazgo y clima.',
+    titulo: 'Contigo Te Escucha: Construyendo Juntos Nuestro Entorno',
+    descripcion: 'Espacio confidencial para identificar oportunidades de bienestar, apoyo y desarrollo en el equipo.',
     departamento: 'Operaciones & Clima Laboral',
     preguntas: []
   }
@@ -220,7 +228,7 @@ const seleccionarProyecto = (id: string) => {
                 <div v-if="idx === 0" class="flex items-center justify-between">
                   <span class="px-2.5 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
                 
-                    <span>Proyecto Principal — Clima Laboral</span>
+                    <span>Proyecto Principal</span>
                   </span>
                   <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
                 </div>
@@ -234,7 +242,7 @@ const seleccionarProyecto = (id: string) => {
                 <!-- Título y Descripción -->
                 <div class="space-y-1.5">
                   <h4 class="text-lg font-black text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-snug">
-                    {{ idx === 0 ? 'Proyecto Clima Laboral' : enc.titulo }}
+                    {{ idx === 0 ? TITULO_ENCUESTA_CLIMA_INTEGRAL : enc.titulo }}
                   </h4>
                  
                 </div>
@@ -271,7 +279,7 @@ const seleccionarProyecto = (id: string) => {
             v-model:departamentoSeleccionado="departamentoFiltro"
             v-model:periodoSeleccionado="filtroPeriodoTemporal"
             v-model:encuestaSeleccionada="encuestaFiltro"
-            :nombreProyectoActivo="encuestaFiltro === 'enc-001' ? 'Proyecto Clima Laboral' : (encuestaSeleccionadaObj?.titulo || encuestaFiltro)"
+            :nombreProyectoActivo="encuestaFiltro === 'enc-001' ? TITULO_ENCUESTA_CLIMA_INTEGRAL : (encuestaSeleccionadaObj?.titulo || encuestaFiltro)"
             :departamentosDisponibles="departamentosDisponibles"
             :encuestasDisponibles="encuestasDisponiblesSegunModo"
             @cambiarProyecto="encuestaFiltro = ''"
@@ -331,6 +339,7 @@ const seleccionarProyecto = (id: string) => {
           v-else-if="pestanaActiva === 'auditoria'"
           :respuestas="respuestasAnonimas"
           @eliminarRespuesta="manejarEliminarRespuestaIndividual"
+          @limpiarBaseDatos="manejarLimpiarTodasLasRespuestas"
         />
 
         <!-- PESTAÑA 6: BLOQUE DE ESTUDIO (TALENTO Y HABILIDADES) -->

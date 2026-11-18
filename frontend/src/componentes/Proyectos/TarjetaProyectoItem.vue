@@ -46,7 +46,7 @@ const emit = defineEmits<{
         v-if="indice === 0"
         class="px-2.5 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-black uppercase tracking-wider shadow-sm flex items-center gap-1.5"
       >
-        <span>Proyecto Principal — Clima Laboral</span>
+        <span>Proyecto Principal</span>
       </span>
       <span
         v-else
@@ -73,7 +73,7 @@ const emit = defineEmits<{
 
     <div class="space-y-1.5">
       <h3 class="text-lg font-black text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-snug">
-        {{ indice === 0 ? 'Proyecto Clima Laboral' : proyecto.titulo }}
+        {{ indice === 0 ? (proyecto.titulo || 'Contigo Te Escucha: Construyendo Juntos Nuestro Entorno') : proyecto.titulo }}
       </h3>
     </div>
 

@@ -197,6 +197,16 @@ export function eliminarRespuestaPorId(
     }
   }
 
+  try {
+    const token = typeof window !== 'undefined'
+      ? (localStorage.getItem('hablandocontigo_auth_token') || localStorage.getItem('hablandocontigo_auth_token_jwt'))
+      : null
+    fetch(`${API_URL}/respuestas/${idRespuesta}`, {
+      method: 'DELETE',
+      headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
+    }).catch(() => {})
+  } catch {}
+
   persistirRespuestasEnLocalStorage(respuestasRef.value)
   persistirEncuestasEnLocalStorage(encuestasRef.value)
   return true
@@ -229,7 +239,13 @@ export async function limpiarTodasLasRespuestasEnBD(
     console.warn('[servicioRespuestas] No se pudo limpiar la base de datos PostgreSQL:', e)
   }
 
-  persistirRespuestasEnLocalStorage(respuestasRef.value)
+  if (typeof window !== 'undefined') {
+    window.localStorage.removeItem('hablandocontigo_respuestas')
+    window.localStorage.removeItem('hablandocontigo_respuestas_guardadas_v2')
+    window.localStorage.removeItem('hablandocontigo_respuestas_anonimas')
+  }
+
+  persistirRespuestasEnLocalStorage([])
   persistirEncuestasEnLocalStorage(encuestasRef.value)
   return true
 }

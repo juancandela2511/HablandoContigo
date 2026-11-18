@@ -17,10 +17,10 @@ import preguntasJson from '@/database/preguntas.json'
 // Metadatos globales de la encuesta
 // ─────────────────────────────────────────────────────────────────────────────
 export const TITULO_ENCUESTA_CLIMA_INTEGRAL =
-  'ENCUESTA DE CLIMA LABORAL Y DESARROLLO ORGANIZACIONAL — CONTIGO CALL CENTER'
+  'Contigo Te Escucha: Construyendo Juntos Nuestro Entorno'
 
 export const DESCRIPCION_ENCUESTA_CLIMA_INTEGRAL =
-  'Nota de confidencialidad: Esta encuesta es 100% anónima. Su objetivo es identificar áreas de mejora y optimizar las condiciones de trabajo basándonos en tu opinión sincera. Por favor, responde cada pregunta de forma independiente.'
+  'Espacio 100% confidencial y seguro. Tu opinión sincera es fundamental para identificar oportunidades de bienestar, apoyo y desarrollo continuo en nuestro equipo.'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Metadatos de cada bloque (para separación visual en el editor y dashboard)

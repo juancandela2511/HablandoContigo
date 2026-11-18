@@ -20,17 +20,15 @@
  */
 
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
-// Rutas públicas: cargadas de forma inmediata (el usuario las ve primero)
+// Vistas principales del sistema
 import HeroPrincipal from '@/vistas/Inicio/HeroPrincipal.vue'
 import LoginView from '@/vistas/Autenticacion/LoginView.vue'
 import ResponderEncuestaView from '@/vistas/Encuestas/ResponderEncuestaView.vue'
-
-// Rutas protegidas: lazy-loaded (se descargan solo cuando el usuario navega a ellas)
-const ProyectosView = () => import('@/vistas/Proyectos/ProyectosView.vue')
-const DashboardView = () => import('@/vistas/Dashboard/DashboardView.vue')
-const ConfiguracionView = () => import('@/vistas/Configuracion/ConfiguracionView.vue')
-const VistaGenerica = () => import('@/vistas/Comunes/VistaGenerica.vue')
-const Error404View = () => import('@/vistas/Comunes/Error404View.vue')
+import ProyectosView from '@/vistas/Proyectos/ProyectosView.vue'
+import DashboardView from '@/vistas/Dashboard/DashboardView.vue'
+import ConfiguracionView from '@/vistas/Configuracion/ConfiguracionView.vue'
+import VistaGenerica from '@/vistas/Comunes/VistaGenerica.vue'
+import Error404View from '@/vistas/Comunes/Error404View.vue'
 
 import { useAutenticacion } from '@/Almacenes/useAutenticacion'
 
@@ -205,6 +203,19 @@ enrutador.beforeEach((rutaHacia) => {
   }
 
   return true
+})
+
+enrutador.onError((error, to) => {
+  if (
+    error?.message?.includes('Failed to fetch dynamically imported module') ||
+    error?.message?.includes('Importing a module script failed')
+  ) {
+    if (to?.fullPath) {
+      window.location.href = to.fullPath
+    } else {
+      window.location.reload()
+    }
+  }
 })
 
 export default enrutador

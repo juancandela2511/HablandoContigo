@@ -1,4 +1,3 @@
-.originkit/
 # Archivos de entorno — NUNCA subir al repositorio
 .env
 .env.*
@@ -45,4 +44,7 @@ __screenshots__/
 
 # Vite
 *.timestamp-*-*.mjs
+
+# Temporales y plantillas
 .originkit/
+

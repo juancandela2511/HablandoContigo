@@ -379,7 +379,7 @@ export function useCuentas() {
     cuentasPorRol,
     departamentosUnicos,
     totalEncuestasGestionadas,
-    cargarCuentasDesdeSupabase: cargarCuentasDesdePostgres,
+    cargarCuentas: cargarCuentasDesdePostgres,
     cargarCuentasDesdePostgres,
     crearCuenta,
     agregarCuenta: crearCuenta,
@@ -393,7 +393,7 @@ export function useCuentas() {
     reenviarPinVerificacion,
     cambiarContrasenaUsuario,
     cambiarContrasenaPorAdmin: cambiarContrasenaUsuario,
-    sembrarCuentasInicialesEnSupabase: cargarCuentasDesdePostgres,
+    sembrarCuentasIniciales: cargarCuentasDesdePostgres,
     reiniciarDatosDemo: cargarCuentasDesdePostgres
   }
 }

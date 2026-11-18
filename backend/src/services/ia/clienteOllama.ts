@@ -6,35 +6,64 @@
  * local o contenedor Docker en español.
  */
 
-const rawOllamaHost = process.env.OLLAMA_HOST || process.env.OLLAMA_BASE_URL || 'http://localhost:11434'
-export const OLLAMA_HOST = rawOllamaHost.replace(/\/+$/, '')
+let hostActivoOllama: string | null = null
+
+const hostsCandidatos = [
+  process.env.OLLAMA_HOST,
+  process.env.OLLAMA_BASE_URL,
+  'http://127.0.0.1:11435',
+  'http://localhost:11435',
+  'http://127.0.0.1:11434',
+  'http://localhost:11434'
+].filter(Boolean).map(h => (h as string).replace(/\/+$/, ''))
+
 export const MODELO_DEFECTO = process.env.OLLAMA_MODEL || 'llama3'
+
+/**
+ * Obtiene la URL activa de Ollama probando candidatos
+ */
+export async function resolverHostOllama(): Promise<string | null> {
+  if (hostActivoOllama) {
+    try {
+      const ping = await fetch(`${hostActivoOllama}/api/tags`, { signal: AbortSignal.timeout(1000) })
+      if (ping.ok) return hostActivoOllama
+    } catch {}
+    hostActivoOllama = null
+  }
+
+  for (const host of hostsCandidatos) {
+    try {
+      const respuesta = await fetch(`${host}/api/tags`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        signal: AbortSignal.timeout(1500)
+      })
+      if (respuesta.ok) {
+        hostActivoOllama = host
+        return host
+      }
+    } catch {}
+  }
+  return null
+}
 
 /**
  * Verifica la conectividad con Ollama en el servidor
  */
 export async function verificarEstadoOllama(): Promise<boolean> {
-  try {
-    const respuesta = await fetch(`${OLLAMA_HOST}/api/tags`, {
-      method: 'GET',
-      headers: { 'Accept': 'application/json' },
-      signal: AbortSignal.timeout(2000)
-    })
-    return respuesta.ok
-  } catch {
-    return false
-  }
+  const host = await resolverHostOllama()
+  return Boolean(host)
 }
 
 /**
  * Realiza una consulta JSON a Ollama con timeout de seguridad
  */
 export async function consultarOllamaJson(prompt: string, timeoutMs: number = 7000): Promise<any | null> {
-  const estaConectado = await verificarEstadoOllama()
-  if (!estaConectado) return null
+  const host = await resolverHostOllama()
+  if (!host) return null
 
   try {
-    const respuesta = await fetch(`${OLLAMA_HOST}/api/generate`, {
+    const respuesta = await fetch(`${host}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

@@ -1,6 +1,6 @@
 -- ============================================================================
 -- SCRIPT DE INICIALIZACIÓN COMPLETA DE BASE DE DATOS (docker/init/01-init.sql)
--- Arquitectura: Tipo Supabase / Enterprise PostgreSQL 16+
+-- Arquitectura: Enterprise PostgreSQL 16+
 -- Seguridad Criptográfica, Cero Pérdida de Datos y Alta Resiliencia
 -- ============================================================================
 
@@ -216,8 +216,8 @@ VALUES (
 INSERT INTO encuestas (id, titulo, descripcion, departamento, creado_por, fecha_creacion, estado, total_respuestas, alertas_registradas, puntaje_promedio)
 VALUES (
   'enc-001',
-  'ENCUESTA DE CLIMA LABORAL Y DESARROLLO ORGANIZACIONAL — CONTIGO CALL CENTER',
-  'Nota de confidencialidad: Esta encuesta es 100% anónima. Su objetivo es identificar áreas de mejora y optimizar las condiciones de trabajo basándonos en tu opinión sincera.',
+  'Contigo Te Escucha: Construyendo Juntos Nuestro Entorno',
+  'Espacio 100% confidencial y seguro. Tu opinión sincera es fundamental para identificar oportunidades de bienestar, apoyo y desarrollo continuo en nuestro equipo.',
   'Operaciones & Clima Laboral',
   'Super Administrador',
   '15 Sep 2026',
@@ -225,7 +225,9 @@ VALUES (
   0,
   0,
   5.0
-) ON CONFLICT (id) DO NOTHING;
+) ON CONFLICT (id) DO UPDATE SET
+  titulo = EXCLUDED.titulo,
+  descripcion = EXCLUDED.descripcion;
 
 -- 3. Configuración de alertas base
 INSERT INTO alertas_config (id, nombre, nivel, severidad, icono, color_hex, activa)

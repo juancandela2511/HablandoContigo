@@ -42,7 +42,7 @@ defineEmits<{
         title="Seleccionar otro proyecto"
       >
         <ArrowLeft class="w-3.5 h-3.5" />
-        <span>Proyectos</span>
+        <span></span>
       </button>
 
       <div class="flex items-center gap-2">
@@ -83,7 +83,7 @@ defineEmits<{
         class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer"
       >
         <Download class="w-3.5 h-3.5" />
-        
+
       </button>
     </div>
   </div>

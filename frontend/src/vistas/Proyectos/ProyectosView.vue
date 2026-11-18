@@ -49,10 +49,10 @@ const {
   revertirFinalizacionProyecto,
   respuestasAnonimas
 } = useEncuestas()
-const { cargarHistoricoDesdeSupabase, cerrarYGuardarPeriodoAnual, revertirCierrePeriodo } = useHistoricoPeriodos()
+const { cargarHistorico, cerrarYGuardarPeriodoAnual, revertirCierrePeriodo } = useHistoricoPeriodos()
 
 onMounted(async () => {
-  await cargarHistoricoDesdeSupabase()
+  await cargarHistorico()
 })
 
 const idProyectoSeleccionado = ref<string | null>(null)
@@ -74,8 +74,8 @@ const encuestaSeleccionada = computed(() =>
 const listaProyectosOrganizada = computed(() => {
   const master = encuestas.value.find(e => e.id === 'enc-001') || {
     id: 'enc-001',
-    titulo: 'Proyecto Clima Laboral — Diagnóstico Organizacional',
-    descripcion: 'Evaluación troncal de bienestar, liderazgo, respeto y desarrollo en el equipo.',
+    titulo: 'Contigo Te Escucha: Construyendo Juntos Nuestro Entorno',
+    descripcion: 'Espacio confidencial para identificar oportunidades de bienestar, apoyo y desarrollo en el equipo.',
     departamento: 'Operaciones & Clima Laboral',
     creadoPor: 'Super Administrador',
     fechaCreacion: '15 Sep 2026',

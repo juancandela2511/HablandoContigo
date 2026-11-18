@@ -8,7 +8,7 @@
   - Tarjeta de advertencia visual (Zona de Riesgo / Danger Zone).
   - Modal de confirmación con doble factor de seguridad (escribir "DESACTIVAR").
   - Selección de motivo de salida/desactivación.
-  - Ejecución de desactivación en Supabase DB (`public.perfiles`), Auth y `useCuentas`.
+  - Ejecución de desactivación en la base de datos PostgreSQL, Auth y useCuentas.
   - Cierre inmediato de sesión y redirección segura al portal de acceso.
   
   ¿PARA QUÉ SIRVE?

@@ -147,7 +147,6 @@ export function useHistoricoPeriodos() {
   return {
     historicoPeriodos,
     cargandoHistorico,
-    cargarHistoricoDesdeSupabase: cargarHistorico,
     cargarHistorico,
     guardarDatoAnioAnterior,
     eliminarDatoAnioAnterior,

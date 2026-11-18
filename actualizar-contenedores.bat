@@ -15,8 +15,8 @@ echo [2/3] Reconstruyendo imágenes limpias (backend y frontend sin cache)...
 docker compose build --no-cache
 
 echo.
-echo [3/3] Levantando todos los servicios en segundo plano...
-docker compose up -d --remove-orphans
+echo [3/3] Levantando todos los servicios recreando contenedores...
+docker compose up -d --force-recreate --remove-orphans
 
 echo.
 echo ============================================================================

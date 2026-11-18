@@ -10,8 +10,19 @@ export default defineConfig(({ mode }) => ({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
-        changeOrigin: true
+        target: 'http://127.0.0.1:3001',
+        changeOrigin: true,
+        configure: (proxy) => {
+          proxy.on('error', (err, _req, res) => {
+            if ((err as any).code === 'ECONNREFUSED') {
+              console.warn('[vite proxy] Backend fuera de línea en http://127.0.0.1:3001. Inicia el servidor backend con "cd backend && npm run dev" o con Docker.')
+            }
+            if (res && 'writeHead' in res && !(res as any).headersSent) {
+              ;(res as any).writeHead(503, { 'Content-Type': 'application/json' })
+              ;(res as any).end(JSON.stringify({ ok: false, error: 'Backend no disponible en el puerto 3001.' }))
+            }
+          })
+        }
       }
     }
   },

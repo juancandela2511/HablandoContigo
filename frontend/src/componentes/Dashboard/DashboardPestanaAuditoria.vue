@@ -26,6 +26,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'eliminarRespuesta', idRespuesta: string): void
+  (e: 'limpiarBaseDatos'): void
 }>()
 
 const { tiposAlertas, eliminarTipoAlerta, coincideTextoConTipoAlerta } = useTiposAlertas()
@@ -42,7 +43,7 @@ const abrirMapa = (registro: RegistroRespuesta) => {
 }
 
 const manejarEliminarRegistro = (idRespuesta: string) => {
-  if (confirm('¿Estás seguro de eliminar este registro de respuesta de la base de datos de Supabase? Esta acción es irreversible.')) {
+  if (confirm('¿Estás seguro de eliminar este registro de respuesta de la base de datos? Esta acción es irreversible.')) {
     emit('eliminarRespuesta', idRespuesta)
   }
 }
@@ -118,6 +119,7 @@ const respuestasFiltradas = computed(() => {
       :totalRespuestas="respuestas.length"
       :totalAlertas="totalConAlertas"
       @abrirGestionAlertas="modalGestionAlertasAbierto = true"
+      @limpiarBaseDatos="$emit('limpiarBaseDatos')"
     />
 
     <!-- 2. Tabla Principal y Filtros -->

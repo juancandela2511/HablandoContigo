@@ -86,7 +86,7 @@ const panelAbierto = ref(false)
 const cargandoNotificaciones = ref(false)
 
 export function useNotificaciones() {
-  const cargarNotificacionesDesdeSupabase = async (_forzar: boolean = false) => Promise.resolve()
+  const cargarNotificaciones = async (_forzar: boolean = false) => Promise.resolve()
 
   const alertasConvivencia = computed(() => {
     const directas = notificaciones.value.filter(n => esAlertaConvivencia(n.tipo))
@@ -185,7 +185,7 @@ export function useNotificaciones() {
     noLeidas,
     noLeidasAlertas,
     totalNotificaciones,
-    cargarNotificacionesDesdeSupabase,
+    cargarNotificaciones,
     togglePanel,
     abrirPanel,
     cerrarPanel,

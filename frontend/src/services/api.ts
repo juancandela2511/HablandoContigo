@@ -2,20 +2,13 @@
  * ============================================================================
  * SERVICIO CENTRALIZADO DE API REST HTTP (src/services/api.ts)
  * ============================================================================
- * Reemplaza la sintaxis de Supabase por llamadas HTTP nativas al backend de Node.js + Express + PostgreSQL.
+ * Cliente HTTP nativo para comunicación con el backend REST API (Express + PostgreSQL).
  */
 
 export function obtenerApiBaseUrl(): string {
   const envUrl = import.meta.env.VITE_API_URL
   if (envUrl) return envUrl
-  if (typeof window !== 'undefined') {
-    const { hostname, port } = window.location
-    if (port === '5173' || port === '4173') {
-      return `http://${hostname}:3001/api`
-    }
-    return '/api'
-  }
-  return 'http://localhost:3001/api'
+  return '/api'
 }
 
 const API_BASE_URL = obtenerApiBaseUrl()
